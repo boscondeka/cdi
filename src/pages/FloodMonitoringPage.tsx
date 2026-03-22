@@ -89,34 +89,36 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
 
   return (
     <div className="p-6">
-      {/* Animated Background - Water waves */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-full h-20 opacity-10"
-            style={{
-              top: `${10 + i * 15}%`,
-              background: 'linear-gradient(90deg, transparent, #06b6d4, transparent)',
-              animation: `wave ${4 + i * 0.5}s ease-in-out infinite`,
-              animationDelay: `${i * 0.3}s`,
-            }}
-          />
-        ))}
-        {/* Water droplets */}
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={`drop-${i}`}
-            className="absolute w-2 h-2 rounded-full bg-cyan-400/30"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 3}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Animated Background - Water waves - Only in Dark Mode */}
+      {isDarkMode && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-full h-20 opacity-10"
+              style={{
+                top: `${10 + i * 15}%`,
+                background: 'linear-gradient(90deg, transparent, #06b6d4, transparent)',
+                animation: `wave ${4 + i * 0.5}s ease-in-out infinite`,
+                animationDelay: `${i * 0.3}s`,
+              }}
+            />
+          ))}
+          {/* Water droplets */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={`drop-${i}`}
+              className="absolute w-2 h-2 rounded-full bg-cyan-400/30"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 3}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Left Sidebar - Filters */}
       <div className="fixed left-0 top-16 bottom-0 w-64 z-20 overflow-y-auto p-4">

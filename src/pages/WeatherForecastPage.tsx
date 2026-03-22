@@ -80,35 +80,37 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
   return (
     <div className="p-6">
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Cloud animations */}
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute opacity-10"
-            style={{
-              left: `${-20 + i * 25}%`,
-              top: `${10 + (i % 3) * 20}%`,
-              animation: `drift ${20 + i * 5}s linear infinite`,
-            }}
-          >
-            <Cloud className="w-32 h-32 text-blue-300" />
-          </div>
-        ))}
-        {/* Rain drops */}
-        {[...Array(15)].map((_, i) => (
-          <div
-            key={`rain-${i}`}
-            className="absolute w-0.5 h-4 bg-blue-400/30 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              animation: `rain ${0.8 + Math.random() * 0.5}s linear infinite`,
-              animationDelay: `${Math.random() * 2}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Animated Background Elements - Only in Dark Mode */}
+      {isDarkMode && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          {/* Cloud animations */}
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute opacity-10"
+              style={{
+                left: `${-20 + i * 25}%`,
+                top: `${10 + (i % 3) * 20}%`,
+                animation: `drift ${20 + i * 5}s linear infinite`,
+              }}
+            >
+              <Cloud className="w-32 h-32 text-blue-300" />
+            </div>
+          ))}
+          {/* Rain drops */}
+          {[...Array(15)].map((_, i) => (
+            <div
+              key={`rain-${i}`}
+              className="absolute w-0.5 h-4 bg-blue-400/30 rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animation: `rain ${0.8 + Math.random() * 0.5}s linear infinite`,
+                animationDelay: `${Math.random() * 2}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Left Sidebar - Filters */}
       <div className="fixed left-0 top-16 bottom-0 w-64 z-20 overflow-y-auto p-4">

@@ -182,37 +182,39 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
 
   return (
     <div className="p-6">
-      {/* Animated Background - Signal waves */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Signal rings */}
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full border-2 border-green-500/20"
-            style={{
-              width: `${100 + i * 100}px`,
-              height: `${100 + i * 100}px`,
-              left: '10%',
-              top: '30%',
-              animation: `signalPulse ${3 + i * 0.5}s ease-out infinite`,
-              animationDelay: `${i * 0.3}s`,
-            }}
-          />
-        ))}
-        {/* Floating signal dots */}
-        {[...Array(15)].map((_, i) => (
-          <div
-            key={`dot-${i}`}
-            className="absolute w-2 h-2 rounded-full bg-green-400/30"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 3}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Animated Background - Signal waves - Only in Dark Mode */}
+      {isDarkMode && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          {/* Signal rings */}
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full border-2 border-green-500/20"
+              style={{
+                width: `${100 + i * 100}px`,
+                height: `${100 + i * 100}px`,
+                left: '10%',
+                top: '30%',
+                animation: `signalPulse ${3 + i * 0.5}s ease-out infinite`,
+                animationDelay: `${i * 0.3}s`,
+              }}
+            />
+          ))}
+          {/* Floating signal dots */}
+          {[...Array(15)].map((_, i) => (
+            <div
+              key={`dot-${i}`}
+              className="absolute w-2 h-2 rounded-full bg-green-400/30"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 3}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Left Sidebar - Filters */}
       <div className="fixed left-0 top-16 bottom-0 w-64 z-20 overflow-y-auto p-4">

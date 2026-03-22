@@ -7,13 +7,12 @@ import {
   Waves, 
   Radio,
   Bell,
-  Settings,
-  User,
   Menu,
   X,
-  RefreshCw,
   Moon,
-  Sun as SunIcon
+  Sun as SunIcon,
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
 import OverviewPage from './pages/OverviewPage';
 import WeatherForecastPage from './pages/WeatherForecastPage';
@@ -31,12 +30,20 @@ const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: 'stations', label: 'Weather Stations', icon: Radio },
 ];
 
+// Sample alerts data
+const alertsData = [
+  { id: 1, title: 'Severe drought in Karamoja', location: 'Moroto', time: '5 min ago', severity: 'high', type: 'drought' },
+  { id: 2, title: 'High flood risk detected', location: 'Kalangala', time: '12 min ago', severity: 'high', type: 'flood' },
+  { id: 3, 'title': 'Weather station offline', location: 'Gulu', time: '1 hour ago', severity: 'medium', type: 'station' },
+  { id: 4, title: 'Heavy rainfall expected', location: 'Mbale', time: '2 hours ago', severity: 'medium', type: 'weather' },
+];
+
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentDate, setCurrentDate] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Detect system color scheme preference
   useEffect(() => {
@@ -49,21 +56,6 @@ function App() {
     
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentDate(now.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      }));
-    };
-    updateDateTime();
-    const interval = setInterval(updateDateTime, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   const handlePageChange = (page: PageType) => {
@@ -107,73 +99,76 @@ function App() {
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-500 ${themeClasses}`}>
-      {/* Background Animation */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Animated gradient orbs */}
-        <div className={`absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse ${
-          currentPage === 'weather' ? 'bg-blue-500' :
-          currentPage === 'drought' ? 'bg-orange-500' :
-          currentPage === 'flood' ? 'bg-cyan-500' :
-          currentPage === 'stations' ? 'bg-green-500' :
-          'bg-blue-500'
-        }`} style={{ animationDuration: '4s' }} />
-        <div className={`absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse ${
-          currentPage === 'weather' ? 'bg-cyan-400' :
-          currentPage === 'drought' ? 'bg-red-400' :
-          currentPage === 'flood' ? 'bg-blue-400' :
-          currentPage === 'stations' ? 'bg-emerald-400' :
-          'bg-purple-400'
-        }`} style={{ animationDuration: '6s', animationDelay: '1s' }} />
-        <div className={`absolute -bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl opacity-15 animate-pulse ${
-          currentPage === 'weather' ? 'bg-indigo-400' :
-          currentPage === 'drought' ? 'bg-yellow-400' :
-          currentPage === 'flood' ? 'bg-teal-400' :
-          currentPage === 'stations' ? 'bg-lime-400' :
-          'bg-pink-400'
-        }`} style={{ animationDuration: '5s', animationDelay: '2s' }} />
-        
-        {/* Floating particles */}
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className={`absolute w-1 h-1 rounded-full opacity-30 animate-float ${
-              currentPage === 'weather' ? 'bg-blue-400' :
-              currentPage === 'drought' ? 'bg-orange-400' :
-              currentPage === 'flood' ? 'bg-cyan-400' :
-              currentPage === 'stations' ? 'bg-green-400' :
-              'bg-blue-400'
-            }`}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Background Animation - Only in Dark Mode */}
+      {isDarkMode && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          {/* Animated gradient orbs */}
+          <div className={`absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse ${
+            currentPage === 'weather' ? 'bg-blue-500' :
+            currentPage === 'drought' ? 'bg-orange-500' :
+            currentPage === 'flood' ? 'bg-cyan-500' :
+            currentPage === 'stations' ? 'bg-green-500' :
+            'bg-blue-500'
+          }`} style={{ animationDuration: '4s' }} />
+          <div className={`absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse ${
+            currentPage === 'weather' ? 'bg-cyan-400' :
+            currentPage === 'drought' ? 'bg-red-400' :
+            currentPage === 'flood' ? 'bg-blue-400' :
+            currentPage === 'stations' ? 'bg-emerald-400' :
+            'bg-purple-400'
+          }`} style={{ animationDuration: '6s', animationDelay: '1s' }} />
+          <div className={`absolute -bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl opacity-15 animate-pulse ${
+            currentPage === 'weather' ? 'bg-indigo-400' :
+            currentPage === 'drought' ? 'bg-yellow-400' :
+            currentPage === 'flood' ? 'bg-teal-400' :
+            currentPage === 'stations' ? 'bg-lime-400' :
+            'bg-pink-400'
+          }`} style={{ animationDuration: '5s', animationDelay: '2s' }} />
+          
+          {/* Floating particles */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className={`absolute w-1 h-1 rounded-full opacity-30 animate-float ${
+                currentPage === 'weather' ? 'bg-blue-400' :
+                currentPage === 'drought' ? 'bg-orange-400' :
+                currentPage === 'flood' ? 'bg-cyan-400' :
+                currentPage === 'stations' ? 'bg-green-400' :
+                'bg-blue-400'
+              }`}
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${3 + Math.random() * 4}s`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Top Navigation Bar */}
-      <header className={`h-16 backdrop-blur-sm border-b flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${headerClasses}`}>
-        <div className="flex items-center gap-4">
+      <header className={`h-16 backdrop-blur-sm border-b flex items-center justify-between px-4 md:px-6 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${headerClasses}`}>
+        <div className="flex items-center gap-3">
+          {/* Mobile Menu Button */}
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={`p-2 rounded-lg transition-colors lg:hidden ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-              <Home className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight">FAO Uganda</h1>
-              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Early Warning System</p>
-            </div>
+          
+          {/* FAO Logo Only */}
+          <div className="flex items-center">
+            <img 
+              src={isDarkMode ? "/fao-white.png" : "/fao_logo_3lines_en1.png"} 
+              alt="FAO Logo" 
+              className="h-8 md:h-10 w-auto"
+            />
           </div>
         </div>
 
-        {/* Center Navigation Tabs */}
+        {/* Center Navigation Tabs - Desktop only */}
         <nav className={`hidden lg:flex items-center gap-1 rounded-xl p-1 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-200/80'}`}>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -197,8 +192,14 @@ function App() {
           })}
         </nav>
 
-        {/* Right Side */}
-        <div className="flex items-center gap-4">
+        {/* Right Side - System Name, Theme Toggle, Notifications */}
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* System Name */}
+          <div className="hidden md:block text-right">
+            <h1 className="font-bold text-sm md:text-base leading-tight">Uganda Multi Hazard</h1>
+            <p className={`text-[10px] md:text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Observatory System</p>
+          </div>
+
           {/* Theme Toggle */}
           <button 
             onClick={toggleTheme}
@@ -206,35 +207,89 @@ function App() {
           >
             {isDarkMode ? <SunIcon className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
           </button>
-
-          <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-200/80'}`}>
-            <RefreshCw className={`w-4 h-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
-            <span className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{currentDate}</span>
-          </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl text-sm font-medium text-white transition-colors">
-            <RefreshCw className="w-4 h-4" />
-            Live Data
-          </button>
-          <button className={`relative p-2 rounded-xl transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}>
-            <Bell className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          <button className={`p-2 rounded-xl transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}>
-            <Settings className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
-          </button>
-          <div className={`flex items-center gap-3 pl-4 border-l ${isDarkMode ? 'border-slate-700' : 'border-slate-300'}`}>
-            <div className="text-right hidden md:block">
-              <p className="text-sm font-medium">Admin User</p>
-              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>FAO Uganda</p>
-            </div>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
-              <User className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
-            </div>
+          
+          {/* Notification Button with Dropdown */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`relative p-2 rounded-xl transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
+            >
+              <Bell className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            
+            {/* Notification Dropdown */}
+            {showNotifications && (
+              <div 
+                className={`absolute right-0 top-full mt-2 w-80 rounded-xl shadow-lg border z-50 ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                }`}
+              >
+                <div className="p-3 border-b border-slate-700/30 flex items-center justify-between">
+                  <span className="font-semibold text-sm">Notifications</span>
+                  <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded-full">{alertsData.length} New</span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {alertsData.map((alert) => (
+                    <div 
+                      key={alert.id} 
+                      className={`p-3 border-b last:border-b-0 transition-colors ${
+                        isDarkMode ? 'border-slate-700/30 hover:bg-slate-700/50' : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                          alert.severity === 'high' ? 'text-red-400' : 'text-yellow-400'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{alert.title}</p>
+                          <div className={`flex items-center gap-2 text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <MapPin className="w-3 h-3" />
+                            <span>{alert.location}</span>
+                            <span>•</span>
+                            <span>{alert.time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className={`p-2 border-t text-center ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
+                  <button className="text-xs text-blue-400 hover:text-blue-300">View All Alerts</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <div className="flex pt-16 min-h-screen relative z-10">
+      {/* Mobile Navigation - Bottom bar */}
+      <nav className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t px-2 py-2 ${
+        isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200'
+      }`}>
+        <div className="flex items-center justify-around">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handlePageChange(item.id)}
+                className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-all ${
+                  isActive
+                    ? 'text-blue-500'
+                    : isDarkMode ? 'text-slate-400' : 'text-slate-500'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px]">{item.label.split(' ')[0]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <div className="flex pt-16 min-h-screen relative z-10 pb-16 lg:pb-0">
         {/* Main Content with transition */}
         <main className={`flex-1 overflow-auto transition-all duration-300 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
           {renderPage()}
