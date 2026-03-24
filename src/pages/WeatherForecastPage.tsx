@@ -12,8 +12,13 @@ import {
   Calendar,
   Clock,
   TrendingUp,
-  ChevronRight,
-  Navigation
+  Navigation,
+  Filter,
+  X,
+  Map as MapIcon,
+  ZoomIn,
+  ZoomOut,
+  Layers
 } from 'lucide-react';
 
 interface WeatherForecastPageProps {
@@ -62,379 +67,485 @@ const getWeatherIcon = (type: string, className = "w-8 h-8") => {
   }
 };
 
+// OpenStreetMap Component
+const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; className?: string }) => {
+  const [zoom, setZoom] = useState(7);
+  const [layer, setLayer] = useState<'mapnik' | 'cyclemap'>('mapnik');
+  
+  const baseBBox = { minLon: 29.5, minLat: -1.5, maxLon: 35.0, maxLat: 4.5 };
+  
+  const getBBox = () => {
+    const centerLon = (baseBBox.minLon + baseBBox.maxLon) / 2;
+    const centerLat = (baseBBox.minLat + baseBBox.maxLat) / 2;
+    const spanLon = (baseBBox.maxLon - baseBBox.minLon) / zoom * 7;
+    const spanLat = (baseBBox.maxLat - baseBBox.minLat) / zoom * 7;
+    return `${centerLon - spanLon / 2}%2C${centerLat - spanLat / 2}%2C${centerLon + spanLon / 2}%2C${centerLat + spanLat / 2}`;
+  };
+  
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${getBBox()}&layer=${layer}`;
+  
+  return (
+    <div className={`relative overflow-hidden rounded-lg md:rounded-xl ${className}`}>
+      <iframe
+        src={mapUrl}
+        className="w-full h-full border-0"
+        title="OpenStreetMap Uganda"
+        loading="lazy"
+      />
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+        <button 
+          onClick={() => setZoom(z => Math.min(z + 1, 12))}
+          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
+        >
+          <ZoomIn className="w-3 h-3" />
+        </button>
+        <button 
+          onClick={() => setZoom(z => Math.max(z - 1, 5))}
+          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
+        >
+          <ZoomOut className="w-3 h-3" />
+        </button>
+      </div>
+      <div className="absolute bottom-2 right-2">
+        <button 
+          onClick={() => setLayer(l => l === 'mapnik' ? 'cyclemap' : 'mapnik')}
+          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
+        >
+          <Layers className="w-3 h-3" />
+        </button>
+      </div>
+      <div className="absolute top-2 left-2">
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shadow-sm ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'}`}>Uganda</span>
+      </div>
+    </div>
+  );
+};
+
 export default function WeatherForecastPage({ isDarkMode = true }: WeatherForecastPageProps) {
   const [activeTab, setActiveTab] = useState<'nowcast' | 'forecast'>('nowcast');
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
   const [selectedParameter, setSelectedParameter] = useState('temperature');
   const [animationKey, setAnimationKey] = useState(0);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Trigger animation on mount and tab change
   useEffect(() => {
     setAnimationKey(prev => prev + 1);
   }, [activeTab]);
 
-  const cardBg = isDarkMode ? 'bg-slate-800/50' : 'bg-white/80';
+  const cardBg = isDarkMode ? 'bg-slate-800/85' : 'bg-white/95';
   const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
   const textSecondary = isDarkMode ? 'text-slate-300' : 'text-slate-600';
+  const borderColor = isDarkMode ? 'border-slate-700/30' : 'border-slate-200';
+  const headerText = isDarkMode ? 'text-white' : 'text-slate-900';
+
+  const FilterContent = () => (
+    <div className="space-y-3">
+      <div>
+        <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
+        <select 
+          value={selectedRegion}
+          onChange={(e) => setSelectedRegion(e.target.value)}
+          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+        >
+          <option value="All Regions">All Regions</option>
+          <option value="Central">Central</option>
+          <option value="Eastern">Eastern</option>
+          <option value="Western">Western</option>
+          <option value="Northern">Northern</option>
+        </select>
+      </div>
+      <div>
+        <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
+        <select 
+          value={selectedParameter}
+          onChange={(e) => setSelectedParameter(e.target.value)}
+          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+        >
+          <option value="temperature">Temperature</option>
+          <option value="humidity">Humidity</option>
+          <option value="wind">Wind Speed</option>
+          <option value="rainfall">Rainfall</option>
+        </select>
+      </div>
+      <div>
+        <label className={`text-xs ${textMuted} mb-1 block`}>Date Range</label>
+        <input 
+          type="date" 
+          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+        />
+      </div>
+      <div className={`pt-3 border-t ${borderColor}`}>
+        <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>Quick Stats</h4>
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs"><span className={textMuted}>Avg Temp</span><span className="text-orange-500 font-medium">24.5°C</span></div>
+          <div className="flex justify-between text-xs"><span className={textMuted}>Max Temp</span><span className="text-red-500 font-medium">31.2°C</span></div>
+          <div className="flex justify-between text-xs"><span className={textMuted}>Min Temp</span><span className="text-blue-500 font-medium">17.8°C</span></div>
+          <div className="flex justify-between text-xs"><span className={textMuted}>Total Rain</span><span className="text-cyan-500 font-medium">125mm</span></div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-6">
-      {/* Animated Background Elements - Only in Dark Mode */}
+    <div className="p-4 md:p-6 min-h-screen">
+      {/* Animated Background */}
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          {/* Cloud animations */}
           {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute opacity-10"
-              style={{
-                left: `${-20 + i * 25}%`,
-                top: `${10 + (i % 3) * 20}%`,
-                animation: `drift ${20 + i * 5}s linear infinite`,
-              }}
-            >
+            <div key={i} className="absolute opacity-10" style={{ left: `${-20 + i * 25}%`, top: `${10 + (i % 3) * 20}%`, animation: `drift ${20 + i * 5}s linear infinite` }}>
               <Cloud className="w-32 h-32 text-blue-300" />
             </div>
-          ))}
-          {/* Rain drops */}
-          {[...Array(15)].map((_, i) => (
-            <div
-              key={`rain-${i}`}
-              className="absolute w-0.5 h-4 bg-blue-400/30 rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animation: `rain ${0.8 + Math.random() * 0.5}s linear infinite`,
-                animationDelay: `${Math.random() * 2}s`,
-              }}
-            />
           ))}
         </div>
       )}
 
-      {/* Left Sidebar - Filters */}
-      <div className="fixed left-0 top-16 bottom-0 w-64 z-20 overflow-y-auto p-4">
-        <div className={`${cardBg} backdrop-blur-sm border rounded-2xl p-4 mb-4 ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-          <h3 className={`text-sm font-semibold mb-3 ${textSecondary}`}>Filters</h3>
-          
-          <div className="space-y-3">
-            <div>
-              <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
-              <select 
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className={`w-full p-2 rounded-xl text-sm outline-none ${isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-900'}`}
-              >
-                <option value="All Regions">All Regions</option>
-                <option value="Central">Central</option>
-                <option value="Eastern">Eastern</option>
-                <option value="Western">Western</option>
-                <option value="Northern">Northern</option>
-              </select>
-            </div>
+      {/* Mobile Filter Button */}
+      <button onClick={() => setShowMobileFilters(true)} className={`lg:hidden fixed bottom-4 right-4 z-30 w-10 h-10 rounded-full flex items-center justify-center shadow-md ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
+        <Filter className="w-4 h-4" />
+      </button>
 
-            <div>
-              <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
-              <select 
-                value={selectedParameter}
-                onChange={(e) => setSelectedParameter(e.target.value)}
-                className={`w-full p-2 rounded-xl text-sm outline-none ${isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-900'}`}
-              >
-                <option value="temperature">Temperature</option>
-                <option value="humidity">Humidity</option>
-                <option value="wind">Wind Speed</option>
-                <option value="rainfall">Rainfall</option>
-                <option value="pressure">Pressure</option>
-              </select>
+      {/* Mobile Filters Drawer */}
+      {showMobileFilters && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileFilters(false)} />
+          <div className={`absolute right-0 top-0 bottom-0 w-72 p-4 overflow-y-auto ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className={`text-base font-semibold ${headerText}`}>Filters</h3>
+              <button onClick={() => setShowMobileFilters(false)} className={`p-1.5 rounded-lg ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}><X className="w-4 h-4" /></button>
             </div>
-
-            <div>
-              <label className={`text-xs ${textMuted} mb-1 block`}>Date Range</label>
-              <input 
-                type="date" 
-                className={`w-full p-2 rounded-xl text-sm outline-none ${isDarkMode ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-900'}`}
-              />
-            </div>
+            <FilterContent />
           </div>
         </div>
+      )}
 
-        {/* Quick Stats */}
-        <div className={`${cardBg} backdrop-blur-sm border rounded-2xl p-4 ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-          <h3 className={`text-sm font-semibold mb-3 ${textSecondary}`}>Quick Stats</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className={textMuted}>Avg Temp</span>
-              <span className="text-orange-400 font-medium">24.5°C</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className={textMuted}>Max Temp</span>
-              <span className="text-red-400 font-medium">31.2°C</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className={textMuted}>Min Temp</span>
-              <span className="text-blue-400 font-medium">17.8°C</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className={textMuted}>Total Rain</span>
-              <span className="text-cyan-400 font-medium">125mm</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="ml-64">
-        {/* Header Banner */}
-        <div className="relative overflow-hidden rounded-2xl p-6 mb-6 animate-fade-in-up" style={{ background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(59, 130, 246, 0.6) 100%)' }}>
+      <div className="relative z-10 max-w-[1600px] mx-auto">
+        {/* Compact Header Banner */}
+        <div className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up" style={{ background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(59, 130, 246, 0.6) 100%)' }}>
           <div className="relative z-10">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-2xl font-bold text-white mb-1">Weather Forecast</h1>
-                <p className="text-slate-200">48-hour nowcasting & 20-day medium range forecasts</p>
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="flex items-center gap-1 text-xs bg-blue-500/30 px-2 py-1 rounded-lg text-blue-200">
-                    <Clock className="w-3 h-3" />
-                    Updated 5 min ago
-                  </span>
-                  <span className="flex items-center gap-1 text-xs bg-green-500/30 px-2 py-1 rounded-lg text-green-200">
-                    <Navigation className="w-3 h-3" />
-                    87% Accuracy
-                  </span>
+                <h1 className="text-lg md:text-xl font-bold text-white">Weather Forecast</h1>
+                <p className="text-slate-200 text-xs md:text-sm">48-hour nowcasting & 20-day forecasts</p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="flex items-center gap-1 text-[10px] bg-blue-500/30 px-1.5 py-0.5 rounded-md text-blue-200"><Clock className="w-3 h-3" />Updated 5 min ago</span>
+                  <span className="flex items-center gap-1 text-[10px] bg-green-500/30 px-1.5 py-0.5 rounded-md text-green-200"><Navigation className="w-3 h-3" />87% Accuracy</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 rounded-xl text-sm font-medium text-white transition-colors">
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl text-sm font-medium text-white transition-colors">
-                  <MapPin className="w-4 h-4" />
-                  View on Map
-                </button>
+              <div className="flex items-center gap-1.5">
+                <button className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 rounded-lg text-xs font-medium text-white transition-colors"><Download className="w-3 h-3" /><span className="hidden sm:inline">Export</span></button>
+                <button className="flex items-center gap-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-xs font-medium text-white transition-colors"><MapPin className="w-3 h-3" /><span className="hidden sm:inline">Map</span></button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
           {[
             { label: 'Temperature', value: '26.5°C', sub: 'Feels like 28°C', icon: Thermometer, color: 'orange' },
             { label: 'Humidity', value: '68%', sub: 'Dew point 19°C', icon: Droplets, color: 'blue' },
             { label: 'Wind', value: '12 km/h', sub: 'NE Direction', icon: Wind, color: 'green' },
-            { label: 'Rainfall (24h)', value: '15.2 mm', sub: 'Light rain expected', icon: CloudRain, color: 'purple' },
+            { label: 'Rainfall (24h)', value: '15.2 mm', sub: 'Light rain', icon: CloudRain, color: 'purple' },
           ].map((stat, index) => (
-            <div 
-              key={index}
-              className={`${cardBg} backdrop-blur-sm border rounded-2xl p-5 card-hover animate-fade-in-up stagger-${index + 1} ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 bg-${stat.color}-500/20 rounded-xl flex items-center justify-center`}>
-                  <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
+            <div key={index} className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up`} style={{ animationDelay: `${index * 0.1}s` }}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: stat.color === 'orange' ? 'rgba(249, 115, 22, 0.2)' : stat.color === 'blue' ? 'rgba(59, 130, 246, 0.2)' : stat.color === 'green' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(168, 85, 247, 0.2)' }}>
+                  <stat.icon className="w-3.5 h-3.5 md:w-4 md:h-4" style={{ color: stat.color === 'orange' ? '#f97316' : stat.color === 'blue' ? '#3b82f6' : stat.color === 'green' ? '#22c55e' : '#a855f7' }} />
                 </div>
               </div>
-              <p className={`text-sm ${textMuted}`}>{stat.label}</p>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className={`text-xs ${textMuted} mt-1`}>{stat.sub}</p>
+              <p className={`text-[10px] md:text-xs ${textMuted}`}>{stat.label}</p>
+              <p className={`text-base md:text-lg font-bold ${headerText}`}>{stat.value}</p>
+              <p className={`text-[10px] ${textMuted}`}>{stat.sub}</p>
             </div>
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6">
-          <button 
-            onClick={() => setActiveTab('nowcast')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              activeTab === 'nowcast' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' : `${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'} hover:text-white hover:bg-blue-500/80`
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            48-Hour Nowcast
-          </button>
-          <button 
-            onClick={() => setActiveTab('forecast')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              activeTab === 'forecast' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' : `${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'} hover:text-white hover:bg-blue-500/80`
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            20-Day Forecast
-          </button>
+        {/* Desktop Layout with Sidebar */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-4">
+          {/* Left Sidebar - Filter extending to footer */}
+          <div className="lg:col-span-3 flex flex-col">
+            <div 
+              className="flex-1 rounded-xl p-3 shadow-sm flex flex-col"
+              style={{ 
+                background: isDarkMode 
+                  ? 'linear-gradient(180deg, rgba(30, 58, 138, 0.3) 0%, rgba(30, 58, 138, 0.15) 100%)' 
+                  : 'linear-gradient(180deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
+                border: `1px solid ${isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'}`,
+              }}
+            >
+              <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
+                <h3 className={`text-sm font-semibold mb-3 ${textSecondary}`}>Filters</h3>
+                <FilterContent />
+              </div>
+
+              {/* Illustration at bottom */}
+              <div className="mt-auto pt-3">
+                <div 
+                  className="rounded-xl overflow-hidden"
+                  style={{ 
+                    backgroundImage: 'url(/weather-illustration.png)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    height: '140px',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-9 space-y-3">
+            {/* Map and Charts Row */}
+            <div className="grid grid-cols-12 gap-3">
+              {/* Map - 7 columns */}
+              <div className="col-span-7">
+                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm h-full`}>
+                  <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
+                    <div className="flex items-center gap-1.5">
+                      <MapIcon className="w-4 h-4 text-blue-500" />
+                      <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
+                    </div>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'}`}>Live</span>
+                  </div>
+                  <div className="relative aspect-[16/10]">
+                    <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Nowcast/Forecast Tabs and Temperature Trend - 5 columns */}
+              <div className="col-span-5 space-y-3">
+                {/* Tabbed Forecast Container */}
+                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
+                  {/* Tabs */}
+                  <div className={`flex border-b ${borderColor}`}>
+                    <button 
+                      onClick={() => setActiveTab('nowcast')} 
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-all ${activeTab === 'nowcast' ? 'bg-blue-500 text-white' : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-blue-500/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-100'}`}`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />48-Hour Nowcast
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('forecast')} 
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-all ${activeTab === 'forecast' ? 'bg-blue-500 text-white' : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-blue-500/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-100'}`}`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />20-Day Forecast
+                    </button>
+                  </div>
+                  
+                  {/* Tab Content */}
+                  <div className="p-3">
+                    {activeTab === 'nowcast' ? (
+                      <div>
+                        <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>Hourly Forecast</h4>
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {hourlyForecast.slice(0, 8).map((hour, idx) => (
+                            <div key={idx} className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? 'bg-blue-500/20 border border-blue-500/30' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                              <p className={`text-[10px] ${textMuted} mb-1`}>{hour.time}</p>
+                              {getWeatherIcon(hour.icon, "w-5 h-5 mx-auto")}
+                              <p className={`text-sm font-bold mt-1 ${headerText}`}>{hour.temp}°</p>
+                              <p className="text-[10px] text-blue-400">{hour.rain}mm</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>20-Day Forecast</h4>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {dailyForecast.slice(0, 5).map((day, idx) => (
+                            <div key={idx} className={`p-1.5 rounded-lg text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                              <p className={`text-[10px] ${textMuted}`}>{day.day}</p>
+                              {getWeatherIcon(day.icon, "w-4 h-4 mx-auto my-0.5")}
+                              <p className={`text-xs font-bold ${headerText}`}>{day.high}°</p>
+                              <p className={`text-[9px] ${textMuted}`}>{day.low}°</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Temperature Trend - Increased Height */}
+                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
+                  <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><TrendingUp className="w-4 h-4 text-orange-400" />Temperature Trend</h3>
+                  <div className="h-40 relative">
+                    <div className={`absolute left-0 top-0 bottom-5 w-5 flex flex-col justify-between text-[10px] ${textMuted}`}>
+                      <span>35°</span><span>30°</span><span>25°</span><span>20°</span><span>15°</span>
+                    </div>
+                    <div className="ml-5 h-full relative">
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <div key={i} className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} style={{ top: `${i * 25}%` }} />
+                      ))}
+                      <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <path d={`M0,${150 - ((hourlyForecast[0].temp - 15) / 20) * 150} ${hourlyForecast.map((h, i) => `L${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} L500,150 L0,150 Z`} fill="url(#tempGradient)" />
+                        <polyline fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} />
+                        {hourlyForecast.map((h, i) => (
+                          <circle key={i} cx={(i / (hourlyForecast.length - 1)) * 500} cy={150 - ((h.temp - 15) / 20) * 150} r="3" fill="#f97316" />
+                        ))}
+                      </svg>
+                      <div className={`flex justify-between text-[10px] ${textMuted} mt-1`}>
+                        <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Full 20-Day Forecast (when forecast tab is active) */}
+            {activeTab === 'forecast' && (
+              <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-3 shadow-sm animate-fade-in-up`}>
+                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-1.5 ${headerText}`}><Calendar className="w-4 h-4 text-blue-400" />Complete 20-Day Forecast</h3>
+                <div className="grid grid-cols-10 gap-2">
+                  {dailyForecast.map((day, idx) => (
+                    <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                      <p className={`text-xs ${textMuted}`}>{day.day}</p>
+                      <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
+                      {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
+                        <span className={`text-xs ${textMuted}`}>{day.low}°</span>
+                      </div>
+                      <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px] text-blue-400">
+                        <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
+                      </div>
+                      <div className="mt-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className={textMuted}>Conf</span>
+                          <span className="text-green-500">{day.confidence}%</span>
+                        </div>
+                        <div className={`h-1 rounded-full mt-0.5 overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-slate-200'}`}>
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${day.confidence}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        {activeTab === 'nowcast' ? (
-          <div className="space-y-6">
-            {/* Hourly Forecast */}
-            <div className={`${cardBg} backdrop-blur-sm border rounded-2xl p-5 animate-fade-in-up ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-400" />
-                  Hourly Forecast
-                </h3>
-                <button className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-200 hover:bg-slate-300'}`}>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+        {/* Mobile Layout */}
+        <div className="block lg:hidden space-y-3">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            <button onClick={() => setActiveTab('nowcast')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'nowcast' ? 'bg-blue-500 text-white shadow-sm' : `${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'} hover:text-white hover:bg-blue-500/80`}`}>
+              <Clock className="w-3.5 h-3.5" />48-Hour Nowcast
+            </button>
+            <button onClick={() => setActiveTab('forecast')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'forecast' ? 'bg-blue-500 text-white shadow-sm' : `${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'} hover:text-white hover:bg-blue-500/80`}`}>
+              <Calendar className="w-3.5 h-3.5" />20-Day Forecast
+            </button>
+          </div>
 
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {hourlyForecast.map((hour, index) => (
-                  <div 
-                    key={index} 
-                    className={`flex-shrink-0 w-20 p-3 rounded-xl text-center transition-all hover:scale-105 ${
-                      index === 0 ? 'bg-blue-500/20 border border-blue-500/30' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'
-                    }`}
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
-                    <p className={`text-xs ${textMuted} mb-2`}>{hour.time}</p>
-                    {getWeatherIcon(hour.icon)}
-                    <p className="text-lg font-bold mt-2">{hour.temp}°</p>
-                    <p className="text-xs text-blue-400">{hour.rain}mm</p>
-                  </div>
-                ))}
+          {/* Map Section */}
+          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm`}>
+            <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
+              <div className="flex items-center gap-1.5">
+                <MapIcon className="w-4 h-4 text-blue-500" />
+                <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
               </div>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'}`}>Live</span>
             </div>
+            <div className="relative aspect-[16/10]">
+              <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+            </div>
+          </div>
 
-            {/* Animated Temperature Trend */}
-            <div className={`${cardBg} backdrop-blur-sm border rounded-2xl p-5 animate-fade-in-up ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-orange-400" />
-                Temperature Trend
-              </h3>
-              <div className="h-48 relative">
-                {/* Y-axis labels */}
-                <div className={`absolute left-0 top-0 bottom-8 w-8 flex flex-col justify-between text-xs ${textMuted}`}>
-                  <span>35°</span>
-                  <span>30°</span>
-                  <span>25°</span>
-                  <span>20°</span>
-                  <span>15°</span>
-                </div>
-                
-                {/* Chart area */}
-                <div className="ml-10 h-full relative">
-                  {/* Grid lines */}
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <div 
-                      key={i} 
-                      className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`}
-                      style={{ top: `${i * 25}%` }}
-                    />
+          {/* Tab Content */}
+          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
+            {activeTab === 'nowcast' ? (
+              <div>
+                <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><Clock className="w-4 h-4 text-blue-400" />Hourly Forecast</h3>
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                  {hourlyForecast.map((hour, idx) => (
+                    <div key={idx} className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? 'bg-blue-500/20 border border-blue-500/30' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                      <p className={`text-[10px] ${textMuted} mb-1`}>{hour.time}</p>
+                      {getWeatherIcon(hour.icon, "w-5 h-5 mx-auto")}
+                      <p className={`text-sm font-bold mt-1 ${headerText}`}>{hour.temp}°</p>
+                      <p className="text-[10px] text-blue-400">{hour.rain}mm</p>
+                    </div>
                   ))}
-                  
-                  {/* Animated SVG line chart */}
-                  <svg 
-                    ref={svgRef}
-                    key={animationKey}
-                    className="w-full h-[85%]" 
-                    viewBox="0 0 500 150" 
-                    preserveAspectRatio="none"
-                  >
-                    <defs>
-                      <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    
-                    {/* Area fill */}
-                    <path
-                      d={`M0,${150 - ((hourlyForecast[0].temp - 15) / 20) * 150} ${hourlyForecast.map((h, i) => `L${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} L500,150 L0,150 Z`}
-                      fill="url(#tempGradient)"
-                      className="animate-fade-in-up"
-                    />
-                    
-                    {/* Line */}
-                    <polyline
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="temperature-trend-line"
-                      points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')}
-                    />
-                    
-                    {/* Data points */}
-                    {hourlyForecast.map((h, i) => (
-                      <circle
-                        key={i}
-                        cx={(i / (hourlyForecast.length - 1)) * 500}
-                        cy={150 - ((h.temp - 15) / 20) * 150}
-                        r="4"
-                        fill="#f97316"
-                        className="animate-pulse"
-                        style={{ animationDelay: `${i * 0.1}s` }}
-                      />
-                    ))}
-                  </svg>
-                  
-                  {/* X-axis labels */}
-                  <div className="flex justify-between text-xs text-slate-500 mt-1">
-                    <span>00:00</span>
-                    <span>04:00</span>
-                    <span>08:00</span>
-                    <span>12:00</span>
-                    <span>16:00</span>
-                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><Calendar className="w-4 h-4 text-blue-400" />20-Day Forecast</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {dailyForecast.map((day, idx) => (
+                    <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                      <p className={`text-xs ${textMuted}`}>{day.day}</p>
+                      <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
+                      {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
+                        <span className={`text-xs ${textMuted}`}>{day.low}°</span>
+                      </div>
+                      <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px] text-blue-400">
+                        <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Temperature Trend */}
+          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
+            <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><TrendingUp className="w-4 h-4 text-orange-400" />Temperature Trend</h3>
+            <div className="h-36 relative">
+              <div className={`absolute left-0 top-0 bottom-5 w-5 flex flex-col justify-between text-[10px] ${textMuted}`}>
+                <span>35°</span><span>30°</span><span>25°</span><span>20°</span><span>15°</span>
+              </div>
+              <div className="ml-5 h-full relative">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div key={i} className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} style={{ top: `${i * 25}%` }} />
+                ))}
+                <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d={`M0,${150 - ((hourlyForecast[0].temp - 15) / 20) * 150} ${hourlyForecast.map((h, i) => `L${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} L500,150 L0,150 Z`} fill="url(#tempGradient)" />
+                  <polyline fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} />
+                  {hourlyForecast.map((h, i) => (
+                    <circle key={i} cx={(i / (hourlyForecast.length - 1)) * 500} cy={150 - ((h.temp - 15) / 20) * 150} r="3" fill="#f97316" />
+                  ))}
+                </svg>
+                <div className={`flex justify-between text-[10px] ${textMuted} mt-1`}>
+                  <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          <div className={`${cardBg} backdrop-blur-sm border rounded-2xl p-5 animate-fade-in-up ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-400" />
-              20-Day Medium Range Forecast
-            </h3>
+        </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {dailyForecast.map((day, index) => (
-                <div 
-                  key={index} 
-                  className={`rounded-xl p-4 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <p className={`text-sm ${textMuted}`}>{day.day}</p>
-                  <p className="text-xs text-slate-500 mb-2">{day.date}</p>
-                  {getWeatherIcon(day.icon)}
-                  <div className="flex items-center justify-center gap-2 mt-2">
-                    <span className="text-lg font-bold">{day.high}°</span>
-                    <span className={`text-sm ${textMuted}`}>{day.low}°</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-1 mt-1 text-xs text-blue-400">
-                    <CloudRain className="w-3 h-3" />
-                    {day.rain}mm
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={textMuted}>Confidence</span>
-                      <span className="text-green-400">{day.confidence}%</span>
-                    </div>
-                    <div className="h-1 bg-slate-600 rounded-full mt-1 overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 rounded-full transition-all duration-1000"
-                        style={{ width: `${day.confidence}%`, transitionDelay: `${index * 0.1}s` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Footer */}
+        <footer className={`mt-6 pt-4 border-t ${borderColor}`}>
+          <div className={`flex flex-col md:flex-row items-center justify-between text-xs ${textMuted} gap-1`}>
+            <p>© 2025 FAO Uganda. All Rights Reserved.</p>
+            <span className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+              System Operational
+            </span>
           </div>
-        )}
+        </footer>
       </div>
 
       <style>{`
-        @keyframes drift {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(100vw); }
-        }
-        @keyframes rain {
-          0% { transform: translateY(-20px); opacity: 0; }
-          50% { opacity: 0.5; }
-          100% { transform: translateY(100vh); opacity: 0; }
-        }
+        @keyframes drift { from { transform: translateX(-100%); } to { transform: translateX(100vw); } }
       `}</style>
     </div>
   );
