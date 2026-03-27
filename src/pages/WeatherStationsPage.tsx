@@ -223,31 +223,6 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
         </div>
       )}
 
-      {/* Mobile Filter Button - Next to Map */}
-      <button 
-        onClick={() => setShowMobileFilters(true)} 
-        className="lg:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg shadow-md text-white"
-        style={{ backgroundColor: FAO_BLUE }}
-      >
-        <Filter className="w-4 h-4" />
-        <span className="text-xs">Open Filter</span>
-      </button>
-
-      {/* Mobile Filters Drawer */}
-      {showMobileFilters && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileFilters(false)} />
-          <div className={`absolute right-0 top-0 bottom-0 w-72 p-4 overflow-y-auto ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`text-base font-semibold ${headerText}`}>Station Filters</h3>
-              <button onClick={() => setShowMobileFilters(false)} className={`p-1.5 rounded-lg ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <FilterContent />
-          </div>
-        </div>
-      )}
 
       <div className="relative z-10 max-w-[1600px] mx-auto">
         {/* Compact Header Banner - No alert buttons */}
@@ -521,29 +496,7 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
 
         {/* Mobile Layout */}
         <div className="block lg:hidden space-y-3">
-          {/* Map Section */}
-          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg overflow-hidden shadow-sm`}>
-            <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                <h3 className={`text-sm font-semibold ${headerText}`}>Station Network Map</h3>
-              </div>
-              <span 
-                className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                style={{ 
-                  backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.15)',
-                  color: '#22c55e'
-                }}
-              >
-                {onlineCount} Active
-              </span>
-            </div>
-            <div className="aspect-video">
-              <StationMap isDarkMode={isDarkMode} className="w-full h-full" />
-            </div>
-          </div>
-
-          {/* Network Overview - Mobile */}
+          {/* Network Overview - Mobile (above map) */}
           <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
             <h3 className={`text-sm font-semibold mb-2 ${headerText}`}>Network Overview</h3>
             <div className="grid grid-cols-4 gap-2">
@@ -564,6 +517,55 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
                 <p className={`text-[10px] ${textMuted}`}>Total</p>
               </div>
             </div>
+          </div>
+
+          {/* Map Section with Filter Popup */}
+          <div className="relative">
+            <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg overflow-hidden shadow-sm`}>
+              <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4" style={{ color: FAO_BLUE }} />
+                  <h3 className={`text-sm font-semibold ${headerText}`}>Station Network Map</h3>
+                </div>
+                <span 
+                  className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                  style={{ 
+                    backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.2)' : 'rgba(34, 197, 94, 0.15)',
+                    color: '#22c55e'
+                  }}
+                >
+                  {onlineCount} Active
+                </span>
+              </div>
+              <div className="relative aspect-video">
+                <StationMap isDarkMode={isDarkMode} className="w-full h-full" />
+                {/* Filter button on map */}
+                <button
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-10 text-white"
+                  style={{ backgroundColor: FAO_BLUE }}
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            {/* Filter Popup */}
+            {showMobileFilters && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowMobileFilters(false)} />
+                <div 
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className={`text-xs font-semibold ${headerText}`}>Station Filters</h4>
+                    <button onClick={() => setShowMobileFilters(false)} className={`p-1 rounded-md ${isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-100'}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <FilterContent />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Station Status - Mobile */}

@@ -11,6 +11,8 @@ import {
   Calendar,
   Clock,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Navigation,
   Filter,
   X,
@@ -25,6 +27,141 @@ interface WeatherForecastPageProps {
 }
 
 const FAO_BLUE = '#318DDE';
+
+// Stat cards with thresholds for scale display (cloned from Overview)
+const statCards = [
+  {
+    label: 'Temperature',
+    value: '26.5°C',
+    change: '+2.3°C',
+    trend: 'up',
+    icon: Thermometer,
+    color: FAO_BLUE,
+    min: 15,
+    max: 40,
+    thresholds: [
+      { value: 20, color: '#3b82f6', label: 'Cool' },
+      { value: 28, color: '#22c55e', label: 'Normal' },
+      { value: 35, color: '#f97316', label: 'Warm' },
+      { value: 40, color: '#dc2626', label: 'Hot' },
+    ]
+  },
+  {
+    label: 'Humidity',
+    value: '68%',
+    change: '-5%',
+    trend: 'down',
+    icon: Droplets,
+    color: FAO_BLUE,
+    min: 0,
+    max: 100,
+    thresholds: [
+      { value: 30, color: '#dc2626', label: 'Dry' },
+      { value: 50, color: '#fbbf24', label: 'Low' },
+      { value: 70, color: '#22c55e', label: 'Normal' },
+      { value: 85, color: '#dc2626', label: 'High' },
+    ]
+  },
+  {
+    label: 'Wind Speed',
+    value: '12 km/h',
+    change: '+3 km/h',
+    trend: 'up',
+    icon: Wind,
+    color: FAO_BLUE,
+    min: 0,
+    max: 60,
+    thresholds: [
+      { value: 10, color: '#22c55e', label: 'Calm' },
+      { value: 25, color: '#3b82f6', label: 'Breezy' },
+      { value: 40, color: '#f97316', label: 'Windy' },
+      { value: 60, color: '#dc2626', label: 'Strong' },
+    ]
+  },
+  {
+    label: 'Rainfall (24h)',
+    value: '15.2 mm',
+    change: '+8 mm',
+    trend: 'up',
+    icon: CloudRain,
+    color: FAO_BLUE,
+    min: 0,
+    max: 100,
+    thresholds: [
+      { value: 5, color: '#22c55e', label: 'Dry' },
+      { value: 20, color: '#3b82f6', label: 'Light' },
+      { value: 50, color: '#f97316', label: 'Moderate' },
+      { value: 100, color: '#dc2626', label: 'Heavy' },
+    ]
+  },
+];
+
+const getTrendIcon = (trend: string) => {
+  switch (trend) {
+    case 'up': return <TrendingUp className="w-3 h-3" />;
+    case 'down': return <TrendingDown className="w-3 h-3" />;
+    default: return <Minus className="w-3 h-3" />;
+  }
+};
+
+const getTrendColor = (trend: string, isDarkMode: boolean) => {
+  if (trend === 'up') return 'text-green-500';
+  if (trend === 'down') return 'text-red-500';
+  return isDarkMode ? 'text-slate-400' : 'text-slate-500';
+};
+
+// Threshold Scale Component
+const ThresholdScale = ({
+  value,
+  min,
+  max,
+  thresholds,
+  isDarkMode
+}: {
+  value: number;
+  min: number;
+  max: number;
+  thresholds: { value: number; color: string; label: string }[];
+  isDarkMode: boolean;
+}) => {
+  const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+
+  const getCurrentColor = () => {
+    for (let i = thresholds.length - 1; i >= 0; i--) {
+      if (value >= thresholds[i].value) return thresholds[i].color;
+    }
+    return thresholds[0]?.color || FAO_BLUE;
+  };
+
+  return (
+    <div className="mt-2">
+      <div className={`relative h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
+        <div className="absolute inset-0 flex">
+          {thresholds.map((t, i) => {
+            const prevValue = i === 0 ? min : thresholds[i - 1].value;
+            const width = ((Math.min(t.value, max) - prevValue) / (max - min)) * 100;
+            return (
+              <div
+                key={i}
+                className="h-full"
+                style={{ width: `${width}%`, backgroundColor: t.color, opacity: 0.7 }}
+              />
+            );
+          })}
+        </div>
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500"
+          style={{ left: `${percentage}%`, backgroundColor: '#318DDE', borderColor: 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
+        />
+      </div>
+      <div className="flex justify-between mt-0.5">
+        {thresholds.map((t, i) => (
+          <span key={i} className={`text-[9px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t.label}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const hourlyForecast = [
   { time: '0:00', temp: 23, rain: 2, icon: 'rain' },
@@ -257,31 +394,6 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
         </div>
       )}
 
-      {/* Mobile Filter Button - Next to Map */}
-      <button 
-        onClick={() => setShowMobileFilters(true)} 
-        className="lg:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg shadow-md text-white"
-        style={{ backgroundColor: FAO_BLUE }}
-      >
-        <Filter className="w-4 h-4" />
-        <span className="text-xs">Open Filter</span>
-      </button>
-
-      {/* Mobile Filters Drawer */}
-      {showMobileFilters && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileFilters(false)} />
-          <div className={`absolute right-0 top-0 bottom-0 w-72 p-4 overflow-y-auto ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`text-base font-semibold ${headerText}`}>Filters</h3>
-              <button onClick={() => setShowMobileFilters(false)} className={`p-1.5 rounded-lg ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <FilterContent />
-          </div>
-        </div>
-      )}
 
       <div className="relative z-10 max-w-[1600px] mx-auto">
         {/* Compact Header Banner - No alert buttons */}
@@ -320,26 +432,35 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
-          {[
-            { label: 'Temperature', value: '26.5°C', sub: 'Feels like 28°C', icon: Thermometer },
-            { label: 'Humidity', value: '68%', sub: 'Dew point 19°C', icon: Droplets },
-            { label: 'Wind', value: '12 km/h', sub: 'NE Direction', icon: Wind },
-            { label: 'Rainfall (24h)', value: '15.2 mm', sub: 'Light rain', icon: CloudRain },
-          ].map((stat, index) => (
-            <div key={index} className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up`} style={{ animationDelay: `${index * 0.1}s` }}>
-              <div className="flex items-center justify-between mb-1.5">
-                <div 
-                  className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${FAO_BLUE}20` }}
-                >
-                  <stat.icon className="w-3.5 h-3.5 md:w-4 md:h-4" style={{ color: FAO_BLUE }} />
+          {statCards.map((card, index) => {
+            const Icon = card.icon;
+            const numericValue = parseFloat(card.value.replace(/[^0-9.]/g, ''));
+            return (
+              <div
+                key={index}
+                className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up transition-all hover:shadow-md`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className="flex items-start justify-between mb-1.5">
+                  <div>
+                    <p className={`text-[10px] md:text-xs ${textMuted} mb-0.5`}>{card.label}</p>
+                    <p className={`text-base md:text-lg font-bold ${headerText}`}>{card.value}</p>
+                  </div>
+                  <div
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `${FAO_BLUE}20` }}
+                  >
+                    <Icon className="w-3.5 h-3.5 md:w-4 md:h-4" style={{ color: FAO_BLUE }} />
+                  </div>
                 </div>
+                <div className={`flex items-center gap-1 text-[10px] ${getTrendColor(card.trend, isDarkMode)}`}>
+                  {getTrendIcon(card.trend)}
+                  <span>{card.change}</span>
+                </div>
+                <ThresholdScale value={numericValue} min={card.min} max={card.max} thresholds={card.thresholds} isDarkMode={isDarkMode} />
               </div>
-              <p className={`text-[10px] md:text-xs ${textMuted}`}>{stat.label}</p>
-              <p className={`text-base md:text-lg font-bold ${headerText}`}>{stat.value}</p>
-              <p className={`text-[10px] ${textMuted}`}>{stat.sub}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Desktop Layout with Sidebar */}
@@ -378,10 +499,10 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
           {/* Main Content */}
           <div className="lg:col-span-9 space-y-3">
             {/* Map and Charts Row */}
-            <div className="grid grid-cols-12 gap-3">
+            <div className="grid grid-cols-12 gap-3" style={{ minHeight: '520px' }}>
               {/* Map - 7 columns */}
-              <div className="col-span-7">
-                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm h-full`}>
+              <div className="col-span-7 flex">
+                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col`}>
                   <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
                     <div className="flex items-center gap-1.5">
                       <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
@@ -397,14 +518,14 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       Live
                     </span>
                   </div>
-                  <div className="relative aspect-[16/10]">
+                  <div className="relative flex-1" style={{ minHeight: '350px' }}>
                     <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
                   </div>
                 </div>
               </div>
 
               {/* Nowcast/Forecast Tabs and Temperature Trend - 5 columns */}
-              <div className="col-span-5 space-y-3">
+              <div className="col-span-5 flex flex-col gap-3">
                 {/* Tabbed Forecast Container - Matching Overview Style with White Dots */}
                 <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
                   {/* Tabs */}
@@ -470,11 +591,11 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 </div>
 
                 {/* Temperature Trend - Increased Height */}
-                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
+                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm flex-1 flex flex-col`}>
                   <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
                     <TrendingUp className="w-4 h-4" style={{ color: FAO_BLUE }} />Temperature Trend
                   </h3>
-                  <div className="h-48 relative">
+                  <div className="flex-1 relative" style={{ minHeight: '200px' }}>
                     <div className={`absolute left-0 top-0 bottom-5 w-5 flex flex-col justify-between text-[10px] ${textMuted}`}>
                       <span>35°</span><span>30°</span><span>25°</span><span>20°</span><span>15°</span>
                     </div>
@@ -544,29 +665,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
         {/* Mobile Layout */}
         <div className="block lg:hidden space-y-3">
-          {/* Map Section */}
-          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm`}>
-            <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
-              <div className="flex items-center gap-1.5">
-                <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
-              </div>
-              <span 
-                className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
-                style={{ 
-                  backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                  color: FAO_BLUE 
-                }}
-              >
-                Live
-              </span>
-            </div>
-            <div className="relative aspect-[16/10]">
-              <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
-            </div>
-          </div>
-
-          {/* Tabbed Container - Mobile */}
+          {/* Tabbed Container - Mobile (above map) */}
           <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
             <div className={`flex border-b ${borderColor}`}>
               <button 
@@ -636,6 +735,55 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Map Section with Filter Popup */}
+          <div className="relative">
+            <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm`}>
+              <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
+                <div className="flex items-center gap-1.5">
+                  <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
+                  <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
+                </div>
+                <span 
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
+                  style={{ 
+                    backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
+                    color: FAO_BLUE 
+                  }}
+                >
+                  Live
+                </span>
+              </div>
+              <div className="relative aspect-[16/10]">
+                <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+                {/* Filter button on map */}
+                <button
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-10 text-white"
+                  style={{ backgroundColor: FAO_BLUE }}
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            {/* Filter Popup */}
+            {showMobileFilters && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setShowMobileFilters(false)} />
+                <div 
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className={`text-xs font-semibold ${headerText}`}>Filters</h4>
+                    <button onClick={() => setShowMobileFilters(false)} className={`p-1 rounded-md ${isDarkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-100'}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <FilterContent />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Temperature Trend */}

@@ -188,7 +188,7 @@ function App() {
               <button
                 key={item.id}
                 onClick={() => handlePageChange(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-md font-medium transition-all ${
                   isActive
                     ? 'text-white'
                     : isDarkMode 

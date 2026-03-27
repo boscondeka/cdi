@@ -1,7 +1,7 @@
-import { 
-  Cloud, 
-  Sun, 
-  Waves, 
+import {
+  Cloud,
+  Sun,
+  Waves,
   Radio,
   AlertTriangle,
   Thermometer,
@@ -35,12 +35,12 @@ const FAO_BLUE = '#318DDE';
 
 // Stat cards with thresholds for scale display
 const statCards = [
-  { 
-    label: 'Temperature', 
-    value: '26.5°C', 
-    change: '+2.3°C', 
+  {
+    label: 'Temperature',
+    value: '26.5°C',
+    change: '+2.3°C',
     trend: 'up',
-    icon: Thermometer, 
+    icon: Thermometer,
     color: FAO_BLUE,
     min: 15,
     max: 40,
@@ -51,12 +51,12 @@ const statCards = [
       { value: 40, color: '#dc2626', label: 'Hot' },
     ]
   },
-  { 
-    label: 'Humidity', 
-    value: '68%', 
-    change: '-5%', 
+  {
+    label: 'Humidity',
+    value: '68%',
+    change: '-5%',
     trend: 'down',
-    icon: Droplets, 
+    icon: Droplets,
     color: FAO_BLUE,
     min: 0,
     max: 100,
@@ -67,12 +67,12 @@ const statCards = [
       { value: 85, color: '#dc2626', label: 'High' },
     ]
   },
-  { 
-    label: 'Wind Speed', 
-    value: '12 km/h', 
-    change: '+3 km/h', 
+  {
+    label: 'Wind Speed',
+    value: '12 km/h',
+    change: '+3 km/h',
     trend: 'up',
-    icon: Wind, 
+    icon: Wind,
     color: FAO_BLUE,
     min: 0,
     max: 60,
@@ -83,12 +83,12 @@ const statCards = [
       { value: 60, color: '#dc2626', label: 'Strong' },
     ]
   },
-  { 
-    label: 'Rainfall (24h)', 
-    value: '15.2 mm', 
-    change: '+8 mm', 
+  {
+    label: 'Rainfall (24h)',
+    value: '15.2 mm',
+    change: '+8 mm',
     trend: 'up',
-    icon: CloudRain, 
+    icon: CloudRain,
     color: FAO_BLUE,
     min: 0,
     max: 100,
@@ -190,28 +190,28 @@ const getTrendColor = (trend: string, isDarkMode: boolean) => {
 };
 
 // Threshold Scale Component
-const ThresholdScale = ({ 
-  value, 
-  min, 
-  max, 
+const ThresholdScale = ({
+  value,
+  min,
+  max,
   thresholds,
-  isDarkMode 
-}: { 
-  value: number; 
-  min: number; 
-  max: number; 
+  isDarkMode
+}: {
+  value: number;
+  min: number;
+  max: number;
   thresholds: { value: number; color: string; label: string }[];
   isDarkMode: boolean;
 }) => {
   const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
-  
+
   const getCurrentColor = () => {
     for (let i = thresholds.length - 1; i >= 0; i--) {
       if (value >= thresholds[i].value) return thresholds[i].color;
     }
     return thresholds[0]?.color || FAO_BLUE;
   };
-  
+
   return (
     <div className="mt-2">
       <div className={`relative h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
@@ -220,7 +220,7 @@ const ThresholdScale = ({
             const prevValue = i === 0 ? min : thresholds[i - 1].value;
             const width = ((Math.min(t.value, max) - prevValue) / (max - min)) * 100;
             return (
-              <div 
+              <div
                 key={i}
                 className="h-full"
                 style={{ width: `${width}%`, backgroundColor: t.color, opacity: 0.7 }}
@@ -228,9 +228,9 @@ const ThresholdScale = ({
             );
           })}
         </div>
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-white shadow-sm transition-all duration-500"
-          style={{ left: `${percentage}%`, backgroundColor: getCurrentColor(), transform: `translate(-50%, -50%)` }}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500"
+          style={{ left: `${percentage}%`, backgroundColor: '#318DDE', borderColor: 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
         />
       </div>
       <div className="flex justify-between mt-0.5">
@@ -243,19 +243,19 @@ const ThresholdScale = ({
 };
 
 // OpenStreetMap Component for Uganda with Legend
-const UgandaMap = ({ 
-  isDarkMode, 
+const UgandaMap = ({
+  isDarkMode,
   className = "",
-}: { 
-  isDarkMode: boolean; 
+}: {
+  isDarkMode: boolean;
   className?: string;
 }) => {
   const [zoom, setZoom] = useState(7);
   const [layer, setLayer] = useState<'mapnik' | 'cyclemap'>('mapnik');
   const [showLegend, setShowLegend] = useState(true);
-  
+
   const baseBBox = { minLon: 29.5, minLat: -1.5, maxLon: 35.0, maxLat: 4.5 };
-  
+
   const getBBox = () => {
     const centerLon = (baseBBox.minLon + baseBBox.maxLon) / 2;
     const centerLat = (baseBBox.minLat + baseBBox.maxLat) / 2;
@@ -263,16 +263,16 @@ const UgandaMap = ({
     const spanLat = (baseBBox.maxLat - baseBBox.minLat) / zoom * 7;
     return `${centerLon - spanLon / 2}%2C${centerLat - spanLat / 2}%2C${centerLon + spanLon / 2}%2C${centerLat + spanLat / 2}`;
   };
-  
+
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${getBBox()}&layer=${layer}`;
-  
+
   const legendItems = [
     { label: 'Weather', color: FAO_BLUE },
     { label: 'Drought', color: '#f97316' },
     { label: 'Flood', color: '#06b6d4' },
     { label: 'Stations', color: '#22c55e' },
   ];
-  
+
   return (
     <div className={`relative overflow-hidden rounded-xl md:rounded-2xl ${className}`}>
       <iframe
@@ -281,38 +281,38 @@ const UgandaMap = ({
         title="OpenStreetMap Uganda"
         loading="lazy"
       />
-      
+
       {/* Map Controls */}
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-        <button 
+        <button
           onClick={() => setZoom(z => Math.min(z + 1, 12))}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
-        <button 
+        <button
           onClick={() => setZoom(z => Math.max(z - 1, 5))}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
         >
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
       </div>
-      
+
       <div className="absolute bottom-2 right-2">
-        <button 
+        <button
           onClick={() => setLayer(l => l === 'mapnik' ? 'cyclemap' : 'mapnik')}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
         >
           <Layers className="w-3.5 h-3.5" />
         </button>
       </div>
-      
+
       {/* Map Legend */}
       {showLegend && (
         <div className={`absolute bottom-2 left-2 rounded-lg p-2 shadow-sm ${isDarkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
           <div className="flex items-center gap-2 mb-1">
             <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Legend</span>
-            <button 
+            <button
               onClick={() => setShowLegend(false)}
               className={`text-[10px] ${isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
             >
@@ -329,13 +329,13 @@ const UgandaMap = ({
           </div>
         </div>
       )}
-      
+
       <div className="absolute top-2 left-2">
-        <span 
+        <span
           className={`px-2 py-0.5 rounded-md text-[10px] font-medium shadow-sm backdrop-blur-sm`}
-          style={{ 
+          style={{
             backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-            color: FAO_BLUE 
+            color: FAO_BLUE
           }}
         >
           Uganda
@@ -346,17 +346,17 @@ const UgandaMap = ({
 };
 
 // Map Filters Component
-const MapFilters = ({ 
-  isDarkMode, 
+const MapFilters = ({
+  isDarkMode,
   selectedModule,
-  onModuleChange 
-}: { 
-  isDarkMode: boolean; 
+  onModuleChange
+}: {
+  isDarkMode: boolean;
   selectedModule: string;
   onModuleChange: (module: string) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const modules = [
     { id: 'all', label: 'All Modules', icon: Filter, color: FAO_BLUE },
     { id: 'weather', label: 'Weather Forecast', icon: Cloud, color: FAO_BLUE },
@@ -364,21 +364,20 @@ const MapFilters = ({
     { id: 'flood', label: 'Flood Monitor', icon: Waves, color: FAO_BLUE },
     { id: 'stations', label: 'Weather Stations', icon: Radio, color: FAO_BLUE },
   ];
-  
+
   const selected = modules.find(m => m.id === selectedModule) || modules[0];
   const SelectedIcon = selected.icon;
-  
+
   return (
     <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80 border-slate-700/30' : 'bg-white/90 border-slate-200'} border shadow-sm`}>
       <label className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mb-1.5 block`}>Select Module</label>
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all ${
-            isDarkMode 
-              ? 'bg-slate-700/50 border-slate-600 hover:border-slate-500' 
+          className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all ${isDarkMode
+              ? 'bg-slate-700/50 border-slate-600 hover:border-slate-500'
               : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: `${selected.color}20` }}>
@@ -388,7 +387,7 @@ const MapFilters = ({
           </div>
           <ChevronDown className={`w-4 h-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
-        
+
         {isOpen && (
           <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-20 ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
             {modules.map((module) => {
@@ -397,11 +396,10 @@ const MapFilters = ({
                 <button
                   key={module.id}
                   onClick={() => { onModuleChange(module.id); setIsOpen(false); }}
-                  className={`w-full flex items-center gap-2 p-2.5 text-left transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                    selectedModule === module.id 
-                      ? (isDarkMode ? 'bg-slate-700' : 'bg-blue-50') 
+                  className={`w-full flex items-center gap-2 p-2.5 text-left transition-colors first:rounded-t-lg last:rounded-b-lg ${selectedModule === module.id
+                      ? (isDarkMode ? 'bg-slate-700' : 'bg-blue-50')
                       : (isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50')
-                  }`}
+                    }`}
                 >
                   <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: `${module.color}20` }}>
                     <Icon className="w-3.5 h-3.5" style={{ color: module.color }} />
@@ -421,13 +419,13 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
   const [selectedModule, setSelectedModule] = useState('all');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Simulate loading
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
-  
+
   const cardBg = isDarkMode ? 'bg-slate-800/85' : 'bg-white/95';
   const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
   const textSecondary = isDarkMode ? 'text-slate-300' : 'text-slate-600';
@@ -438,7 +436,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" 
+          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
             style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}>
           </div>
           <p className={textMuted}>Loading Dashboard...</p>
@@ -452,16 +450,16 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
       {/* Animated Background - Only in Dark Mode */}
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-15 animate-pulse" 
+          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-15 animate-pulse"
             style={{ backgroundColor: FAO_BLUE, animationDuration: '4s' }} />
-          <div className="absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse bg-blue-400" 
+          <div className="absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse bg-blue-400"
             style={{ animationDuration: '6s', animationDelay: '1s' }} />
         </div>
       )}
 
       {/* Mobile Filter Button - Next to Map */}
-      <button 
-        onClick={() => setShowMobileFilters(true)} 
+      <button
+        onClick={() => setShowMobileFilters(true)}
         className="lg:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg shadow-md text-white"
         style={{ backgroundColor: FAO_BLUE }}
       >
@@ -498,24 +496,24 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
             <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Kampala, Central Region</span>
-            <span 
+            <span
               className={`text-[10px] px-1.5 py-0.5 rounded-full`}
-              style={{ 
+              style={{
                 backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                color: FAO_BLUE 
+                color: FAO_BLUE
               }}
             >
               Live
             </span>
           </div>
-          
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
             {statCards.map((card, index) => {
               const Icon = card.icon;
               const numericValue = parseFloat(card.value.replace(/[^0-9.]/g, ''));
               return (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up transition-all hover:shadow-md`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
@@ -524,7 +522,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                       <p className={`text-[10px] md:text-xs ${textMuted} mb-0.5`}>{card.label}</p>
                       <p className={`text-base md:text-lg font-bold ${headerText}`}>{card.value}</p>
                     </div>
-                    <div 
+                    <div
                       className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: `${FAO_BLUE}20` }}
                     >
@@ -551,11 +549,11 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                 <MapIcon className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
                 <h2 className={`text-xs font-semibold ${headerText}`}>Uganda Map</h2>
               </div>
-              <span 
+              <span
                 className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
-                style={{ 
+                style={{
                   backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                  color: FAO_BLUE 
+                  color: FAO_BLUE
                 }}
               >
                 Live
@@ -574,18 +572,18 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
         <div className="hidden lg:grid lg:grid-cols-12 gap-4">
           {/* Left Sidebar - Filters starting same line as map */}
           <div className="lg:col-span-3 flex flex-col">
-            <div 
+            <div
               className="flex-1 rounded-xl p-3 shadow-sm flex flex-col"
-              style={{ 
-                background: isDarkMode 
-                  ? `linear-gradient(180deg, ${FAO_BLUE}30 0%, ${FAO_BLUE}15 100%)` 
+              style={{
+                background: isDarkMode
+                  ? `linear-gradient(180deg, ${FAO_BLUE}30 0%, ${FAO_BLUE}15 100%)`
                   : `linear-gradient(180deg, ${FAO_BLUE}15 0%, ${FAO_BLUE}05 100%)`,
                 border: `1px solid ${isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}15`}`,
               }}
             >
-              <MapFilters isDarkMode={isDarkMode} selectedModule={selectedModule} onModuleChange={setSelectedModule} />
-              
-              <div className={`mt-3 p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/60' : 'bg-white/70'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
+
+
+              <div className={`mt-3 mb-9 p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/60' : 'bg-white/70'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
                 <h3 className={`text-xs font-semibold mb-2 ${headerText}`}>Quick Stats</h3>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -603,11 +601,16 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                 </div>
               </div>
 
+              <div className='mt-9  '>
+                <MapFilters isDarkMode={isDarkMode} selectedModule={selectedModule} onModuleChange={setSelectedModule} />
+
+              </div>
+
               {/* Illustration at bottom */}
               <div className="mt-auto pt-3">
-                <div 
+                <div
                   className="rounded-xl overflow-hidden"
-                  style={{ 
+                  style={{
                     backgroundImage: 'url(/climate-illustration.png)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -624,7 +627,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: `${FAO_BLUE}20` }}
                   >
@@ -632,14 +635,14 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                   </div>
                   <h2 className={`text-base font-semibold ${headerText}`}>Monitoring Modules</h2>
                 </div>
-                <button 
+                <button
                   className="flex items-center gap-1 text-xs transition-colors hover:opacity-80"
                   style={{ color: FAO_BLUE }}
                 >
                   View All <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-4 gap-3">
                 {monitoringModules.map((module) => {
                   const Icon = module.icon;
@@ -648,7 +651,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                       key={module.id}
                       onClick={() => onNavigate(module.id)}
                       className="relative overflow-hidden rounded-xl p-4 text-left shadow-sm transition-all hover:shadow-md group"
-                      style={{ 
+                      style={{
                         backgroundImage: `linear-gradient(to right, ${isDarkMode ? 'rgba(30, 41, 59, 0.97)' : 'rgba(255, 255, 255, 0.97)'}, ${isDarkMode ? 'rgba(30, 41, 59, 0.88)' : 'rgba(255, 255, 255, 0.88)'}), url(${module.bgImage})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -657,7 +660,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                     >
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-2">
-                          <div 
+                          <div
                             className="w-12 h-12 rounded-xl flex items-center justify-center"
                             style={{ backgroundColor: `${FAO_BLUE}25` }}
                           >
@@ -691,11 +694,11 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                     <div className="flex items-center gap-2">
                       <span className={`text-[11px] ${textMuted}`}>Lat: 1.3733° N</span>
                       <span className={`text-[11px] ${textMuted}`}>Long: 32.2903° E</span>
-                      <span 
+                      <span
                         className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
-                        style={{ 
+                        style={{
                           backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                          color: FAO_BLUE 
+                          color: FAO_BLUE
                         }}
                       >
                         Live
