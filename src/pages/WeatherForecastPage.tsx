@@ -7,7 +7,6 @@ import {
   Wind,
   Droplets,
   Thermometer,
-  MapPin,
   Download,
   Calendar,
   Clock,
@@ -24,6 +23,8 @@ import {
 interface WeatherForecastPageProps {
   isDarkMode?: boolean;
 }
+
+const FAO_BLUE = '#318DDE';
 
 const hourlyForecast = [
   { time: '0:00', temp: 23, rain: 2, icon: 'rain' },
@@ -67,10 +68,11 @@ const getWeatherIcon = (type: string, className = "w-8 h-8") => {
   }
 };
 
-// OpenStreetMap Component
+// OpenStreetMap Component with Legend
 const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; className?: string }) => {
   const [zoom, setZoom] = useState(7);
   const [layer, setLayer] = useState<'mapnik' | 'cyclemap'>('mapnik');
+  const [showLegend, setShowLegend] = useState(true);
   
   const baseBBox = { minLon: 29.5, minLat: -1.5, maxLon: 35.0, maxLat: 4.5 };
   
@@ -83,6 +85,13 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
   };
   
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${getBBox()}&layer=${layer}`;
+  
+  const legendItems = [
+    { label: 'Sunny', color: '#fbbf24' },
+    { label: 'Cloudy', color: '#94a3b8' },
+    { label: 'Rainy', color: '#3b82f6' },
+    { label: 'Storm', color: '#a855f7' },
+  ];
   
   return (
     <div className={`relative overflow-hidden rounded-lg md:rounded-xl ${className}`}>
@@ -114,8 +123,40 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
           <Layers className="w-3 h-3" />
         </button>
       </div>
+      
+      {/* Map Legend */}
+      {showLegend && (
+        <div className={`absolute bottom-2 left-2 rounded-lg p-2 shadow-sm ${isDarkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Weather</span>
+            <button 
+              onClick={() => setShowLegend(false)}
+              className={`text-[10px] ${isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="space-y-1">
+            {legendItems.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className={`text-[9px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       <div className="absolute top-2 left-2">
-        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shadow-sm ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'}`}>Uganda</span>
+        <span 
+          className={`px-1.5 py-0.5 rounded text-[10px] font-medium shadow-sm`}
+          style={{ 
+            backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
+            color: FAO_BLUE 
+          }}
+        >
+          Uganda
+        </span>
       </div>
     </div>
   );
@@ -127,10 +168,13 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
   const [selectedParameter, setSelectedParameter] = useState('temperature');
   const [animationKey, setAnimationKey] = useState(0);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     setAnimationKey(prev => prev + 1);
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
   }, [activeTab]);
 
   const cardBg = isDarkMode ? 'bg-slate-800/85' : 'bg-white/95';
@@ -178,7 +222,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
       <div className={`pt-3 border-t ${borderColor}`}>
         <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>Quick Stats</h4>
         <div className="space-y-1.5">
-          <div className="flex justify-between text-xs"><span className={textMuted}>Avg Temp</span><span className="text-orange-500 font-medium">24.5°C</span></div>
+          <div className="flex justify-between text-xs"><span className={textMuted}>Avg Temp</span><span className="font-medium" style={{ color: FAO_BLUE }}>24.5°C</span></div>
           <div className="flex justify-between text-xs"><span className={textMuted}>Max Temp</span><span className="text-red-500 font-medium">31.2°C</span></div>
           <div className="flex justify-between text-xs"><span className={textMuted}>Min Temp</span><span className="text-blue-500 font-medium">17.8°C</span></div>
           <div className="flex justify-between text-xs"><span className={textMuted}>Total Rain</span><span className="text-cyan-500 font-medium">125mm</span></div>
@@ -186,6 +230,19 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
       </div>
     </div>
   );
+
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" 
+            style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}>
+          </div>
+          <p className={textMuted}>Loading Weather Forecast...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 min-h-screen">
@@ -200,9 +257,14 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
         </div>
       )}
 
-      {/* Mobile Filter Button */}
-      <button onClick={() => setShowMobileFilters(true)} className={`lg:hidden fixed bottom-4 right-4 z-30 w-10 h-10 rounded-full flex items-center justify-center shadow-md ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
+      {/* Mobile Filter Button - Next to Map */}
+      <button 
+        onClick={() => setShowMobileFilters(true)} 
+        className="lg:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg shadow-md text-white"
+        style={{ backgroundColor: FAO_BLUE }}
+      >
         <Filter className="w-4 h-4" />
+        <span className="text-xs">Open Filter</span>
       </button>
 
       {/* Mobile Filters Drawer */}
@@ -212,7 +274,9 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
           <div className={`absolute right-0 top-0 bottom-0 w-72 p-4 overflow-y-auto ${isDarkMode ? 'bg-slate-900' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className={`text-base font-semibold ${headerText}`}>Filters</h3>
-              <button onClick={() => setShowMobileFilters(false)} className={`p-1.5 rounded-lg ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}><X className="w-4 h-4" /></button>
+              <button onClick={() => setShowMobileFilters(false)} className={`p-1.5 rounded-lg ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}>
+                <X className="w-4 h-4" />
+              </button>
             </div>
             <FilterContent />
           </div>
@@ -220,21 +284,35 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
       )}
 
       <div className="relative z-10 max-w-[1600px] mx-auto">
-        {/* Compact Header Banner */}
-        <div className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up" style={{ background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.9) 0%, rgba(59, 130, 246, 0.6) 100%)' }}>
+        {/* Compact Header Banner - No alert buttons */}
+        <div 
+          className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up"
+          style={{ background: `linear-gradient(135deg, ${FAO_BLUE}e6 0%, ${FAO_BLUE}99 100%)` }}
+        >
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
                 <h1 className="text-lg md:text-xl font-bold text-white">Weather Forecast</h1>
                 <p className="text-slate-200 text-xs md:text-sm">48-hour nowcasting & 20-day forecasts</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="flex items-center gap-1 text-[10px] bg-blue-500/30 px-1.5 py-0.5 rounded-md text-blue-200"><Clock className="w-3 h-3" />Updated 5 min ago</span>
-                  <span className="flex items-center gap-1 text-[10px] bg-green-500/30 px-1.5 py-0.5 rounded-md text-green-200"><Navigation className="w-3 h-3" />87% Accuracy</span>
+                  <span 
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                  >
+                    <Clock className="w-3 h-3" />Updated 5 min ago
+                  </span>
+                  <span 
+                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                  >
+                    <Navigation className="w-3 h-3" />87% Accuracy
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <button className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 rounded-lg text-xs font-medium text-white transition-colors"><Download className="w-3 h-3" /><span className="hidden sm:inline">Export</span></button>
-                <button className="flex items-center gap-1 px-2 py-1.5 bg-blue-500 hover:bg-blue-600 rounded-lg text-xs font-medium text-white transition-colors"><MapPin className="w-3 h-3" /><span className="hidden sm:inline">Map</span></button>
+                <button className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 rounded-lg text-xs font-medium text-white transition-colors">
+                  <Download className="w-3 h-3" /><span className="hidden sm:inline">Export</span>
+                </button>
               </div>
             </div>
           </div>
@@ -243,15 +321,18 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
           {[
-            { label: 'Temperature', value: '26.5°C', sub: 'Feels like 28°C', icon: Thermometer, color: 'orange' },
-            { label: 'Humidity', value: '68%', sub: 'Dew point 19°C', icon: Droplets, color: 'blue' },
-            { label: 'Wind', value: '12 km/h', sub: 'NE Direction', icon: Wind, color: 'green' },
-            { label: 'Rainfall (24h)', value: '15.2 mm', sub: 'Light rain', icon: CloudRain, color: 'purple' },
+            { label: 'Temperature', value: '26.5°C', sub: 'Feels like 28°C', icon: Thermometer },
+            { label: 'Humidity', value: '68%', sub: 'Dew point 19°C', icon: Droplets },
+            { label: 'Wind', value: '12 km/h', sub: 'NE Direction', icon: Wind },
+            { label: 'Rainfall (24h)', value: '15.2 mm', sub: 'Light rain', icon: CloudRain },
           ].map((stat, index) => (
             <div key={index} className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up`} style={{ animationDelay: `${index * 0.1}s` }}>
               <div className="flex items-center justify-between mb-1.5">
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: stat.color === 'orange' ? 'rgba(249, 115, 22, 0.2)' : stat.color === 'blue' ? 'rgba(59, 130, 246, 0.2)' : stat.color === 'green' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(168, 85, 247, 0.2)' }}>
-                  <stat.icon className="w-3.5 h-3.5 md:w-4 md:h-4" style={{ color: stat.color === 'orange' ? '#f97316' : stat.color === 'blue' ? '#3b82f6' : stat.color === 'green' ? '#22c55e' : '#a855f7' }} />
+                <div 
+                  className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${FAO_BLUE}20` }}
+                >
+                  <stat.icon className="w-3.5 h-3.5 md:w-4 md:h-4" style={{ color: FAO_BLUE }} />
                 </div>
               </div>
               <p className={`text-[10px] md:text-xs ${textMuted}`}>{stat.label}</p>
@@ -263,15 +344,15 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
         {/* Desktop Layout with Sidebar */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-4">
-          {/* Left Sidebar - Filter extending to footer */}
+          {/* Left Sidebar - Filter next to map */}
           <div className="lg:col-span-3 flex flex-col">
             <div 
               className="flex-1 rounded-xl p-3 shadow-sm flex flex-col"
               style={{ 
                 background: isDarkMode 
-                  ? 'linear-gradient(180deg, rgba(30, 58, 138, 0.3) 0%, rgba(30, 58, 138, 0.15) 100%)' 
-                  : 'linear-gradient(180deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%)',
-                border: `1px solid ${isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.15)'}`,
+                  ? `linear-gradient(180deg, ${FAO_BLUE}30 0%, ${FAO_BLUE}15 100%)` 
+                  : `linear-gradient(180deg, ${FAO_BLUE}15 0%, ${FAO_BLUE}05 100%)`,
+                border: `1px solid ${isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}15`}`,
               }}
             >
               <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
@@ -303,10 +384,18 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm h-full`}>
                   <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
                     <div className="flex items-center gap-1.5">
-                      <MapIcon className="w-4 h-4 text-blue-500" />
+                      <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
                       <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
                     </div>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'}`}>Live</span>
+                    <span 
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
+                      style={{ 
+                        backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
+                        color: FAO_BLUE 
+                      }}
+                    >
+                      Live
+                    </span>
                   </div>
                   <div className="relative aspect-[16/10]">
                     <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
@@ -316,20 +405,32 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
               {/* Nowcast/Forecast Tabs and Temperature Trend - 5 columns */}
               <div className="col-span-5 space-y-3">
-                {/* Tabbed Forecast Container */}
+                {/* Tabbed Forecast Container - Matching Overview Style with White Dots */}
                 <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
                   {/* Tabs */}
                   <div className={`flex border-b ${borderColor}`}>
                     <button 
                       onClick={() => setActiveTab('nowcast')} 
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-all ${activeTab === 'nowcast' ? 'bg-blue-500 text-white' : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-blue-500/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-100'}`}`}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
+                        activeTab === 'nowcast' 
+                          ? 'text-white' 
+                          : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600'}`
+                      }`}
+                      style={{ backgroundColor: activeTab === 'nowcast' ? FAO_BLUE : undefined }}
                     >
+                      <span className={`w-2 h-2 rounded-full ${activeTab === 'nowcast' ? 'bg-white' : 'bg-slate-400'}`} />
                       <Clock className="w-3.5 h-3.5" />48-Hour Nowcast
                     </button>
                     <button 
                       onClick={() => setActiveTab('forecast')} 
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-all ${activeTab === 'forecast' ? 'bg-blue-500 text-white' : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-blue-500/50' : 'bg-slate-100 text-slate-600 hover:bg-blue-100'}`}`}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
+                        activeTab === 'forecast' 
+                          ? 'text-white' 
+                          : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600'}`
+                      }`}
+                      style={{ backgroundColor: activeTab === 'forecast' ? FAO_BLUE : undefined }}
                     >
+                      <span className={`w-2 h-2 rounded-full ${activeTab === 'forecast' ? 'bg-white' : 'bg-slate-400'}`} />
                       <Calendar className="w-3.5 h-3.5" />20-Day Forecast
                     </button>
                   </div>
@@ -341,11 +442,11 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                         <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>Hourly Forecast</h4>
                         <div className="flex gap-2 overflow-x-auto pb-1">
                           {hourlyForecast.slice(0, 8).map((hour, idx) => (
-                            <div key={idx} className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? 'bg-blue-500/20 border border-blue-500/30' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                            <div key={idx} className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? 'border' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`} style={{ borderColor: idx === 0 ? FAO_BLUE : undefined, backgroundColor: idx === 0 ? `${FAO_BLUE}20` : undefined }}>
                               <p className={`text-[10px] ${textMuted} mb-1`}>{hour.time}</p>
                               {getWeatherIcon(hour.icon, "w-5 h-5 mx-auto")}
                               <p className={`text-sm font-bold mt-1 ${headerText}`}>{hour.temp}°</p>
-                              <p className="text-[10px] text-blue-400">{hour.rain}mm</p>
+                              <p className="text-[10px]" style={{ color: FAO_BLUE }}>{hour.rain}mm</p>
                             </div>
                           ))}
                         </div>
@@ -370,8 +471,10 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
                 {/* Temperature Trend - Increased Height */}
                 <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
-                  <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><TrendingUp className="w-4 h-4 text-orange-400" />Temperature Trend</h3>
-                  <div className="h-40 relative">
+                  <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
+                    <TrendingUp className="w-4 h-4" style={{ color: FAO_BLUE }} />Temperature Trend
+                  </h3>
+                  <div className="h-48 relative">
                     <div className={`absolute left-0 top-0 bottom-5 w-5 flex flex-col justify-between text-[10px] ${textMuted}`}>
                       <span>35°</span><span>30°</span><span>25°</span><span>20°</span><span>15°</span>
                     </div>
@@ -382,14 +485,14 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
-                            <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                            <stop offset="0%" stopColor={FAO_BLUE} stopOpacity="0.3" />
+                            <stop offset="100%" stopColor={FAO_BLUE} stopOpacity="0" />
                           </linearGradient>
                         </defs>
                         <path d={`M0,${150 - ((hourlyForecast[0].temp - 15) / 20) * 150} ${hourlyForecast.map((h, i) => `L${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} L500,150 L0,150 Z`} fill="url(#tempGradient)" />
-                        <polyline fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} />
+                        <polyline fill="none" stroke={FAO_BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} />
                         {hourlyForecast.map((h, i) => (
-                          <circle key={i} cx={(i / (hourlyForecast.length - 1)) * 500} cy={150 - ((h.temp - 15) / 20) * 150} r="3" fill="#f97316" />
+                          <circle key={i} cx={(i / (hourlyForecast.length - 1)) * 500} cy={150 - ((h.temp - 15) / 20) * 150} r="3" fill={FAO_BLUE} />
                         ))}
                       </svg>
                       <div className={`flex justify-between text-[10px] ${textMuted} mt-1`}>
@@ -401,34 +504,38 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
               </div>
             </div>
 
-            {/* Full 20-Day Forecast (when forecast tab is active) */}
+            {/* Full 20-Day Forecast (when forecast tab is active) - With Scrollbar */}
             {activeTab === 'forecast' && (
               <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-3 shadow-sm animate-fade-in-up`}>
-                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-1.5 ${headerText}`}><Calendar className="w-4 h-4 text-blue-400" />Complete 20-Day Forecast</h3>
-                <div className="grid grid-cols-10 gap-2">
-                  {dailyForecast.map((day, idx) => (
-                    <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
-                      <p className={`text-xs ${textMuted}`}>{day.day}</p>
-                      <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
-                      {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
-                        <span className={`text-xs ${textMuted}`}>{day.low}°</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px] text-blue-400">
-                        <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
-                      </div>
-                      <div className="mt-1">
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className={textMuted}>Conf</span>
-                          <span className="text-green-500">{day.confidence}%</span>
+                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-1.5 ${headerText}`}>
+                  <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />Complete 20-Day Forecast
+                </h3>
+                <div className="overflow-x-auto pb-2">
+                  <div className="grid grid-cols-10 gap-2 min-w-[800px]">
+                    {dailyForecast.map((day, idx) => (
+                      <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                        <p className={`text-xs ${textMuted}`}>{day.day}</p>
+                        <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
+                        {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
+                          <span className={`text-xs ${textMuted}`}>{day.low}°</span>
                         </div>
-                        <div className={`h-1 rounded-full mt-0.5 overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-slate-200'}`}>
-                          <div className="h-full bg-green-500 rounded-full" style={{ width: `${day.confidence}%` }} />
+                        <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px]" style={{ color: FAO_BLUE }}>
+                          <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
+                        </div>
+                        <div className="mt-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className={textMuted}>Conf</span>
+                            <span style={{ color: FAO_BLUE }}>{day.confidence}%</span>
+                          </div>
+                          <div className={`h-1 rounded-full mt-0.5 overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-slate-200'}`}>
+                            <div className="h-full rounded-full" style={{ width: `${day.confidence}%`, backgroundColor: FAO_BLUE }} />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -437,72 +544,105 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
         {/* Mobile Layout */}
         <div className="block lg:hidden space-y-3">
-          {/* Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            <button onClick={() => setActiveTab('nowcast')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'nowcast' ? 'bg-blue-500 text-white shadow-sm' : `${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'} hover:text-white hover:bg-blue-500/80`}`}>
-              <Clock className="w-3.5 h-3.5" />48-Hour Nowcast
-            </button>
-            <button onClick={() => setActiveTab('forecast')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${activeTab === 'forecast' ? 'bg-blue-500 text-white shadow-sm' : `${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-600'} hover:text-white hover:bg-blue-500/80`}`}>
-              <Calendar className="w-3.5 h-3.5" />20-Day Forecast
-            </button>
-          </div>
-
           {/* Map Section */}
           <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm`}>
             <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
               <div className="flex items-center gap-1.5">
-                <MapIcon className="w-4 h-4 text-blue-500" />
+                <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
                 <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
               </div>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'}`}>Live</span>
+              <span 
+                className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
+                style={{ 
+                  backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
+                  color: FAO_BLUE 
+                }}
+              >
+                Live
+              </span>
             </div>
             <div className="relative aspect-[16/10]">
               <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
-            {activeTab === 'nowcast' ? (
-              <div>
-                <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><Clock className="w-4 h-4 text-blue-400" />Hourly Forecast</h3>
-                <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-                  {hourlyForecast.map((hour, idx) => (
-                    <div key={idx} className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? 'bg-blue-500/20 border border-blue-500/30' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
-                      <p className={`text-[10px] ${textMuted} mb-1`}>{hour.time}</p>
-                      {getWeatherIcon(hour.icon, "w-5 h-5 mx-auto")}
-                      <p className={`text-sm font-bold mt-1 ${headerText}`}>{hour.temp}°</p>
-                      <p className="text-[10px] text-blue-400">{hour.rain}mm</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><Calendar className="w-4 h-4 text-blue-400" />20-Day Forecast</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {dailyForecast.map((day, idx) => (
-                    <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
-                      <p className={`text-xs ${textMuted}`}>{day.day}</p>
-                      <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
-                      {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
-                        <span className={`text-xs ${textMuted}`}>{day.low}°</span>
+          {/* Tabbed Container - Mobile */}
+          <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
+            <div className={`flex border-b ${borderColor}`}>
+              <button 
+                onClick={() => setActiveTab('nowcast')} 
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
+                  activeTab === 'nowcast' 
+                    ? 'text-white' 
+                    : `${isDarkMode ? 'bg-slate-800/50 text-slate-400' : 'bg-slate-100 text-slate-600'}`
+                }`}
+                style={{ backgroundColor: activeTab === 'nowcast' ? FAO_BLUE : undefined }}
+              >
+                <span className={`w-2 h-2 rounded-full ${activeTab === 'nowcast' ? 'bg-white' : 'bg-slate-400'}`} />
+                <Clock className="w-3.5 h-3.5" />Nowcast
+              </button>
+              <button 
+                onClick={() => setActiveTab('forecast')} 
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
+                  activeTab === 'forecast' 
+                    ? 'text-white' 
+                    : `${isDarkMode ? 'bg-slate-800/50 text-slate-400' : 'bg-slate-100 text-slate-600'}`
+                }`}
+                style={{ backgroundColor: activeTab === 'forecast' ? FAO_BLUE : undefined }}
+              >
+                <span className={`w-2 h-2 rounded-full ${activeTab === 'forecast' ? 'bg-white' : 'bg-slate-400'}`} />
+                <Calendar className="w-3.5 h-3.5" />Forecast
+              </button>
+            </div>
+            
+            <div className="p-3">
+              {activeTab === 'nowcast' ? (
+                <div>
+                  <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
+                    <Clock className="w-4 h-4" style={{ color: FAO_BLUE }} />Hourly Forecast
+                  </h3>
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                    {hourlyForecast.map((hour, idx) => (
+                      <div key={idx} className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? 'border' : isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`} style={{ borderColor: idx === 0 ? FAO_BLUE : undefined, backgroundColor: idx === 0 ? `${FAO_BLUE}20` : undefined }}>
+                        <p className={`text-[10px] ${textMuted} mb-1`}>{hour.time}</p>
+                        {getWeatherIcon(hour.icon, "w-5 h-5 mx-auto")}
+                        <p className={`text-sm font-bold mt-1 ${headerText}`}>{hour.temp}°</p>
+                        <p className="text-[10px]" style={{ color: FAO_BLUE }}>{hour.rain}mm</p>
                       </div>
-                      <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px] text-blue-400">
-                        <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div>
+                  <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
+                    <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />20-Day Forecast
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {dailyForecast.map((day, idx) => (
+                      <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                        <p className={`text-xs ${textMuted}`}>{day.day}</p>
+                        <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
+                        {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
+                          <span className={`text-xs ${textMuted}`}>{day.low}°</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px]" style={{ color: FAO_BLUE }}>
+                          <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Temperature Trend */}
           <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}>
-            <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}><TrendingUp className="w-4 h-4 text-orange-400" />Temperature Trend</h3>
+            <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
+              <TrendingUp className="w-4 h-4" style={{ color: FAO_BLUE }} />Temperature Trend
+            </h3>
             <div className="h-36 relative">
               <div className={`absolute left-0 top-0 bottom-5 w-5 flex flex-col justify-between text-[10px] ${textMuted}`}>
                 <span>35°</span><span>30°</span><span>25°</span><span>20°</span><span>15°</span>
@@ -514,14 +654,14 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#f97316" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+                      <stop offset="0%" stopColor={FAO_BLUE} stopOpacity="0.3" />
+                      <stop offset="100%" stopColor={FAO_BLUE} stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   <path d={`M0,${150 - ((hourlyForecast[0].temp - 15) / 20) * 150} ${hourlyForecast.map((h, i) => `L${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} L500,150 L0,150 Z`} fill="url(#tempGradient)" />
-                  <polyline fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} />
+                  <polyline fill="none" stroke={FAO_BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={hourlyForecast.map((h, i) => `${(i / (hourlyForecast.length - 1)) * 500},${150 - ((h.temp - 15) / 20) * 150}`).join(' ')} />
                   {hourlyForecast.map((h, i) => (
-                    <circle key={i} cx={(i / (hourlyForecast.length - 1)) * 500} cy={150 - ((h.temp - 15) / 20) * 150} r="3" fill="#f97316" />
+                    <circle key={i} cx={(i / (hourlyForecast.length - 1)) * 500} cy={150 - ((h.temp - 15) / 20) * 150} r="3" fill={FAO_BLUE} />
                   ))}
                 </svg>
                 <div className={`flex justify-between text-[10px] ${textMuted} mt-1`}>
@@ -537,7 +677,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
           <div className={`flex flex-col md:flex-row items-center justify-between text-xs ${textMuted} gap-1`}>
             <p>© 2025 FAO Uganda. All Rights Reserved.</p>
             <span className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: FAO_BLUE }}></div>
               System Operational
             </span>
           </div>
@@ -546,6 +686,8 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
       <style>{`
         @keyframes drift { from { transform: translateX(-100%); } to { transform: translateX(100vw); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
       `}</style>
     </div>
   );
