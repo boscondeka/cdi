@@ -126,13 +126,6 @@ const ThresholdScale = ({
 }) => {
   const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
 
-  const getCurrentColor = () => {
-    for (let i = thresholds.length - 1; i >= 0; i--) {
-      if (value >= thresholds[i].value) return thresholds[i].color;
-    }
-    return thresholds[0]?.color || FAO_BLUE;
-  };
-
   return (
     <div className="mt-2">
       <div className={`relative h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
@@ -150,8 +143,8 @@ const ThresholdScale = ({
           })}
         </div>
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500"
-          style={{ left: `${percentage}%`, backgroundColor: '#318DDE', borderColor: 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
+          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500 bg-black"
+          style={{ left: `${percentage}%`, borderColor: isDarkMode ? '#334155' : 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
         />
       </div>
       <div className="flex justify-between mt-0.5">
@@ -190,9 +183,6 @@ const dailyForecast = [
   { day: 'Thu', date: 'Mar 26', high: 31, low: 22, rain: 23, icon: 'rain', confidence: 95 },
   { day: 'Fri', date: 'Mar 27', high: 29, low: 21, rain: 18, icon: 'rain', confidence: 91 },
   { day: 'Sat', date: 'Mar 28', high: 28, low: 20, rain: 12, icon: 'cloud', confidence: 88 },
-  { day: 'Sun', date: 'Mar 29', high: 30, low: 21, rain: 8, icon: 'sun', confidence: 90 },
-  { day: 'Mon', date: 'Mar 30', high: 31, low: 22, rain: 5, icon: 'cloud', confidence: 86 },
-  { day: 'Tue', date: 'Mar 31', high: 32, low: 23, rain: 2, icon: 'sun', confidence: 89 },
 ];
 
 const getWeatherIcon = (type: string, className = "w-8 h-8") => {
@@ -405,7 +395,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
                 <h1 className="text-lg md:text-xl font-bold text-white">Weather Forecast</h1>
-                <p className="text-slate-200 text-xs md:text-sm">48-hour nowcasting & 20-day forecasts</p>
+                <p className="text-slate-200 text-xs md:text-sm">48-hour nowcasting & 7-day forecasts</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   <span 
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
@@ -518,8 +508,25 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       Live
                     </span>
                   </div>
-                  <div className="relative flex-1" style={{ minHeight: '350px' }}>
-                    <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+                  <div className="relative flex-1 flex flex-col" style={{ minHeight: '350px' }}>
+                    <div className="flex-1 relative">
+                      <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full rounded-none" />
+                    </div>
+                    {/* Time Slider */}
+                    <div className={`px-4 py-3 border-t ${borderColor} flex items-center gap-4 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
+                      <span className={`text-xs font-medium ${textMuted}`}>2001</span>
+                      <input 
+                        type="range" 
+                        min="2001" 
+                        max={new Date().getFullYear()} 
+                        defaultValue={new Date().getFullYear()}
+                        className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
+                      />
+                      <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                        {new Date().getFullYear()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -552,7 +559,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       style={{ backgroundColor: activeTab === 'forecast' ? FAO_BLUE : undefined }}
                     >
                       <span className={`w-2 h-2 rounded-full ${activeTab === 'forecast' ? 'bg-white' : 'bg-slate-400'}`} />
-                      <Calendar className="w-3.5 h-3.5" />20-Day Forecast
+                      <Calendar className="w-3.5 h-3.5" />7-Day Forecast
                     </button>
                   </div>
                   
@@ -574,7 +581,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       </div>
                     ) : (
                       <div>
-                        <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>20-Day Forecast</h4>
+                        <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>7-Day Forecast</h4>
                         <div className="grid grid-cols-5 gap-1.5">
                           {dailyForecast.slice(0, 5).map((day, idx) => (
                             <div key={idx} className={`p-1.5 rounded-lg text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
@@ -629,7 +636,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
             {activeTab === 'forecast' && (
               <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-3 shadow-sm animate-fade-in-up`}>
                 <h3 className={`text-sm font-semibold mb-3 flex items-center gap-1.5 ${headerText}`}>
-                  <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />Complete 20-Day Forecast
+                  <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />Complete 7-Day Forecast
                 </h3>
                 <div className="overflow-x-auto pb-2">
                   <div className="grid grid-cols-10 gap-2 min-w-[800px]">
@@ -714,7 +721,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
               ) : (
                 <div>
                   <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
-                    <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />20-Day Forecast
+                    <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />7-Day Forecast
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {dailyForecast.map((day, idx) => (
@@ -755,8 +762,10 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                   Live
                 </span>
               </div>
-              <div className="relative aspect-[16/10]">
-                <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+              <div className="relative aspect-[16/10] flex flex-col">
+                <div className="flex-1 relative">
+                  <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+                </div>
                 {/* Filter button on map */}
                 <button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
@@ -765,6 +774,22 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 >
                   <Filter className="w-4 h-4" />
                 </button>
+                
+                {/* Time Slider */}
+                <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
+                  <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
+                  <input 
+                    type="range" 
+                    min="2001" 
+                    max={new Date().getFullYear()} 
+                    defaultValue={new Date().getFullYear()}
+                    className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
+                    style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
+                  />
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                    {new Date().getFullYear()}
+                  </span>
+                </div>
               </div>
             </div>
             {/* Filter Popup */}
