@@ -13,15 +13,13 @@ import {
   TrendingDown,
   Minus,
   Map as MapIcon,
-  ZoomIn,
-  ZoomOut,
-  Layers,
   Filter,
   ArrowRight,
   X
 } from 'lucide-react';
 import type { PageType } from '../App';
 import { useState, useEffect } from 'react';
+import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
 
 interface OverviewPageProps {
   onNavigate: (page: PageType) => void;
@@ -237,98 +235,19 @@ const UgandaMap = ({
   isDarkMode: boolean;
   className?: string;
 }) => {
-  const [zoom, setZoom] = useState(7);
-  const [layer, setLayer] = useState<'mapnik' | 'cyclemap'>('mapnik');
-  const [showLegend, setShowLegend] = useState(true);
-
-  const baseBBox = { minLon: 29.5, minLat: -1.5, maxLon: 35.0, maxLat: 4.5 };
-
-  const getBBox = () => {
-    const centerLon = (baseBBox.minLon + baseBBox.maxLon) / 2;
-    const centerLat = (baseBBox.minLat + baseBBox.maxLat) / 2;
-    const spanLon = (baseBBox.maxLon - baseBBox.minLon) / zoom * 7;
-    const spanLat = (baseBBox.maxLat - baseBBox.minLat) / zoom * 7;
-    return `${centerLon - spanLon / 2}%2C${centerLat - spanLat / 2}%2C${centerLon + spanLon / 2}%2C${centerLat + spanLat / 2}`;
-  };
-
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${getBBox()}&layer=${layer}`;
-
-  const legendItems = [
-    { label: 'Weather', color: FAO_BLUE },
-    { label: 'Drought', color: '#f97316' },
-    { label: 'Flood', color: '#06b6d4' },
-    { label: 'Stations', color: '#22c55e' },
-  ];
-
   return (
-    <div className={`relative overflow-hidden rounded-xl md:rounded-2xl ${className}`}>
-      <iframe
-        src={mapUrl}
-        className="w-full h-full border-0"
-        title="OpenStreetMap Uganda"
-        loading="lazy"
-      />
-
-      {/* Map Controls */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-        <button
-          onClick={() => setZoom(z => Math.min(z + 1, 12))}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
-        >
-          <ZoomIn className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={() => setZoom(z => Math.max(z - 1, 5))}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
-        >
-          <ZoomOut className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      <div className="absolute bottom-2 right-2">
-        <button
-          onClick={() => setLayer(l => l === 'mapnik' ? 'cyclemap' : 'mapnik')}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Map Legend */}
-      {showLegend && (
-        <div className={`absolute bottom-2 left-2 rounded-lg p-2 shadow-sm ${isDarkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Legend</span>
-            <button
-              onClick={() => setShowLegend(false)}
-              className={`text-[10px] ${isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="space-y-1">
-            {legendItems.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className={`text-[9px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="absolute top-2 left-2">
-        <span
-          className={`px-2 py-0.5 rounded-md text-[10px] font-medium shadow-sm backdrop-blur-sm`}
-          style={{
-            backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-            color: FAO_BLUE
-          }}
-        >
-          Uganda
-        </span>
-      </div>
-    </div>
+    <UgandaBoundaryMap
+      isDarkMode={isDarkMode}
+      className={`rounded-xl md:rounded-2xl ${className}`}
+      badgeText="Uganda"
+      legendTitle="Legend"
+      legendItems={[
+        { label: 'Weather', color: FAO_BLUE },
+        { label: 'Drought', color: '#f97316' },
+        { label: 'Flood', color: '#06b6d4' },
+        { label: 'Stations', color: '#22c55e' },
+      ]}
+    />
   );
 };
 

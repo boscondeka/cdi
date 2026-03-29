@@ -17,6 +17,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
+import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
 
 interface WeatherStationsPageProps {
   isDarkMode?: boolean;
@@ -70,65 +71,18 @@ const getStatusIcon = (status: string) => {
 
 // Map Component with Legend
 const StationMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; className?: string }) => {
-  const [showLegend, setShowLegend] = useState(true);
-  
-  const legendItems = [
-    { label: 'Online', color: '#22c55e' },
-    { label: 'Maintenance', color: '#eab308' },
-    { label: 'Offline', color: '#ef4444' },
-  ];
-  
   return (
-    <div className={`relative overflow-hidden rounded-lg md:rounded-xl ${className}`}>
-      <div className={`w-full h-full flex items-center justify-center ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-        <div className="text-center p-4">
-          <Radio className="w-12 h-12 md:w-14 md:h-14 text-slate-400 mx-auto mb-2" />
-          <p className={`text-sm mb-1 ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>Interactive Station Map</p>
-          <p className={`text-xs mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>AWS locations across Uganda</p>
-          <button 
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors mx-auto"
-            style={{ backgroundColor: FAO_BLUE }}
-          >
-            <MapPin className="w-3 h-3" />View Full Map
-          </button>
-        </div>
-      </div>
-      
-      {/* Map Legend */}
-      {showLegend && (
-        <div className={`absolute bottom-2 left-2 rounded-lg p-2 shadow-sm ${isDarkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Stations</span>
-            <button 
-              onClick={() => setShowLegend(false)}
-              className={`text-[10px] ${isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-          <div className="space-y-1">
-            {legendItems.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className={`text-[9px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      <div className="absolute top-2 left-2">
-        <span 
-          className={`px-1.5 py-0.5 rounded text-[10px] font-medium shadow-sm`}
-          style={{ 
-            backgroundColor: isDarkMode ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.2)',
-            color: '#22c55e'
-          }}
-        >
-          7 Active
-        </span>
-      </div>
-    </div>
+    <UgandaBoundaryMap
+      isDarkMode={isDarkMode}
+      className={`rounded-lg md:rounded-xl ${className}`}
+      badgeText="7 Active"
+      legendTitle="Stations"
+      legendItems={[
+        { label: 'Online', color: '#22c55e' },
+        { label: 'Maintenance', color: '#eab308' },
+        { label: 'Offline', color: '#ef4444' },
+      ]}
+    />
   );
 };
 

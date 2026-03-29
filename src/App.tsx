@@ -22,7 +22,7 @@ import FloodMonitoringPage from './pages/FloodMonitoringPage';
 import WeatherStationsPage from './pages/WeatherStationsPage';
 import ResourcesPage from './pages/ResourcesPage';
 
-export type PageType = 'overview' | 'weather' | 'drought' | 'flood' | 'stations';
+export type PageType = 'overview' | 'weather' | 'drought' | 'flood' | 'stations' | 'resources';
 
 const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Overview', icon: Home },
