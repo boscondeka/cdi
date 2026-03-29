@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Cloud, 
+import {
+  Cloud,
   Sun,
   CloudRain,
   CloudLightning,
@@ -200,9 +200,9 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
   const [zoom, setZoom] = useState(7);
   const [layer, setLayer] = useState<'mapnik' | 'cyclemap'>('mapnik');
   const [showLegend, setShowLegend] = useState(true);
-  
+
   const baseBBox = { minLon: 29.5, minLat: -1.5, maxLon: 35.0, maxLat: 4.5 };
-  
+
   const getBBox = () => {
     const centerLon = (baseBBox.minLon + baseBBox.maxLon) / 2;
     const centerLat = (baseBBox.minLat + baseBBox.maxLat) / 2;
@@ -210,16 +210,16 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
     const spanLat = (baseBBox.maxLat - baseBBox.minLat) / zoom * 7;
     return `${centerLon - spanLon / 2}%2C${centerLat - spanLat / 2}%2C${centerLon + spanLon / 2}%2C${centerLat + spanLat / 2}`;
   };
-  
+
   const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${getBBox()}&layer=${layer}`;
-  
+
   const legendItems = [
     { label: 'Sunny', color: '#fbbf24' },
     { label: 'Cloudy', color: '#94a3b8' },
     { label: 'Rainy', color: '#3b82f6' },
     { label: 'Storm', color: '#a855f7' },
   ];
-  
+
   return (
     <div className={`relative overflow-hidden rounded-lg md:rounded-xl ${className}`}>
       <iframe
@@ -229,13 +229,13 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
         loading="lazy"
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-        <button 
+        <button
           onClick={() => setZoom(z => Math.min(z + 1, 12))}
           className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
         >
           <ZoomIn className="w-3 h-3" />
         </button>
-        <button 
+        <button
           onClick={() => setZoom(z => Math.max(z - 1, 5))}
           className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
         >
@@ -243,20 +243,20 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
         </button>
       </div>
       <div className="absolute bottom-2 right-2">
-        <button 
+        <button
           onClick={() => setLayer(l => l === 'mapnik' ? 'cyclemap' : 'mapnik')}
           className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors shadow-sm ${isDarkMode ? 'bg-slate-800/90 hover:bg-slate-700 text-white' : 'bg-white/90 hover:bg-slate-100 text-slate-800'}`}
         >
           <Layers className="w-3 h-3" />
         </button>
       </div>
-      
+
       {/* Map Legend */}
       {showLegend && (
         <div className={`absolute bottom-2 left-2 rounded-lg p-2 shadow-sm ${isDarkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
           <div className="flex items-center gap-2 mb-1">
             <span className={`text-[10px] font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Weather</span>
-            <button 
+            <button
               onClick={() => setShowLegend(false)}
               className={`text-[10px] ${isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
             >
@@ -273,13 +273,13 @@ const UgandaMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; classN
           </div>
         </div>
       )}
-      
+
       <div className="absolute top-2 left-2">
-        <span 
+        <span
           className={`px-1.5 py-0.5 rounded text-[10px] font-medium shadow-sm`}
-          style={{ 
+          style={{
             backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-            color: FAO_BLUE 
+            color: FAO_BLUE
           }}
         >
           Uganda
@@ -314,7 +314,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
     <div className="space-y-3">
       <div>
         <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
-        <select 
+        <select
           value={selectedRegion}
           onChange={(e) => setSelectedRegion(e.target.value)}
           className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
@@ -328,7 +328,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
       </div>
       <div>
         <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
-        <select 
+        <select
           value={selectedParameter}
           onChange={(e) => setSelectedParameter(e.target.value)}
           className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
@@ -341,8 +341,8 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
       </div>
       <div>
         <label className={`text-xs ${textMuted} mb-1 block`}>Date Range</label>
-        <input 
-          type="date" 
+        <input
+          type="date"
           className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
         />
       </div>
@@ -362,7 +362,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" 
+          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
             style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}>
           </div>
           <p className={textMuted}>Loading Weather Forecast...</p>
@@ -387,7 +387,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
       <div className="relative z-10 max-w-[1600px] mx-auto">
         {/* Compact Header Banner - No alert buttons */}
-        <div 
+        <div
           className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up"
           style={{ background: `linear-gradient(135deg, ${FAO_BLUE}e6 0%, ${FAO_BLUE}99 100%)` }}
         >
@@ -397,13 +397,13 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 <h1 className="text-lg md:text-xl font-bold text-white">Weather Forecast</h1>
                 <p className="text-slate-200 text-xs md:text-sm">48-hour nowcasting & 7-day forecasts</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span 
+                  <span
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
                     style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
                   >
                     <Clock className="w-3 h-3" />Updated 5 min ago
                   </span>
-                  <span 
+                  <span
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
                     style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
                   >
@@ -457,11 +457,11 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
         <div className="hidden lg:grid lg:grid-cols-12 gap-4">
           {/* Left Sidebar - Filter next to map */}
           <div className="lg:col-span-3 flex flex-col">
-            <div 
+            <div
               className="flex-1 rounded-xl p-3 shadow-sm flex flex-col"
-              style={{ 
-                background: isDarkMode 
-                  ? `linear-gradient(180deg, ${FAO_BLUE}30 0%, ${FAO_BLUE}15 100%)` 
+              style={{
+                background: isDarkMode
+                  ? `linear-gradient(180deg, ${FAO_BLUE}30 0%, ${FAO_BLUE}15 100%)`
                   : `linear-gradient(180deg, ${FAO_BLUE}15 0%, ${FAO_BLUE}05 100%)`,
                 border: `1px solid ${isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}15`}`,
               }}
@@ -473,9 +473,9 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
 
               {/* Illustration at bottom */}
               <div className="mt-auto pt-3">
-                <div 
+                <div
                   className="rounded-xl overflow-hidden"
-                  style={{ 
+                  style={{
                     backgroundImage: 'url(/weather-illustration.png)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -498,11 +498,11 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
                       <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
                     </div>
-                    <span 
+                    <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
-                      style={{ 
+                      style={{
                         backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                        color: FAO_BLUE 
+                        color: FAO_BLUE
                       }}
                     >
                       Live
@@ -515,10 +515,10 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                     {/* Time Slider */}
                     <div className={`px-4 py-3 border-t ${borderColor} flex items-center gap-4 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
                       <span className={`text-xs font-medium ${textMuted}`}>2001</span>
-                      <input 
-                        type="range" 
-                        min="2001" 
-                        max={new Date().getFullYear()} 
+                      <input
+                        type="range"
+                        min="2001"
+                        max={new Date().getFullYear()}
                         defaultValue={new Date().getFullYear()}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
@@ -537,32 +537,30 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
                   {/* Tabs */}
                   <div className={`flex border-b ${borderColor}`}>
-                    <button 
-                      onClick={() => setActiveTab('nowcast')} 
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
-                        activeTab === 'nowcast' 
-                          ? 'text-white' 
+                    <button
+                      onClick={() => setActiveTab('nowcast')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${activeTab === 'nowcast'
+                          ? 'text-white'
                           : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600'}`
-                      }`}
+                        }`}
                       style={{ backgroundColor: activeTab === 'nowcast' ? FAO_BLUE : undefined }}
                     >
                       <span className={`w-2 h-2 rounded-full ${activeTab === 'nowcast' ? 'bg-white' : 'bg-slate-400'}`} />
                       <Clock className="w-3.5 h-3.5" />48-Hour Nowcast
                     </button>
-                    <button 
-                      onClick={() => setActiveTab('forecast')} 
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
-                        activeTab === 'forecast' 
-                          ? 'text-white' 
+                    <button
+                      onClick={() => setActiveTab('forecast')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${activeTab === 'forecast'
+                          ? 'text-white'
                           : `${isDarkMode ? 'bg-slate-800/50 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600'}`
-                      }`}
+                        }`}
                       style={{ backgroundColor: activeTab === 'forecast' ? FAO_BLUE : undefined }}
                     >
                       <span className={`w-2 h-2 rounded-full ${activeTab === 'forecast' ? 'bg-white' : 'bg-slate-400'}`} />
                       <Calendar className="w-3.5 h-3.5" />7-Day Forecast
                     </button>
                   </div>
-                  
+
                   {/* Tab Content */}
                   <div className="p-3">
                     {activeTab === 'nowcast' ? (
@@ -675,32 +673,30 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
           {/* Tabbed Container - Mobile (above map) */}
           <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}>
             <div className={`flex border-b ${borderColor}`}>
-              <button 
-                onClick={() => setActiveTab('nowcast')} 
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
-                  activeTab === 'nowcast' 
-                    ? 'text-white' 
+              <button
+                onClick={() => setActiveTab('nowcast')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${activeTab === 'nowcast'
+                    ? 'text-white'
                     : `${isDarkMode ? 'bg-slate-800/50 text-slate-400' : 'bg-slate-100 text-slate-600'}`
-                }`}
+                  }`}
                 style={{ backgroundColor: activeTab === 'nowcast' ? FAO_BLUE : undefined }}
               >
                 <span className={`w-2 h-2 rounded-full ${activeTab === 'nowcast' ? 'bg-white' : 'bg-slate-400'}`} />
                 <Clock className="w-3.5 h-3.5" />Nowcast
               </button>
-              <button 
-                onClick={() => setActiveTab('forecast')} 
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${
-                  activeTab === 'forecast' 
-                    ? 'text-white' 
+              <button
+                onClick={() => setActiveTab('forecast')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${activeTab === 'forecast'
+                    ? 'text-white'
                     : `${isDarkMode ? 'bg-slate-800/50 text-slate-400' : 'bg-slate-100 text-slate-600'}`
-                }`}
+                  }`}
                 style={{ backgroundColor: activeTab === 'forecast' ? FAO_BLUE : undefined }}
               >
                 <span className={`w-2 h-2 rounded-full ${activeTab === 'forecast' ? 'bg-white' : 'bg-slate-400'}`} />
                 <Calendar className="w-3.5 h-3.5" />Forecast
               </button>
             </div>
-            
+
             <div className="p-3">
               {activeTab === 'nowcast' ? (
                 <div>
@@ -752,11 +748,11 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                   <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
                   <h3 className={`text-sm font-semibold ${headerText}`}>Weather Map</h3>
                 </div>
-                <span 
+                <span
                   className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
-                  style={{ 
+                  style={{
                     backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                    color: FAO_BLUE 
+                    color: FAO_BLUE
                   }}
                 >
                   Live
@@ -774,14 +770,14 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 >
                   <Filter className="w-4 h-4" />
                 </button>
-                
+
                 {/* Time Slider */}
                 <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
                   <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
-                  <input 
-                    type="range" 
-                    min="2001" 
-                    max={new Date().getFullYear()} 
+                  <input
+                    type="range"
+                    min="2001"
+                    max={new Date().getFullYear()}
                     defaultValue={new Date().getFullYear()}
                     className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
                     style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
@@ -796,7 +792,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
             {showMobileFilters && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setShowMobileFilters(false)} />
-                <div 
+                <div
                   className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
                 >
                   <div className="flex items-center justify-between mb-2">

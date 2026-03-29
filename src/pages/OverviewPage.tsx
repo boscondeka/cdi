@@ -361,9 +361,9 @@ const MapFilters = ({
             <button
               key={module.id}
               onClick={() => onModuleChange(module.id)}
-              className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors ${isSelected 
-                  ? (isDarkMode ? 'bg-slate-700/80' : 'bg-blue-50') 
-                  : (isDarkMode ? 'hover:bg-slate-700/40' : 'hover:bg-slate-50')
+              className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors ${isSelected
+                ? (isDarkMode ? 'bg-slate-700/80' : 'bg-blue-50')
+                : (isDarkMode ? 'hover:bg-slate-700/40' : 'hover:bg-slate-50')
                 }`}
             >
               <div className="w-6 h-6 rounded-md flex items-center justify-center p-0.5" style={{ backgroundColor: isSelected ? `${module.color}30` : `${module.color}15` }}>
@@ -513,14 +513,14 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                 >
                   <Filter className="w-4 h-4" />
                 </button>
-                
+
                 {/* Time Slider */}
                 <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
                   <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
-                  <input 
-                    type="range" 
-                    min="2001" 
-                    max={new Date().getFullYear()} 
+                  <input
+                    type="range"
+                    min="2001"
+                    max={new Date().getFullYear()}
                     defaultValue={new Date().getFullYear()}
                     className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
                     style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
@@ -535,7 +535,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
             {showMobileFilters && (
               <>
                 <div className="fixed inset-0 z-20" onClick={() => setShowMobileFilters(false)} />
-                <div 
+                <div
                   className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -555,78 +555,78 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
         <div className="hidden lg:flex lg:flex-col gap-4">
           {/* Monitoring Modules Section - Now above the grid and full width */}
           <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `${FAO_BLUE}20` }}
-                  >
-                    <Cloud className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                  </div>
-                  <h2 className={`text-base font-semibold ${headerText}`}>Monitoring Modules</h2>
-                </div>
-                <button
-                  className="flex items-center gap-1 text-xs transition-colors hover:opacity-80"
-                  style={{ color: FAO_BLUE }}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: `${FAO_BLUE}20` }}
                 >
-                  View All <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                  <Cloud className="w-4 h-4" style={{ color: FAO_BLUE }} />
+                </div>
+                <h2 className={`text-base font-semibold ${headerText}`}>Monitoring Modules</h2>
               </div>
-
-              <div className="grid grid-cols-4 gap-3">
-                {monitoringModules.map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <button
-                      key={module.id}
-                      onClick={() => onNavigate(module.id)}
-                      className={`relative flex flex-col overflow-hidden rounded-xl p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md group border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200'}`}
-                      style={{ 
-                        minHeight: '150px',
-                        background: isDarkMode 
-                          ? `linear-gradient(135deg, ${module.color}30 0%, rgba(15, 23, 42, 1) 100%)` 
-                          : `linear-gradient(135deg, ${module.color}20 0%, rgba(241, 245, 249, 1) 100%)`
-                      }}
-                    >
-                      <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 pointer-events-none transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-                         <Icon className="w-24 h-24" style={{ color: module.color }} />
-                      </div>
-                      
-                      <div className="relative z-10 flex-1 flex flex-col justify-between w-full">
-                        <div className="flex items-center justify-between mb-3">
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
-                            style={{ 
-                              backgroundColor: isDarkMode ? `${module.color}30` : 'white', 
-                              border: isDarkMode ? `1px solid ${module.color}40` : `1px solid ${module.color}20` 
-                            }}
-                          >
-                            <Icon className="w-5 h-5" style={{ color: module.color }} />
-                          </div>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isDarkMode ? 'bg-slate-800/50' : 'bg-white/60'} group-hover:shadow-sm`}>
-                             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" style={{ color: module.color }} />
-                          </div>
-                        </div>
-                        <div>
-                          <p className={`text-sm font-semibold mb-1 ${headerText}`}>{module.title}</p>
-                          <p className={`text-[11px] ${textMuted} line-clamp-2 leading-relaxed mb-3`}>{module.description}</p>
-                          <div 
-                            className="inline-flex items-center px-2 py-1 rounded border" 
-                            style={{ 
-                              backgroundColor: isDarkMode ? `${module.color}10` : 'white', 
-                              borderColor: `${module.color}30`, 
-                              color: module.color 
-                            }}
-                          >
-                            <span className="text-[10px] font-medium">{module.metric}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                className="flex items-center gap-1 text-xs transition-colors hover:opacity-80"
+                style={{ color: FAO_BLUE }}
+              >
+                View All <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
+
+            <div className="grid grid-cols-4 gap-3">
+              {monitoringModules.map((module) => {
+                const Icon = module.icon;
+                return (
+                  <button
+                    key={module.id}
+                    onClick={() => onNavigate(module.id)}
+                    className={`relative flex flex-col overflow-hidden rounded-xl p-4 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md group border ${isDarkMode ? 'border-slate-700/50' : 'border-slate-200'}`}
+                    style={{
+                      minHeight: '150px',
+                      background: isDarkMode
+                        ? `linear-gradient(135deg, ${module.color}30 0%, rgba(15, 23, 42, 1) 100%)`
+                        : `linear-gradient(135deg, ${module.color}20 0%, rgba(241, 245, 249, 1) 100%)`
+                    }}
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 pointer-events-none transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+                      <Icon className="w-24 h-24" style={{ color: module.color }} />
+                    </div>
+
+                    <div className="relative z-10 flex-1 flex flex-col justify-between w-full">
+                      <div className="flex items-center justify-between mb-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
+                          style={{
+                            backgroundColor: isDarkMode ? `${module.color}30` : 'white',
+                            border: isDarkMode ? `1px solid ${module.color}40` : `1px solid ${module.color}20`
+                          }}
+                        >
+                          <Icon className="w-5 h-5" style={{ color: module.color }} />
+                        </div>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isDarkMode ? 'bg-slate-800/50' : 'bg-white/60'} group-hover:shadow-sm`}>
+                          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" style={{ color: module.color }} />
+                        </div>
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold mb-1 ${headerText}`}>{module.title}</p>
+                        <p className={`text-[11px] ${textMuted} line-clamp-2 leading-relaxed mb-3`}>{module.description}</p>
+                        <div
+                          className="inline-flex items-center px-2 py-1 rounded border"
+                          style={{
+                            backgroundColor: isDarkMode ? `${module.color}10` : 'white',
+                            borderColor: `${module.color}30`,
+                            color: module.color
+                          }}
+                        >
+                          <span className="text-[10px] font-medium">{module.metric}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Map and Sidebar Grid */}
           <div className="grid lg:grid-cols-12 gap-4">
@@ -709,10 +709,10 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                     {/* Time Slider */}
                     <div className={`px-4 py-3 border-t ${borderColor} flex items-center gap-4 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
                       <span className={`text-xs font-medium ${textMuted}`}>2001</span>
-                      <input 
-                        type="range" 
-                        min="2001" 
-                        max={new Date().getFullYear()} 
+                      <input
+                        type="range"
+                        min="2001"
+                        max={new Date().getFullYear()}
                         defaultValue={new Date().getFullYear()}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}

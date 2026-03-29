@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { 
-  Home, 
-  Cloud, 
-  Sun, 
-  Waves, 
+import {
+  Home,
+  Cloud,
+  Sun,
+  Waves,
   Radio,
   Bell,
   Menu,
   X,
   Moon,
+  BookOpen,
   Sun as SunIcon,
   AlertTriangle,
   MapPin
@@ -19,6 +20,7 @@ import WeatherForecastPage from './pages/WeatherForecastPage';
 import DroughtMonitoringPage from './pages/DroughtMonitoringPage';
 import FloodMonitoringPage from './pages/FloodMonitoringPage';
 import WeatherStationsPage from './pages/WeatherStationsPage';
+import ResourcesPage from './pages/ResourcesPage';
 
 export type PageType = 'overview' | 'weather' | 'drought' | 'flood' | 'stations';
 
@@ -28,6 +30,7 @@ const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: 'drought', label: 'Drought Monitor', icon: Sun },
   { id: 'flood', label: 'Flood Monitor', icon: Waves },
   { id: 'stations', label: 'Weather Stations', icon: Radio },
+  { id: 'resources', label: 'Resources', icon: BookOpen },
 ];
 
 // Sample alerts data for each page
@@ -54,11 +57,11 @@ function App() {
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDarkMode(mediaQuery.matches);
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       setIsDarkMode(e.matches);
     };
-    
+
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
@@ -103,18 +106,20 @@ function App() {
         return <FloodMonitoringPage isDarkMode={isDarkMode} />;
       case 'stations':
         return <WeatherStationsPage isDarkMode={isDarkMode} />;
+      case 'resources':
+        return <ResourcesPage isDarkMode={isDarkMode} />;
       default:
         return <OverviewPage onNavigate={handlePageChange} isDarkMode={isDarkMode} />;
     }
   };
 
   // Theme classes
-  const themeClasses = isDarkMode 
-    ? 'bg-slate-900 text-white' 
+  const themeClasses = isDarkMode
+    ? 'bg-slate-900 text-white'
     : 'bg-slate-50 text-slate-900';
-  
-  const headerClasses = isDarkMode 
-    ? 'bg-slate-800/50 border-slate-700/50' 
+
+  const headerClasses = isDarkMode
+    ? 'bg-slate-800/50 border-slate-700/50'
     : 'bg-white/80 border-slate-200';
 
   return (
@@ -123,7 +128,7 @@ function App() {
       {pageLoading && (
         <div className={`fixed inset-0 z-[100] flex items-center justify-center ${isDarkMode ? 'bg-slate-900/90' : 'bg-white/90'} backdrop-blur-sm`}>
           <div className="text-center">
-            <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" 
+            <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
               style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}>
             </div>
             <p className={isDarkMode ? 'text-slate-400' : 'text-slate-600'}>Loading...</p>
@@ -135,13 +140,13 @@ function App() {
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           {/* Animated gradient orbs - FAO Blue Theme */}
-          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse" 
+          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse"
             style={{ backgroundColor: FAO_BLUE, animationDuration: '4s' }} />
-          <div className="absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse bg-blue-400" 
+          <div className="absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse bg-blue-400"
             style={{ animationDuration: '6s', animationDelay: '1s' }} />
-          <div className="absolute -bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl opacity-15 animate-pulse bg-cyan-400" 
+          <div className="absolute -bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl opacity-15 animate-pulse bg-cyan-400"
             style={{ animationDuration: '5s', animationDelay: '2s' }} />
-          
+
           {/* Floating particles */}
           {[...Array(20)].map((_, i) => (
             <div
@@ -162,18 +167,18 @@ function App() {
       <header className={`h-16 backdrop-blur-sm border-b flex items-center justify-between px-4 md:px-6 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${headerClasses}`}>
         <div className="flex items-center gap-3">
           {/* Mobile Menu Button - Only shows sidebar on desktop */}
-          <button 
+          <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className={`p-2 rounded-lg transition-colors hidden lg:flex ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          
+
           {/* FAO Logo Only */}
           <div className="flex items-center">
-            <img 
-              src={isDarkMode ? "/fao-white.png" : "/fao_logo_3lines_en1.png"} 
-              alt="FAO Logo" 
+            <img
+              src={isDarkMode ? "/fao-white.png" : "/fao_logo_3lines_en1.png"}
+              alt="FAO Logo"
               className="h-8 md:h-10 w-auto"
             />
           </div>
@@ -188,13 +193,12 @@ function App() {
               <button
                 key={item.id}
                 onClick={() => handlePageChange(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-md font-medium transition-all ${
-                  isActive
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-md font-medium transition-all ${isActive
                     ? 'text-white'
-                    : isDarkMode 
-                      ? 'text-slate-400 hover:text-white hover:bg-slate-700/50' 
+                    : isDarkMode
+                      ? 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300/50'
-                }`}
+                  }`}
                 style={{ backgroundColor: isActive ? FAO_BLUE : 'transparent' }}
               >
                 <Icon className="w-4 h-4" />
@@ -213,29 +217,28 @@ function App() {
           </div>
 
           {/* Theme Toggle */}
-          <button 
+          <button
             onClick={toggleTheme}
             className={`p-2 rounded-xl transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
           >
             {isDarkMode ? <SunIcon className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-slate-600" />}
           </button>
-          
+
           {/* Notification Button with Dropdown */}
           <div className="relative" ref={notificationRef}>
-            <button 
+            <button
               onClick={() => setShowNotifications(!showNotifications)}
               className={`relative p-2 rounded-xl transition-colors ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
             >
               <Bell className={`w-5 h-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
             </button>
-            
+
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div 
-                className={`absolute right-0 top-full mt-2 w-80 rounded-xl shadow-lg border z-50 animate-fade-in-up ${
-                  isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-                }`}
+              <div
+                className={`absolute right-0 top-full mt-2 w-80 rounded-xl shadow-lg border z-50 animate-fade-in-up ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                  }`}
               >
                 <div className={`p-3 border-b flex items-center justify-between ${isDarkMode ? 'border-slate-700' : 'border-slate-200'}`}>
                   <span className="font-semibold text-sm">Notifications</span>
@@ -243,16 +246,14 @@ function App() {
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {alertsData.map((alert) => (
-                    <div 
-                      key={alert.id} 
-                      className={`p-3 border-b last:border-b-0 transition-colors ${
-                        isDarkMode ? 'border-slate-700/30 hover:bg-slate-700/50' : 'border-slate-200 hover:bg-slate-50'
-                      }`}
+                    <div
+                      key={alert.id}
+                      className={`p-3 border-b last:border-b-0 transition-colors ${isDarkMode ? 'border-slate-700/30 hover:bg-slate-700/50' : 'border-slate-200 hover:bg-slate-50'
+                        }`}
                     >
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                          alert.severity === 'high' ? 'text-red-500' : 'text-yellow-500'
-                        }`} />
+                        <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${alert.severity === 'high' ? 'text-red-500' : 'text-yellow-500'
+                          }`} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{alert.title}</p>
                           <div className={`flex items-center gap-2 text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -267,7 +268,7 @@ function App() {
                   ))}
                 </div>
                 <div className={`p-2 border-t text-center ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-                  <button 
+                  <button
                     className="text-xs hover:underline"
                     style={{ color: FAO_BLUE }}
                   >
@@ -281,9 +282,8 @@ function App() {
       </header>
 
       {/* Mobile Navigation - Bottom bar */}
-      <nav className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t px-2 py-2 ${
-        isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200'
-      }`}>
+      <nav className={`lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t px-2 py-2 ${isDarkMode ? 'bg-slate-800/95 border-slate-700/50' : 'bg-white/95 border-slate-200'
+        }`}>
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -292,11 +292,10 @@ function App() {
               <button
                 key={item.id}
                 onClick={() => handlePageChange(item.id)}
-                className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-all ${
-                  isActive
+                className={`flex flex-col items-center gap-1 px-2 py-1 rounded-lg transition-all ${isActive
                     ? 'text-white'
                     : isDarkMode ? 'text-slate-400' : 'text-slate-500'
-                }`}
+                  }`}
                 style={{ color: isActive ? FAO_BLUE : undefined }}
               >
                 <Icon className="w-5 h-5" />
