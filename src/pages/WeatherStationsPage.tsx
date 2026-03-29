@@ -69,6 +69,74 @@ const getStatusIcon = (status: string) => {
   }
 };
 
+const FilterContent = ({
+  selectedRegion,
+  setSelectedRegion,
+  selectedStatus,
+  setSelectedStatus,
+  isDarkMode,
+  textMuted,
+  textSecondary,
+  borderColor,
+  headerText,
+  onlineCount,
+  offlineCount,
+}: {
+  selectedRegion: string;
+  setSelectedRegion: (val: string) => void;
+  selectedStatus: string;
+  setSelectedStatus: (val: string) => void;
+  isDarkMode: boolean;
+  textMuted: string;
+  textSecondary: string;
+  borderColor: string;
+  headerText: string;
+  onlineCount: number;
+  offlineCount: number;
+}) => (
+  <div className="space-y-3">
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
+      <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+        <option value="All Regions">All Regions</option>
+        <option value="Central">Central</option>
+        <option value="Eastern">Eastern</option>
+        <option value="Western">Western</option>
+        <option value="Northern">Northern</option>
+      </select>
+    </div>
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Status</label>
+      <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+        <option value="All Status">All Status</option>
+        <option value="online">Online</option>
+        <option value="maintenance">Maintenance</option>
+        <option value="offline">Offline</option>
+      </select>
+    </div>
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
+      <div className="space-y-1.5">
+        {['Temperature', 'Humidity', 'Wind', 'Pressure', 'Rainfall'].map((param) => (
+          <label key={param} className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" className={`rounded ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-300'}`} defaultChecked />
+            <span className={textSecondary}>{param}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+    <div className={`pt-3 border-t ${borderColor}`}>
+      <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>Network Stats</h4>
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-xs"><span className={textMuted}>Total Stations</span><span className={`font-medium ${headerText}`}>{stations.length}</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Online</span><span className="text-green-500 font-medium">{onlineCount}</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Offline</span><span className="text-red-500 font-medium">{offlineCount}</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Data Quality</span><span className="font-medium" style={{ color: FAO_BLUE }}>94%</span></div>
+      </div>
+    </div>
+  </div>
+);
+
 // Map Component with Legend
 const StationMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; className?: string }) => {
   return (
@@ -92,6 +160,14 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sliderValue, setSliderValue] = useState(((2026 - 2001) * 12) + 2); // Mar 2026
+
+  const getMonthYear = (months: number) => {
+    const year = 2001 + Math.floor(months / 12);
+    const month = months % 12;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[month]} ${year}`;
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -107,50 +183,6 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
   const textSecondary = isDarkMode ? 'text-slate-300' : 'text-slate-600';
   const borderColor = isDarkMode ? 'border-slate-700/30' : 'border-slate-200';
   const headerText = isDarkMode ? 'text-white' : 'text-slate-900';
-
-  const FilterContent = () => (
-    <div className="space-y-3">
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
-        <select value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-          <option value="All Regions">All Regions</option>
-          <option value="Central">Central</option>
-          <option value="Eastern">Eastern</option>
-          <option value="Western">Western</option>
-          <option value="Northern">Northern</option>
-        </select>
-      </div>
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Status</label>
-        <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-          <option value="All Status">All Status</option>
-          <option value="online">Online</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
-        <div className="space-y-1.5">
-          {['Temperature', 'Humidity', 'Wind', 'Pressure', 'Rainfall'].map((param) => (
-            <label key={param} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" className={`rounded ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-300'}`} defaultChecked />
-              <span className={textSecondary}>{param}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-      <div className={`pt-3 border-t ${borderColor}`}>
-        <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>Network Stats</h4>
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs"><span className={textMuted}>Total Stations</span><span className={`font-medium ${headerText}`}>{stations.length}</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Online</span><span className="text-green-500 font-medium">{onlineCount}</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Offline</span><span className="text-red-500 font-medium">{offlineCount}</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Data Quality</span><span className="font-medium" style={{ color: FAO_BLUE }}>94%</span></div>
-        </div>
-      </div>
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -238,7 +270,19 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
               }}
             >
               <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-                <FilterContent />
+                <FilterContent
+                  selectedRegion={selectedRegion}
+                  setSelectedRegion={setSelectedRegion}
+                  selectedStatus={selectedStatus}
+                  setSelectedStatus={setSelectedStatus}
+                  isDarkMode={isDarkMode}
+                  textMuted={textMuted}
+                  textSecondary={textSecondary}
+                  borderColor={borderColor}
+                  headerText={headerText}
+                  onlineCount={onlineCount}
+                  offlineCount={offlineCount}
+                />
               </div>
 
               {/* Illustration at bottom */}
@@ -308,14 +352,15 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
                       <span className={`text-xs font-medium ${textMuted}`}>2001</span>
                       <input 
                         type="range" 
-                        min="2001" 
-                        max={new Date().getFullYear()} 
-                        defaultValue={new Date().getFullYear()}
+                        min="0" 
+                        max={(2026 - 2001 + 1) * 12 - 1} 
+                        value={sliderValue}
+                        onChange={(e) => setSliderValue(parseInt(e.target.value))}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                       />
-                      <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                        {new Date().getFullYear()}
+                      <span className="text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                        {getMonthYear(sliderValue)}
                       </span>
                     </div>
                   </div>
@@ -483,14 +528,15 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
                 <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                 <input 
                   type="range" 
-                  min="2001" 
-                  max={new Date().getFullYear()} 
-                  defaultValue={new Date().getFullYear()}
+                  min="0" 
+                  max={(2026 - 2001 + 1) * 12 - 1} 
+                  value={sliderValue}
+                  onChange={(e) => setSliderValue(parseInt(e.target.value))}
                   className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
                   style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                 />
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                  {new Date().getFullYear()}
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                  {getMonthYear(sliderValue)}
                 </span>
               </div>
             </div>
@@ -508,7 +554,19 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <FilterContent />
+                  <FilterContent
+                    selectedRegion={selectedRegion}
+                    setSelectedRegion={setSelectedRegion}
+                    selectedStatus={selectedStatus}
+                    setSelectedStatus={setSelectedStatus}
+                    isDarkMode={isDarkMode}
+                    textMuted={textMuted}
+                    textSecondary={textSecondary}
+                    borderColor={borderColor}
+                    headerText={headerText}
+                    onlineCount={onlineCount}
+                    offlineCount={offlineCount}
+                  />
                 </div>
               </>
             )}

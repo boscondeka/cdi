@@ -74,6 +74,73 @@ const getTrendIcon = (trend: string) => {
   }
 };
 
+const FilterContent = ({
+  timeRange,
+  setTimeRange,
+  selectedBasin,
+  setSelectedBasin,
+  isDarkMode,
+  textMuted,
+  textSecondary,
+  borderColor,
+  headerText,
+}: {
+  timeRange: string;
+  setTimeRange: (val: string) => void;
+  selectedBasin: string;
+  setSelectedBasin: (val: string) => void;
+  isDarkMode: boolean;
+  textMuted: string;
+  textSecondary: string;
+  borderColor: string;
+  headerText: string;
+}) => (
+  <div className="space-y-3">
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Time Range</label>
+      <select 
+        value={timeRange}
+        onChange={(e) => setTimeRange(e.target.value)}
+        className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+      >
+        <option value="Last 24 Hours">Last 24 Hours</option>
+        <option value="Last 7 Days">Last 7 Days</option>
+        <option value="Last 30 Days">Last 30 Days</option>
+      </select>
+    </div>
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>River Basin</label>
+      <select 
+        value={selectedBasin}
+        onChange={(e) => setSelectedBasin(e.target.value)}
+        className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+      >
+        {riverBasins.map(b => (<option key={b.name} value={b.name}>{b.name}</option>))}
+      </select>
+    </div>
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Alert Level</label>
+      <div className="space-y-1.5">
+        {['All Levels', 'Critical Only', 'Warning Only', 'Normal'].map((level) => (
+          <label key={level} className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" className={`rounded ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-300'}`} defaultChecked={level === 'All Levels'} />
+            <span className={textSecondary}>{level}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+    <div className={`pt-3 border-t ${borderColor}`}>
+      <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>Quick Stats</h4>
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-xs"><span className={textMuted}>Critical Basins</span><span className="text-red-500 font-medium">2</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>At Risk Population</span><span className="text-orange-500 font-medium">1.6M</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Avg Rainfall</span><span className="font-medium" style={{ color: FAO_BLUE }}>54mm</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Active Alerts</span><span className="text-red-500 font-medium">3</span></div>
+      </div>
+    </div>
+  </div>
+);
+
 // Map Component with Legend
 const FloodMap = ({ isDarkMode, className = "" }: { isDarkMode: boolean; className?: string }) => {
   return (
@@ -97,12 +164,18 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   const [timeRange, setTimeRange] = useState('Last 24 Hours');
   const [selectedBasin, setSelectedBasin] = useState('Nile Basin');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [animationKey, setAnimationKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [sliderValue, setSliderValue] = useState(((2026 - 2001) * 12) + 2); // Mar 2026
   const svgRef = useRef<SVGSVGElement>(null);
 
+  const getMonthYear = (months: number) => {
+    const year = 2001 + Math.floor(months / 12);
+    const month = months % 12;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[month]} ${year}`;
+  };
+
   useEffect(() => {
-    setAnimationKey(prev => prev + 1);
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, [selectedBasin]);
@@ -112,53 +185,6 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   const textSecondary = isDarkMode ? 'text-slate-300' : 'text-slate-600';
   const borderColor = isDarkMode ? 'border-slate-700/30' : 'border-slate-200';
   const headerText = isDarkMode ? 'text-white' : 'text-slate-900';
-
-  const FilterContent = () => (
-    <div className="space-y-3">
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Time Range</label>
-        <select 
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
-          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-        >
-          <option value="Last 24 Hours">Last 24 Hours</option>
-          <option value="Last 7 Days">Last 7 Days</option>
-          <option value="Last 30 Days">Last 30 Days</option>
-        </select>
-      </div>
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>River Basin</label>
-        <select 
-          value={selectedBasin}
-          onChange={(e) => setSelectedBasin(e.target.value)}
-          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-        >
-          {riverBasins.map(b => (<option key={b.name} value={b.name}>{b.name}</option>))}
-        </select>
-      </div>
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Alert Level</label>
-        <div className="space-y-1.5">
-          {['All Levels', 'Critical Only', 'Warning Only', 'Normal'].map((level) => (
-            <label key={level} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" className={`rounded ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-300'}`} defaultChecked={level === 'All Levels'} />
-              <span className={textSecondary}>{level}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-      <div className={`pt-3 border-t ${borderColor}`}>
-        <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>Quick Stats</h4>
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs"><span className={textMuted}>Critical Basins</span><span className="text-red-500 font-medium">2</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>At Risk Population</span><span className="text-orange-500 font-medium">1.6M</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Avg Rainfall</span><span className="font-medium" style={{ color: FAO_BLUE }}>54mm</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Active Alerts</span><span className="text-red-500 font-medium">3</span></div>
-        </div>
-      </div>
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -234,7 +260,17 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
               }}
             >
               <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-                <FilterContent />
+                <FilterContent 
+                  timeRange={timeRange}
+                  setTimeRange={setTimeRange}
+                  selectedBasin={selectedBasin}
+                  setSelectedBasin={setSelectedBasin}
+                  isDarkMode={isDarkMode}
+                  textMuted={textMuted}
+                  textSecondary={textSecondary}
+                  borderColor={borderColor}
+                  headerText={headerText}
+                />
               </div>
 
               {/* Illustration at bottom */}
@@ -274,14 +310,15 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                       <span className={`text-xs font-medium ${textMuted}`}>2001</span>
                       <input 
                         type="range" 
-                        min="2001" 
-                        max={new Date().getFullYear()} 
-                        defaultValue={new Date().getFullYear()}
+                        min="0" 
+                        max={(2026 - 2001 + 1) * 12 - 1} 
+                        value={sliderValue}
+                        onChange={(e) => setSliderValue(parseInt(e.target.value))}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                       />
-                      <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                        {new Date().getFullYear()}
+                      <span className="text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                        {getMonthYear(sliderValue)}
                       </span>
                     </div>
                   </div>
@@ -338,7 +375,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                       {[0, 1, 2, 3, 4].map((i) => (
                         <div key={i} className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} style={{ top: `${i * 25}%` }} />
                       ))}
-                      <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 400 120" preserveAspectRatio="none">
+                      <svg ref={svgRef} key={selectedBasin} className="w-full h-[85%]" viewBox="0 0 400 120" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="floodGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                             <stop offset="0%" stopColor={FAO_BLUE} stopOpacity="0.3" />
@@ -485,14 +522,15 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                   <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                   <input 
                     type="range" 
-                    min="2001" 
-                    max={new Date().getFullYear()} 
-                    defaultValue={new Date().getFullYear()}
+                    min="0" 
+                    max={(2026 - 2001 + 1) * 12 - 1} 
+                    value={sliderValue}
+                    onChange={(e) => setSliderValue(parseInt(e.target.value))}
                     className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
                     style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                   />
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                    {new Date().getFullYear()}
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                    {getMonthYear(sliderValue)}
                   </span>
                 </div>
               </div>
@@ -510,7 +548,17 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <FilterContent />
+                  <FilterContent 
+                    timeRange={timeRange}
+                    setTimeRange={setTimeRange}
+                    selectedBasin={selectedBasin}
+                    setSelectedBasin={setSelectedBasin}
+                    isDarkMode={isDarkMode}
+                    textMuted={textMuted}
+                    textSecondary={textSecondary}
+                    borderColor={borderColor}
+                    headerText={headerText}
+                  />
                 </div>
               </>
             )}
@@ -532,7 +580,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                 {[0, 1, 2, 3, 4].map((i) => (
                   <div key={i} className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} style={{ top: `${i * 25}%` }} />
                 ))}
-                <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 400 120" preserveAspectRatio="none">
+                <svg ref={svgRef} key={selectedBasin} className="w-full h-[85%]" viewBox="0 0 400 120" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="floodGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stopColor={FAO_BLUE} stopOpacity="0.3" />

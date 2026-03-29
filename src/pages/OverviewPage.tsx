@@ -101,7 +101,7 @@ const monitoringModules = [
   {
     id: 'weather' as PageType,
     title: 'Weather Forecast',
-    description: '48-hour nowcasting & 7-day forecasts with high accuracy predictions',
+    description: '24-hour nowcasting & 7-day forecasts with high accuracy predictions',
     icon: Cloud,
     metric: 'Accuracy: 87%',
     alerts: 0,
@@ -214,7 +214,7 @@ const ThresholdScale = ({
           })}
         </div>
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500 bg-black"
+          className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500 ${isDarkMode ? 'bg-white' : 'bg-black'}`}
           style={{ left: `${percentage}%`, borderColor: isDarkMode ? '#334155' : 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
         />
       </div>
@@ -303,6 +303,14 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
   const [selectedModule, setSelectedModule] = useState('all');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sliderValue, setSliderValue] = useState(((2026 - 2001) * 12) + 2); // Mar 2026
+
+  const getMonthYear = (months: number) => {
+    const year = 2001 + Math.floor(months / 12);
+    const month = months % 12;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[month]} ${year}`;
+  };
 
   // Simulate loading
   useEffect(() => {
@@ -438,14 +446,15 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                   <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                   <input
                     type="range"
-                    min="2001"
-                    max={new Date().getFullYear()}
-                    defaultValue={new Date().getFullYear()}
+                    min="0"
+                    max={(2026 - 2001 + 1) * 12 - 1}
+                    value={sliderValue}
+                    onChange={(e) => setSliderValue(parseInt(e.target.value))}
                     className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
                     style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                   />
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                    {new Date().getFullYear()}
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                    {getMonthYear(sliderValue)}
                   </span>
                 </div>
               </div>
@@ -599,9 +608,9 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
 
             {/* Map and Alerts Row */}
             <div className="lg:col-span-9 grid grid-cols-12 gap-4">
-              {/* Map Section - 8 columns */}
-              <div className="col-span-8">
-                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-xl overflow-hidden shadow-sm h-full`}>
+              {/* Map Section - 9 columns */}
+              <div className="col-span-9">
+                <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-xl overflow-hidden shadow-sm h-full flex flex-col`}>
                   <div className={`flex items-center justify-between p-2 border-b ${borderColor}`}>
                     <div className="flex items-center gap-1.5">
                       <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
@@ -621,7 +630,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                       </span>
                     </div>
                   </div>
-                  <div className="relative aspect-[16/9] flex flex-col">
+                  <div className="relative flex-1 min-h-[450px] flex flex-col">
                     <div className="flex-1 relative">
                       <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
                     </div>
@@ -630,22 +639,23 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                       <span className={`text-xs font-medium ${textMuted}`}>2001</span>
                       <input
                         type="range"
-                        min="2001"
-                        max={new Date().getFullYear()}
-                        defaultValue={new Date().getFullYear()}
+                        min="0"
+                        max={(2026 - 2001 + 1) * 12 - 1}
+                        value={sliderValue}
+                        onChange={(e) => setSliderValue(parseInt(e.target.value))}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                       />
-                      <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                        {new Date().getFullYear()}
+                      <span className="text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                        {getMonthYear(sliderValue)}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Recent Alerts - 4 columns */}
-              <div className="col-span-4">
+              {/* Recent Alerts - 3 columns */}
+              <div className="col-span-3">
                 <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-xl p-3 shadow-sm h-full flex flex-col`}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">

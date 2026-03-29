@@ -108,6 +108,72 @@ const getTrendColor = (trend: string, isDarkMode: boolean) => {
   return isDarkMode ? 'text-slate-400' : 'text-slate-500';
 };
 
+const FilterContent = ({
+  selectedRegion,
+  setSelectedRegion,
+  selectedParameter,
+  setSelectedParameter,
+  isDarkMode,
+  textMuted,
+  textSecondary,
+  borderColor,
+}: {
+  selectedRegion: string;
+  setSelectedRegion: (val: string) => void;
+  selectedParameter: string;
+  setSelectedParameter: (val: string) => void;
+  isDarkMode: boolean;
+  textMuted: string;
+  textSecondary: string;
+  borderColor: string;
+}) => (
+  <div className="space-y-3">
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
+      <select
+        value={selectedRegion}
+        onChange={(e) => setSelectedRegion(e.target.value)}
+        className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+      >
+        <option value="All Regions">All Regions</option>
+        <option value="Central">Central</option>
+        <option value="Eastern">Eastern</option>
+        <option value="Western">Western</option>
+        <option value="Northern">Northern</option>
+      </select>
+    </div>
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
+      <select
+        value={selectedParameter}
+        onChange={(e) => setSelectedParameter(e.target.value)}
+        className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+      >
+        <option value="temperature">Temperature</option>
+        <option value="humidity">Humidity</option>
+        <option value="wind">Wind Speed</option>
+        <option value="rainfall">Rainfall</option>
+      </select>
+    </div>
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Date Range</label>
+      <input
+        type="date"
+        className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+      />
+    </div>
+    <div className={`pt-3 border-t ${borderColor}`}>
+      <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>Quick Stats</h4>
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-xs"><span className={textMuted}>Avg Temp</span><span className="font-medium" style={{ color: FAO_BLUE }}>24.5°C</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Max Temp</span><span className="text-red-500 font-medium">31.2°C</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Min Temp</span><span className="text-blue-500 font-medium">17.8°C</span></div>
+        <div className="flex justify-between text-xs"><span className={textMuted}>Total Rain</span><span className="text-cyan-500 font-medium">125mm</span></div>
+      </div>
+    </div>
+  </div>
+);
+
 // Threshold Scale Component
 const ThresholdScale = ({
   value,
@@ -141,7 +207,7 @@ const ThresholdScale = ({
           })}
         </div>
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500 bg-black"
+          className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500 ${isDarkMode ? 'bg-white' : 'bg-black'}`}
           style={{ left: `${percentage}%`, borderColor: isDarkMode ? '#334155' : 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
         />
       </div>
@@ -215,13 +281,19 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
   const [activeTab, setActiveTab] = useState<'nowcast' | 'forecast'>('nowcast');
   const [selectedRegion, setSelectedRegion] = useState('All Regions');
   const [selectedParameter, setSelectedParameter] = useState('temperature');
-  const [animationKey, setAnimationKey] = useState(0);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sliderValue, setSliderValue] = useState(((2026 - 2001) * 12) + 2); // Mar 2026
   const svgRef = useRef<SVGSVGElement>(null);
 
+  const getMonthYear = (months: number) => {
+    const year = 2001 + Math.floor(months / 12);
+    const month = months % 12;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[month]} ${year}`;
+  };
+
   useEffect(() => {
-    setAnimationKey(prev => prev + 1);
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, [activeTab]);
@@ -231,54 +303,6 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
   const textSecondary = isDarkMode ? 'text-slate-300' : 'text-slate-600';
   const borderColor = isDarkMode ? 'border-slate-700/30' : 'border-slate-200';
   const headerText = isDarkMode ? 'text-white' : 'text-slate-900';
-
-  const FilterContent = () => (
-    <div className="space-y-3">
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Region</label>
-        <select
-          value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
-          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-        >
-          <option value="All Regions">All Regions</option>
-          <option value="Central">Central</option>
-          <option value="Eastern">Eastern</option>
-          <option value="Western">Western</option>
-          <option value="Northern">Northern</option>
-        </select>
-      </div>
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
-        <select
-          value={selectedParameter}
-          onChange={(e) => setSelectedParameter(e.target.value)}
-          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-        >
-          <option value="temperature">Temperature</option>
-          <option value="humidity">Humidity</option>
-          <option value="wind">Wind Speed</option>
-          <option value="rainfall">Rainfall</option>
-        </select>
-      </div>
-      <div>
-        <label className={`text-xs ${textMuted} mb-1 block`}>Date Range</label>
-        <input
-          type="date"
-          className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-        />
-      </div>
-      <div className={`pt-3 border-t ${borderColor}`}>
-        <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>Quick Stats</h4>
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs"><span className={textMuted}>Avg Temp</span><span className="font-medium" style={{ color: FAO_BLUE }}>24.5°C</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Max Temp</span><span className="text-red-500 font-medium">31.2°C</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Min Temp</span><span className="text-blue-500 font-medium">17.8°C</span></div>
-          <div className="flex justify-between text-xs"><span className={textMuted}>Total Rain</span><span className="text-cyan-500 font-medium">125mm</span></div>
-        </div>
-      </div>
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -317,7 +341,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
                 <h1 className="text-lg md:text-xl font-bold text-white">Weather Forecast</h1>
-                <p className="text-slate-200 text-xs md:text-sm">48-hour nowcasting & 7-day forecasts</p>
+                <p className="text-slate-200 text-xs md:text-sm">24-hour nowcasting & 7-day forecasts</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   <span
                     className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
@@ -390,7 +414,16 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
             >
               <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
                 <h3 className={`text-sm font-semibold mb-3 ${textSecondary}`}>Filters</h3>
-                <FilterContent />
+                <FilterContent
+                  selectedRegion={selectedRegion}
+                  setSelectedRegion={setSelectedRegion}
+                  selectedParameter={selectedParameter}
+                  setSelectedParameter={setSelectedParameter}
+                  isDarkMode={isDarkMode}
+                  textMuted={textMuted}
+                  textSecondary={textSecondary}
+                  borderColor={borderColor}
+                />
               </div>
 
               {/* Illustration at bottom */}
@@ -439,14 +472,15 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       <span className={`text-xs font-medium ${textMuted}`}>2001</span>
                       <input
                         type="range"
-                        min="2001"
-                        max={new Date().getFullYear()}
-                        defaultValue={new Date().getFullYear()}
+                        min="0"
+                        max={(2026 - 2001 + 1) * 12 - 1}
+                        value={sliderValue}
+                        onChange={(e) => setSliderValue(parseInt(e.target.value))}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                       />
-                      <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                        {new Date().getFullYear()}
+                      <span className="text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                        {getMonthYear(sliderValue)}
                       </span>
                     </div>
                   </div>
@@ -468,7 +502,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       style={{ backgroundColor: activeTab === 'nowcast' ? FAO_BLUE : undefined }}
                     >
                       <span className={`w-2 h-2 rounded-full ${activeTab === 'nowcast' ? 'bg-white' : 'bg-slate-400'}`} />
-                      <Clock className="w-3.5 h-3.5" />48-Hour Nowcast
+                      <Clock className="w-3.5 h-3.5" />24-Hour Nowcast
                     </button>
                     <button
                       onClick={() => setActiveTab('forecast')}
@@ -502,11 +536,11 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                     ) : (
                       <div>
                         <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>7-Day Forecast</h4>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {dailyForecast.slice(0, 5).map((day, idx) => (
-                            <div key={idx} className={`p-1.5 rounded-lg text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                          {dailyForecast.map((day, idx) => (
+                            <div key={idx} className={`flex-shrink-0 w-20 p-2 rounded-lg text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
                               <p className={`text-[10px] ${textMuted}`}>{day.day}</p>
-                              {getWeatherIcon(day.icon, "w-4 h-4 mx-auto my-0.5")}
+                              {getWeatherIcon(day.icon, "w-5 h-5 mx-auto my-1")}
                               <p className={`text-xs font-bold ${headerText}`}>{day.high}°</p>
                               <p className={`text-[9px] ${textMuted}`}>{day.low}°</p>
                             </div>
@@ -530,7 +564,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       {[0, 1, 2, 3, 4].map((i) => (
                         <div key={i} className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} style={{ top: `${i * 25}%` }} />
                       ))}
-                      <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
+                      <svg ref={svgRef} key={activeTab} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
                         <defs>
                           <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                             <stop offset="0%" stopColor={FAO_BLUE} stopOpacity="0.3" />
@@ -641,9 +675,9 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                   <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}>
                     <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />7-Day Forecast
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
                     {dailyForecast.map((day, idx) => (
-                      <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
+                      <div key={idx} className={`flex-shrink-0 w-24 rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
                         <p className={`text-xs ${textMuted}`}>{day.day}</p>
                         <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
                         {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
@@ -698,14 +732,15 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                   <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                   <input
                     type="range"
-                    min="2001"
-                    max={new Date().getFullYear()}
-                    defaultValue={new Date().getFullYear()}
+                    min="0"
+                    max={(2026 - 2001 + 1) * 12 - 1}
+                    value={sliderValue}
+                    onChange={(e) => setSliderValue(parseInt(e.target.value))}
                     className="flex-1 h-1 rounded-lg appearance-none cursor-pointer"
                     style={{ backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', accentColor: FAO_BLUE }}
                   />
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
-                    {new Date().getFullYear()}
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}>
+                    {getMonthYear(sliderValue)}
                   </span>
                 </div>
               </div>
@@ -723,7 +758,16 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <FilterContent />
+                  <FilterContent
+                    selectedRegion={selectedRegion}
+                    setSelectedRegion={setSelectedRegion}
+                    selectedParameter={selectedParameter}
+                    setSelectedParameter={setSelectedParameter}
+                    isDarkMode={isDarkMode}
+                    textMuted={textMuted}
+                    textSecondary={textSecondary}
+                    borderColor={borderColor}
+                  />
                 </div>
               </>
             )}
@@ -742,7 +786,7 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 {[0, 1, 2, 3, 4].map((i) => (
                   <div key={i} className={`absolute left-0 right-0 h-px ${isDarkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} style={{ top: `${i * 25}%` }} />
                 ))}
-                <svg ref={svgRef} key={animationKey} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
+                <svg ref={svgRef} key={activeTab} className="w-full h-[85%]" viewBox="0 0 500 150" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                       <stop offset="0%" stopColor={FAO_BLUE} stopOpacity="0.3" />

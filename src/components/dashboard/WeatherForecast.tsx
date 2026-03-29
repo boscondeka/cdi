@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 
-// Mock data for 48-hour nowcasting
+// Mock data for 24-hour nowcasting
 const nowcastData = Array.from({ length: 24 }, (_, i) => ({
   hour: i,
   time: `${i}:00`,
@@ -116,7 +116,7 @@ const NowcastPanel = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-slate-300 flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            48-Hour Nowcast Timeline
+            24-Hour Nowcast Timeline
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -217,14 +217,14 @@ const ForecastPanel = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {forecastData.map((day, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className="p-3 rounded-lg bg-slate-700/50 border border-slate-600 hover:border-slate-500 transition-colors"
+                className="flex-shrink-0 w-32 p-3 rounded-lg bg-slate-700/50 border border-slate-600 hover:border-slate-500 transition-colors"
               >
                 <p className="text-xs text-slate-400 text-center">{day.day}</p>
                 <p className="text-xs text-slate-500 text-center">{day.date}</p>
@@ -264,7 +264,7 @@ export default function WeatherForecast() {
         <TabsList className="grid w-full grid-cols-2 bg-slate-800">
           <TabsTrigger value="nowcast" className="data-[state=active]:bg-blue-600">
             <Clock className="w-4 h-4 mr-2" />
-            48-Hour Nowcast
+            24-Hour Nowcast
           </TabsTrigger>
           <TabsTrigger value="forecast" className="data-[state=active]:bg-blue-600">
             <Calendar className="w-4 h-4 mr-2" />
