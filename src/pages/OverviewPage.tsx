@@ -231,22 +231,37 @@ const ThresholdScale = ({
 const UgandaMap = ({
   isDarkMode,
   className = "",
+  selectedModule = 'all',
 }: {
   isDarkMode: boolean;
   className?: string;
+  selectedModule?: string;
 }) => {
+  const getLegendItems = () => {
+    const allItems = [
+      { label: 'Weather', color: FAO_BLUE, id: 'weather' },
+      { label: 'Drought', color: '#f97316', id: 'drought' },
+      { label: 'Flood', color: '#06b6d4', id: 'flood' },
+      { label: 'Stations', color: '#22c55e', id: 'stations' },
+    ];
+
+    if (selectedModule === 'all') return allItems;
+    return allItems.filter(item => item.id === selectedModule);
+  };
+
+  const getBadgeText = () => {
+    if (selectedModule === 'all') return 'Uganda';
+    const module = monitoringModules.find(m => m.id === selectedModule);
+    return module ? module.title : 'Uganda';
+  };
+
   return (
     <UgandaBoundaryMap
       isDarkMode={isDarkMode}
       className={`rounded-xl md:rounded-2xl ${className}`}
-      badgeText="Uganda"
+      badgeText={getBadgeText()}
       legendTitle="Legend"
-      legendItems={[
-        { label: 'Weather', color: FAO_BLUE },
-        { label: 'Drought', color: '#f97316' },
-        { label: 'Flood', color: '#06b6d4' },
-        { label: 'Stations', color: '#22c55e' },
-      ]}
+      legendItems={getLegendItems()}
     />
   );
 };
@@ -270,31 +285,28 @@ const MapFilters = ({
   ];
 
   return (
-    <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80 border-slate-700/30' : 'bg-white/90 border-slate-200'} border shadow-sm`}>
-      <h3 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Map Filters</h3>
-      <div className="space-y-1">
-        {modules.map((module) => {
-          const Icon = module.icon;
-          const isSelected = selectedModule === module.id;
-          return (
-            <button
-              key={module.id}
-              onClick={() => onModuleChange(module.id)}
-              className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors ${isSelected
-                ? (isDarkMode ? 'bg-slate-700/80' : 'bg-blue-50')
-                : (isDarkMode ? 'hover:bg-slate-700/40' : 'hover:bg-slate-50')
-                }`}
-            >
-              <div className="w-6 h-6 rounded-md flex items-center justify-center p-0.5" style={{ backgroundColor: isSelected ? `${module.color}30` : `${module.color}15` }}>
-                <Icon className="w-3.5 h-3.5" style={{ color: module.color }} />
-              </div>
-              <span className={`text-xs font-medium ${isSelected ? (isDarkMode ? 'text-white' : 'text-slate-900') : (isDarkMode ? 'text-slate-300' : 'text-slate-600')}`}>
-                {module.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="space-y-1">
+      {modules.map((module) => {
+        const Icon = module.icon;
+        const isSelected = selectedModule === module.id;
+        return (
+          <button
+            key={module.id}
+            onClick={() => onModuleChange(module.id)}
+            className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors ${isSelected
+              ? (isDarkMode ? 'bg-slate-700/80' : 'bg-blue-50')
+              : (isDarkMode ? 'hover:bg-slate-700/40' : 'hover:bg-slate-50')
+              }`}
+          >
+            <div className="w-6 h-6 rounded-md flex items-center justify-center p-0.5" style={{ backgroundColor: isSelected ? `${module.color}30` : `${module.color}15` }}>
+              <Icon className="w-3.5 h-3.5" style={{ color: module.color }} />
+            </div>
+            <span className={`text-xs font-medium ${isSelected ? (isDarkMode ? 'text-white' : 'text-slate-900') : (isDarkMode ? 'text-slate-300' : 'text-slate-600')}`}>
+              {module.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 };
@@ -430,19 +442,19 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
               </div>
               <div className="relative aspect-[4/3] flex flex-col">
                 <div className="flex-1 relative">
-                  <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+                  <UgandaMap isDarkMode={isDarkMode} selectedModule={selectedModule} className="absolute inset-0 w-full h-full" />
                 </div>
                 {/* Filter button on map */}
                 <button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-10 text-white"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-[1001] text-white"
                   style={{ backgroundColor: FAO_BLUE }}
                 >
                   <Filter className="w-4 h-4" />
                 </button>
 
                 {/* Time Slider */}
-                <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
+                <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'} z-[1001]`}>
                   <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                   <input
                     type="range"
@@ -462,9 +474,9 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
             {/* Filter Popup */}
             {showMobileFilters && (
               <>
-                <div className="fixed inset-0 z-20" onClick={() => setShowMobileFilters(false)} />
+                <div className="fixed inset-0 z-[1002]" onClick={() => setShowMobileFilters(false)} />
                 <div
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-[1003] w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h4 className={`text-xs font-semibold ${headerText}`}>Map Filters</h4>
@@ -570,7 +582,10 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                 }}
               >
                 <div className='mt-1 mb-4'>
-                  <MapFilters isDarkMode={isDarkMode} selectedModule={selectedModule} onModuleChange={setSelectedModule} />
+                  <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80 border-slate-700/30' : 'bg-white/90 border-slate-200'} border shadow-sm`}>
+                    <h3 className={`text-xs font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Map Filters</h3>
+                    <MapFilters isDarkMode={isDarkMode} selectedModule={selectedModule} onModuleChange={setSelectedModule} />
+                  </div>
                 </div>
 
                 <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/60' : 'bg-white/70'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
@@ -632,7 +647,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                   </div>
                   <div className="relative flex-1 min-h-[450px] flex flex-col">
                     <div className="flex-1 relative">
-                      <UgandaMap isDarkMode={isDarkMode} className="absolute inset-0 w-full h-full" />
+                      <UgandaMap isDarkMode={isDarkMode} selectedModule={selectedModule} className="absolute inset-0 w-full h-full" />
                     </div>
                     {/* Time Slider */}
                     <div className={`px-4 py-3 border-t ${borderColor} flex items-center gap-4 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>

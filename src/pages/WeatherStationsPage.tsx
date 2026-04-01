@@ -517,14 +517,14 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
               {/* Filter button on map */}
               <button
                 onClick={() => setShowMobileFilters(!showMobileFilters)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-10 text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-[1001] text-white"
                 style={{ backgroundColor: FAO_BLUE }}
               >
                 <Filter className="w-4 h-4" />
               </button>
               
               {/* Time Slider */}
-              <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>
+              <div className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'} z-[1001]`}>
                 <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                 <input 
                   type="range" 
@@ -544,9 +544,9 @@ export default function WeatherStationsPage({ isDarkMode = true }: WeatherStatio
             {/* Filter Popup */}
             {showMobileFilters && (
               <>
-                <div className="fixed inset-0 z-20" onClick={() => setShowMobileFilters(false)} />
+                <div className="fixed inset-0 z-[1002]" onClick={() => setShowMobileFilters(false)} />
                 <div 
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-30 w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-[1003] w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h4 className={`text-xs font-semibold ${headerText}`}>Station Filters</h4>
