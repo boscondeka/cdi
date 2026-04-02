@@ -585,42 +585,6 @@ export default function WeatherForecastPage({ isDarkMode = true }: WeatherForeca
                 </div>
               </div>
             </div>
-
-            {/* Full 20-Day Forecast (when forecast tab is active) - With Scrollbar */}
-            {activeTab === 'forecast' && (
-              <div className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl p-3 shadow-sm animate-fade-in-up`}>
-                <h3 className={`text-sm font-semibold mb-3 flex items-center gap-1.5 ${headerText}`}>
-                  <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />Complete 7-Day Forecast
-                </h3>
-                <div className="overflow-x-auto pb-2">
-                  <div className="grid grid-cols-10 gap-2 min-w-[800px]">
-                    {dailyForecast.map((day, idx) => (
-                      <div key={idx} className={`rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? 'bg-slate-700/30' : 'bg-slate-100'}`}>
-                        <p className={`text-xs ${textMuted}`}>{day.day}</p>
-                        <p className="text-[10px] text-slate-500 mb-1">{day.date}</p>
-                        {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
-                        <div className="flex items-center justify-center gap-1 mt-1">
-                          <span className={`text-sm font-bold ${headerText}`}>{day.high}°</span>
-                          <span className={`text-xs ${textMuted}`}>{day.low}°</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-1 mt-0.5 text-[10px]" style={{ color: FAO_BLUE }}>
-                          <CloudRain className="w-2.5 h-2.5" />{day.rain}mm
-                        </div>
-                        <div className="mt-1">
-                          <div className="flex items-center justify-between text-[10px]">
-                            <span className={textMuted}>Conf</span>
-                            <span style={{ color: FAO_BLUE }}>{day.confidence}%</span>
-                          </div>
-                          <div className={`h-1 rounded-full mt-0.5 overflow-hidden ${isDarkMode ? 'bg-slate-600' : 'bg-slate-200'}`}>
-                            <div className="h-full rounded-full" style={{ width: `${day.confidence}%`, backgroundColor: FAO_BLUE }} />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
