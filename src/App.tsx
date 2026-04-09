@@ -11,6 +11,7 @@ import {
   X,
   Moon,
   BookOpen,
+  HelpCircle,
   Sun as SunIcon,
   AlertTriangle,
   MapPin
@@ -21,8 +22,9 @@ import DroughtMonitoringPage from './pages/DroughtMonitoringPage';
 import FloodMonitoringPage from './pages/FloodMonitoringPage';
 import WeatherStationsPage from './pages/WeatherStationsPage';
 import ResourcesPage from './pages/ResourcesPage';
+import HelpPage from './pages/HelpPage';
 
-export type PageType = 'overview' | 'weather' | 'drought' | 'flood' | 'stations' | 'resources';
+export type PageType = 'overview' | 'weather' | 'drought' | 'flood' | 'stations' | 'resources' | 'help';
 
 const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Overview', icon: Home },
@@ -31,6 +33,7 @@ const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: 'flood', label: 'Flood Monitor', icon: Waves },
   { id: 'stations', label: 'Weather Stations', icon: Radio },
   { id: 'resources', label: 'Resources', icon: BookOpen },
+  { id: 'help', label: 'Help', icon: HelpCircle },
 ];
 
 // Sample alerts data for each page
@@ -120,6 +123,8 @@ function App() {
         return <WeatherStationsPage isDarkMode={isDarkMode} />;
       case 'resources':
         return <ResourcesPage isDarkMode={isDarkMode} />;
+      case 'help':
+        return <HelpPage isDarkMode={isDarkMode} />;
       default:
         return <OverviewPage onNavigate={handlePageChange} isDarkMode={isDarkMode} />;
     }
@@ -176,29 +181,34 @@ function App() {
       )}
 
       {/* Top Navigation Bar */}
-      <header className={`h-16 backdrop-blur-sm border-b flex items-center justify-between px-4 md:px-6 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${headerClasses}`}>
+      <header className={`h-14 backdrop-blur-sm border-b flex items-center justify-between px-4 md:px-6 fixed top-0 left-0 right-0 z-50 transition-colors duration-300 ${headerClasses}`}>
         <div className="flex items-center gap-3">
           {/* Mobile Menu Button - Only shows sidebar on desktop */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className={`p-2 rounded-lg transition-colors hidden lg:flex ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
+            className={`p-1.5 rounded-lg transition-colors hidden lg:flex ${isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-200'}`}
           >
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
 
           {/* FAO and Uganda Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <img
               src={isDarkMode ? "/fao-white.png" : "/fao_logo_3lines_en1.png"}
               alt="FAO Logo"
-              className="h-8 md:h-10 w-auto object-contain"
+              className="h-6 md:h-8 w-auto object-contain"
             />
-            <div className={`h-8 w-px ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} />
-            <img
-              src="/uganda-coat-of-arms.svg"
-              alt="Uganda Coat of Arms"
-              className="h-10 md:h-12 w-auto object-contain"
-            />
+            <div className={`h-6 w-px ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} />
+            <div className="flex items-center gap-1.5">
+              <img
+                src="/uganda-coat-of-arms.svg"
+                alt="Uganda Coat of Arms"
+                className="h-7 md:h-9 w-auto object-contain"
+              />
+              <div className="hidden sm:block">
+                <p className={`text-[9px] md:text-[10px] font-bold leading-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Republic of Uganda</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -324,7 +334,7 @@ function App() {
         </div>
       </nav>
 
-      <div className="flex pt-16 min-h-screen relative z-10 pb-16 lg:pb-0">
+      <div className="flex pt-14 min-h-screen relative z-10 pb-16 lg:pb-0">
         {/* Main Content with transition */}
         <main className={`flex-1 overflow-auto transition-all duration-300 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
           {renderPage()}
