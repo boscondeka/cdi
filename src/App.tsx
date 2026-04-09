@@ -51,7 +51,19 @@ function App() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
+  const [particles, setParticles] = useState<{ id: number; left: string; top: string; delay: string; duration: string }[]>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Generate particles once to avoid impure function calls during render
+  useEffect(() => {
+    setParticles([...Array(20)].map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 5}s`,
+      duration: `${3 + Math.random() * 4}s`,
+    })));
+  }, []);
 
   // Detect system color scheme preference
   useEffect(() => {
@@ -148,15 +160,15 @@ function App() {
             style={{ animationDuration: '5s', animationDelay: '2s' }} />
 
           {/* Floating particles */}
-          {[...Array(20)].map((_, i) => (
+          {particles.map((p) => (
             <div
-              key={i}
+              key={p.id}
               className="absolute w-1 h-1 rounded-full opacity-30 animate-float bg-blue-400"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${3 + Math.random() * 4}s`,
+                left: p.left,
+                top: p.top,
+                animationDelay: p.delay,
+                animationDuration: p.duration,
               }}
             />
           ))}
@@ -174,12 +186,18 @@ function App() {
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* FAO Logo Only */}
-          <div className="flex items-center">
+          {/* FAO and Uganda Logo */}
+          <div className="flex items-center gap-3">
             <img
               src={isDarkMode ? "/fao-white.png" : "/fao_logo_3lines_en1.png"}
               alt="FAO Logo"
-              className="h-8 md:h-10 w-auto"
+              className="h-8 md:h-10 w-auto object-contain"
+            />
+            <div className={`h-8 w-px ${isDarkMode ? 'bg-slate-700' : 'bg-slate-300'}`} />
+            <img
+              src="/uganda-coat-of-arms.svg"
+              alt="Uganda Coat of Arms"
+              className="h-10 md:h-12 w-auto object-contain"
             />
           </div>
         </div>
