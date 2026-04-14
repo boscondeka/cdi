@@ -213,7 +213,7 @@ function App() {
         </div>
 
         {/* Center Navigation Tabs - Desktop only */}
-        <nav className={`hidden lg:flex items-center gap-1 rounded-xl p-1 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-200/80'}`}>
+        <nav className={`hidden lg:flex items-center gap-0.5 rounded-xl p-1 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-200/80'}`}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
@@ -221,7 +221,8 @@ function App() {
               <button
                 key={item.id}
                 onClick={() => handlePageChange(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-md font-medium transition-all ${isActive
+                title={item.label}
+                className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-xs xl:text-sm font-medium transition-all ${isActive
                     ? 'text-white'
                     : isDarkMode
                       ? 'text-slate-400 hover:text-white hover:bg-slate-700/50'
@@ -229,8 +230,9 @@ function App() {
                   }`}
                 style={{ backgroundColor: isActive ? FAO_BLUE : 'transparent' }}
               >
-                <Icon className="w-4 h-4" />
-                {item.label}
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden xl:inline">{item.label}</span>
+                <span className="xl:hidden">{item.label.split(' ')[0]}</span>
               </button>
             );
           })}
@@ -240,8 +242,8 @@ function App() {
         <div className="flex items-center gap-3 md:gap-4">
           {/* System Name */}
           <div className="hidden md:block text-right">
-            <h1 className="font-bold text-sm md:text-base leading-tight">Uganda Multi Hazard</h1>
-            <p className={`text-[10px] md:text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Observatory System</p>
+            <h1 className="font-bold text-xs xl:text-sm leading-tight">Uganda Multi Hazard</h1>
+            <p className={`text-[9px] xl:text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Observatory System</p>
           </div>
 
           {/* Theme Toggle */}
