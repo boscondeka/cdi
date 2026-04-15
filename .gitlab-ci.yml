@@ -8,13 +8,11 @@ deploy:
   services:
     - docker:dind
   script:
-    - rm -rf .next node_modules
-    - rm -f .env.local
-    - cp /home/gitlab-runner/env.txt .env.local
+    - rm -rf dist node_modules
     - docker ps
     - ls
     - docker build -t cdi_main .
     - docker stop cdi_main_container || true
     - docker rm cdi_main_container || true
-    - docker run -d -p 3000:3000 --restart unless-stopped --name cdi_main_container cdi_main
+    - docker run -d -p 3000:80 --restart unless-stopped --name cdi_main_container cdi_main
    

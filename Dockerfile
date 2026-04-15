@@ -1,35 +1,29 @@
-# Dockerfile
-# base image
-# Use a base Node.js image
-FROM node:20-alpine AS base
+# Stage 1: Build
+FROM node:20-alpine AS builder
 
-RUN apk add --no-cache nano
-# Set the working directory in the container
-WORKDIR /rootdir
+WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
-
-RUN npm install -g npm@latest
-
-# Install dependencies
 RUN npm install --force
 
-
-# Copy the entire project to the working directory
 COPY . .
-
-RUN pwd
-# Copy .env.local from host machine to the container
-COPY .env.local .env.local
-
-# Build the Next.js app for production
 RUN npm run build
 
-# Expose the port on which the Next.js app will run
-EXPOSE 3000
+# Stage 2: Serve with nginx
+FROM nginx:alpine
 
-# Start the Next.js app
-CMD ["npm", "start"]
+COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Handle client-side routing
+RUN echo 'server { \
+  listen 80; \
+  root /usr/share/nginx/html; \
+  index index.html; \
+  location / { \
+    try_files $uri $uri/ /index.html; \
+  } \
+}' > /etc/nginx/conf.d/default.conf
 
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
