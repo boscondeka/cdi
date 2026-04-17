@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Cloud, 
-  Sun, 
-  CloudRain, 
-  Wind, 
-  Droplets, 
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Cloud,
+  Sun,
+  CloudRain,
+  Wind,
+  Droplets,
   Thermometer,
   Clock,
   Calendar,
-  TrendingUp
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
+  TrendingUp,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 
 // Mock data for 24-hour nowcasting
 const nowcastData = Array.from({ length: 24 }, (_, i) => ({
@@ -23,7 +23,7 @@ const nowcastData = Array.from({ length: 24 }, (_, i) => ({
   rainfall: Math.max(0, Math.sin(i / 4) * 15 + Math.random() * 5),
   humidity: 60 + Math.sin(i / 5) * 20 + Math.random() * 10,
   windSpeed: 5 + Math.random() * 10,
-  condition: i % 4 === 0 ? 'rainy' : i % 3 === 0 ? 'cloudy' : 'sunny',
+  condition: i % 4 === 0 ? "rainy" : i % 3 === 0 ? "cloudy" : "sunny",
 }));
 
 // Mock data for 20-day forecast
@@ -31,27 +31,40 @@ const forecastData = Array.from({ length: 20 }, (_, i) => {
   const date = new Date();
   date.setDate(date.getDate() + i);
   return {
-    day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    day: date.toLocaleDateString("en-US", { weekday: "short" }),
+    date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     maxTemp: 26 + Math.sin(i / 3) * 4 + Math.random() * 3,
     minTemp: 18 + Math.sin(i / 3) * 3 + Math.random() * 2,
     rainfall: Math.max(0, Math.sin(i / 5) * 25 + Math.random() * 10),
     humidity: 55 + Math.sin(i / 4) * 25 + Math.random() * 10,
-    condition: i % 5 === 0 ? 'heavy-rain' : i % 4 === 0 ? 'light-rain' : i % 3 === 0 ? 'cloudy' : 'sunny',
+    condition:
+      i % 5 === 0
+        ? "heavy-rain"
+        : i % 4 === 0
+          ? "light-rain"
+          : i % 3 === 0
+            ? "cloudy"
+            : "sunny",
     confidence: 85 + Math.random() * 10,
   };
 });
 
-const WeatherIcon = ({ condition, className = "w-6 h-6" }: { condition: string; className?: string }) => {
+const WeatherIcon = ({
+  condition,
+  className = "w-6 h-6",
+}: {
+  condition: string;
+  className?: string;
+}) => {
   switch (condition) {
-    case 'sunny':
+    case "sunny":
       return <Sun className={`${className} text-amber-400`} />;
-    case 'cloudy':
+    case "cloudy":
       return <Cloud className={`${className} text-slate-400`} />;
-    case 'rainy':
-    case 'light-rain':
+    case "rainy":
+    case "light-rain":
       return <CloudRain className={`${className} text-blue-400`} />;
-    case 'heavy-rain':
+    case "heavy-rain":
       return <CloudRain className={`${className} text-blue-600`} />;
     default:
       return <Sun className={`${className} text-amber-400`} />;
@@ -71,7 +84,9 @@ const NowcastPanel = () => {
               <Thermometer className="w-8 h-8 text-red-400" />
               <div>
                 <p className="text-slate-400 text-xs">Temperature</p>
-                <p className="text-2xl font-bold text-white">{nowcastData[selectedHour].temperature.toFixed(1)}°C</p>
+                <p className="text-2xl font-bold text-white">
+                  {nowcastData[selectedHour].temperature.toFixed(1)}°C
+                </p>
               </div>
             </div>
           </CardContent>
@@ -82,7 +97,9 @@ const NowcastPanel = () => {
               <Droplets className="w-8 h-8 text-blue-400" />
               <div>
                 <p className="text-slate-400 text-xs">Rainfall</p>
-                <p className="text-2xl font-bold text-white">{nowcastData[selectedHour].rainfall.toFixed(1)}mm</p>
+                <p className="text-2xl font-bold text-white">
+                  {nowcastData[selectedHour].rainfall.toFixed(1)}mm
+                </p>
               </div>
             </div>
           </CardContent>
@@ -93,7 +110,9 @@ const NowcastPanel = () => {
               <Wind className="w-8 h-8 text-cyan-400" />
               <div>
                 <p className="text-slate-400 text-xs">Wind Speed</p>
-                <p className="text-2xl font-bold text-white">{nowcastData[selectedHour].windSpeed.toFixed(1)}km/h</p>
+                <p className="text-2xl font-bold text-white">
+                  {nowcastData[selectedHour].windSpeed.toFixed(1)}km/h
+                </p>
               </div>
             </div>
           </CardContent>
@@ -104,7 +123,9 @@ const NowcastPanel = () => {
               <Droplets className="w-8 h-8 text-indigo-400" />
               <div>
                 <p className="text-slate-400 text-xs">Humidity</p>
-                <p className="text-2xl font-bold text-white">{nowcastData[selectedHour].humidity.toFixed(0)}%</p>
+                <p className="text-2xl font-bold text-white">
+                  {nowcastData[selectedHour].humidity.toFixed(0)}%
+                </p>
               </div>
             </div>
           </CardContent>
@@ -129,14 +150,19 @@ const NowcastPanel = () => {
                 onClick={() => setSelectedHour(index)}
                 className={`flex-shrink-0 p-3 rounded-lg border transition-all ${
                   selectedHour === index
-                    ? 'bg-blue-600/30 border-blue-500'
-                    : 'bg-slate-700/50 border-slate-600 hover:border-slate-500'
+                    ? "bg-blue-600/30 border-blue-500"
+                    : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
                 }`}
               >
                 <div className="text-center">
                   <p className="text-xs text-slate-400">{hour.time}</p>
-                  <WeatherIcon condition={hour.condition} className="w-6 h-6 mx-auto my-1" />
-                  <p className="text-sm font-semibold text-white">{hour.temperature.toFixed(0)}°</p>
+                  <WeatherIcon
+                    condition={hour.condition}
+                    className="w-6 h-6 mx-auto my-1"
+                  />
+                  <p className="text-sm font-semibold text-white">
+                    {hour.temperature.toFixed(0)}°
+                  </p>
                 </div>
               </motion.button>
             ))}
@@ -186,7 +212,11 @@ const ForecastPanel = () => {
           <CardContent className="p-4">
             <p className="text-slate-400 text-xs mb-1">Avg Temperature</p>
             <p className="text-2xl font-bold text-white">
-              {(forecastData.reduce((acc, d) => acc + d.maxTemp, 0) / forecastData.length).toFixed(1)}°C
+              {(
+                forecastData.reduce((acc, d) => acc + d.maxTemp, 0) /
+                forecastData.length
+              ).toFixed(1)}
+              °C
             </p>
           </CardContent>
         </Card>
@@ -194,7 +224,8 @@ const ForecastPanel = () => {
           <CardContent className="p-4">
             <p className="text-slate-400 text-xs mb-1">Total Rainfall</p>
             <p className="text-2xl font-bold text-blue-400">
-              {forecastData.reduce((acc, d) => acc + d.rainfall, 0).toFixed(0)}mm
+              {forecastData.reduce((acc, d) => acc + d.rainfall, 0).toFixed(0)}
+              mm
             </p>
           </CardContent>
         </Card>
@@ -202,7 +233,7 @@ const ForecastPanel = () => {
           <CardContent className="p-4">
             <p className="text-slate-400 text-xs mb-1">Rainy Days</p>
             <p className="text-2xl font-bold text-cyan-400">
-              {forecastData.filter(d => d.rainfall > 5).length} days
+              {forecastData.filter((d) => d.rainfall > 5).length} days
             </p>
           </CardContent>
         </Card>
@@ -232,19 +263,27 @@ const ForecastPanel = () => {
                   <WeatherIcon condition={day.condition} className="w-8 h-8" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-white">{day.maxTemp.toFixed(0)}°</p>
-                  <p className="text-xs text-slate-400">{day.minTemp.toFixed(0)}°</p>
+                  <p className="text-sm font-semibold text-white">
+                    {day.maxTemp.toFixed(0)}°
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {day.minTemp.toFixed(0)}°
+                  </p>
                 </div>
                 {day.rainfall > 0 && (
                   <div className="flex items-center justify-center gap-1 mt-1">
                     <Droplets className="w-3 h-3 text-blue-400" />
-                    <span className="text-xs text-blue-400">{day.rainfall.toFixed(0)}mm</span>
+                    <span className="text-xs text-blue-400">
+                      {day.rainfall.toFixed(0)}mm
+                    </span>
                   </div>
                 )}
                 <div className="mt-2">
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-slate-500">Confidence</span>
-                    <span className="text-emerald-400">{day.confidence.toFixed(0)}%</span>
+                    <span className="text-emerald-400">
+                      {day.confidence.toFixed(0)}%
+                    </span>
                   </div>
                   <Progress value={day.confidence} className="h-1" />
                 </div>
@@ -262,11 +301,17 @@ export default function WeatherForecast() {
     <div className="h-full">
       <Tabs defaultValue="nowcast" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-slate-800">
-          <TabsTrigger value="nowcast" className="data-[state=active]:bg-blue-600">
+          <TabsTrigger
+            value="nowcast"
+            className="data-[state=active]:bg-blue-600"
+          >
             <Clock className="w-4 h-4 mr-2" />
             24-Hour Nowcast
           </TabsTrigger>
-          <TabsTrigger value="forecast" className="data-[state=active]:bg-blue-600">
+          <TabsTrigger
+            value="forecast"
+            className="data-[state=active]:bg-blue-600"
+          >
             <Calendar className="w-4 h-4 mr-2" />
             20-Day Forecast
           </TabsTrigger>
