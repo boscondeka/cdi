@@ -10,15 +10,13 @@ import {
   Download,
   Calendar,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Navigation,
   Filter,
   X,
   Map as MapIcon,
 } from "lucide-react";
 import { useFilterStore } from "../../store/useFilterStore";
+import { getTrendIcon, getTrendColor } from "../../utils/chartHelpers";
 
 interface WeatherData {
   district_name: string;
@@ -50,22 +48,6 @@ function Stats() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [weatherError, setWeatherError] = useState<string | null>(null);
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case "up":
-        return <TrendingUp className="w-3 h-3" />;
-      case "down":
-        return <TrendingDown className="w-3 h-3" />;
-      default:
-        return <Minus className="w-3 h-3" />;
-    }
-  };
-
-  const getTrendColor = (trend: string, isDarkMode: boolean) => {
-    if (trend === "up") return "text-green-500";
-    if (trend === "down") return "text-red-500";
-    return isDarkMode ? "text-slate-400" : "text-slate-500";
-  };
 
   useEffect(() => {
     const fetchWeatherData = async () => {
