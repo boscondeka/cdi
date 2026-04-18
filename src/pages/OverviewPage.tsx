@@ -167,43 +167,24 @@ const recentAlerts = [
 ];
 
 
-// OpenStreetMap Component for Uganda with Legend
-const UgandaMap = ({
-  isDarkMode,
-  className = "",
-  selectedModule = 'all',
-}: {
-  isDarkMode: boolean;
-  className?: string;
-  selectedModule?: string;
-}) => {
-  const getLegendItems = () => {
-    const allItems = [
-      { label: 'Weather', color: FAO_BLUE, id: 'weather' },
-      { label: 'Drought', color: '#f97316', id: 'drought' },
-      { label: 'Flood', color: '#06b6d4', id: 'flood' },
-      { label: 'Stations', color: '#22c55e', id: 'stations' },
-    ];
+// Helper to get legend items based on selected module
+const getOverviewLegendItems = (selectedModule: string) => {
+  const allItems = [
+    { label: 'Weather', color: FAO_BLUE, id: 'weather' },
+    { label: 'Drought', color: '#f97316', id: 'drought' },
+    { label: 'Flood', color: '#06b6d4', id: 'flood' },
+    { label: 'Stations', color: '#22c55e', id: 'stations' },
+  ];
 
-    if (selectedModule === 'all') return allItems;
-    return allItems.filter(item => item.id === selectedModule);
-  };
+  if (selectedModule === 'all') return allItems;
+  return allItems.filter(item => item.id === selectedModule);
+};
 
-  const getBadgeText = () => {
-    if (selectedModule === 'all') return 'Uganda';
-    const module = monitoringModules.find(m => m.id === selectedModule);
-    return module ? module.title : 'Uganda';
-  };
-
-  return (
-    <UgandaBoundaryMap
-      isDarkMode={isDarkMode}
-      className={`rounded-xl md:rounded-2xl ${className}`}
-      badgeText={getBadgeText()}
-      legendTitle="Legend"
-      legendItems={getLegendItems()}
-    />
-  );
+// Helper to get badge text based on selected module
+const getOverviewBadgeText = (selectedModule: string) => {
+  if (selectedModule === 'all') return 'Uganda';
+  const module = monitoringModules.find(m => m.id === selectedModule);
+  return module ? module.title : 'Uganda';
 };
 
 // Map Filters Component
@@ -382,7 +363,13 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
               </div>
               <div className="relative aspect-[4/3] flex flex-col">
                 <div className="flex-1 relative">
-                  <UgandaMap isDarkMode={isDarkMode} selectedModule={selectedModule} className="absolute inset-0 w-full h-full" />
+                  <UgandaBoundaryMap
+                    isDarkMode={isDarkMode}
+                    className="absolute inset-0 w-full h-full rounded-xl md:rounded-2xl"
+                    badgeText={getOverviewBadgeText(selectedModule)}
+                    legendTitle="Legend"
+                    legendItems={getOverviewLegendItems(selectedModule)}
+                  />
                 </div>
                 {/* Filter button on map */}
                 <button
@@ -587,7 +574,13 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                   </div>
                   <div className="relative flex-1 min-h-[450px] flex flex-col">
                     <div className="flex-1 relative">
-                      <UgandaMap isDarkMode={isDarkMode} selectedModule={selectedModule} className="absolute inset-0 w-full h-full" />
+                      <UgandaBoundaryMap
+                        isDarkMode={isDarkMode}
+                        className="absolute inset-0 w-full h-full rounded-xl md:rounded-2xl"
+                        badgeText={getOverviewBadgeText(selectedModule)}
+                        legendTitle="Legend"
+                        legendItems={getOverviewLegendItems(selectedModule)}
+                      />
                     </div>
                     {/* Time Slider */}
                     <div className={`px-4 py-3 border-t ${borderColor} flex items-center gap-4 ${isDarkMode ? 'bg-slate-800/80' : 'bg-slate-50'}`}>

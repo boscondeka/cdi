@@ -18,6 +18,7 @@ import {
 import UgandaBoundaryMap from "../components/map/UgandaBoundaryMap";
 import { getTrendIcon, getTrendColor } from "../utils/chartHelpers";
 import { ThresholdScale } from "../components/shared/ThresholdScale";
+import { weatherAPI } from "../services/api";
 
 interface WeatherForecastPageProps {
   isDarkMode?: boolean;
@@ -278,28 +279,13 @@ const getWeatherIcon = (type: string, className = "w-8 h-8") => {
 };
 
 // OpenStreetMap Component with Legend
-const UgandaMap = ({
-  isDarkMode,
-  className = "",
-}: {
-  isDarkMode: boolean;
-  className?: string;
-}) => {
-  return (
-    <UgandaBoundaryMap
-      isDarkMode={isDarkMode}
-      className={`rounded-lg md:rounded-xl ${className}`}
-      badgeText="Uganda"
-      legendTitle="Weather"
-      legendItems={[
-        { label: "Sunny", color: "#fbbf24" },
-        { label: "Cloudy", color: "#94a3b8" },
-        { label: "Rainy", color: "#3b82f6" },
-        { label: "Storm", color: "#a855f7" },
-      ]}
-    />
-  );
-};
+// Weather legend items for maps
+const WEATHER_LEGEND_ITEMS = [
+  { label: "Sunny", color: "#fbbf24" },
+  { label: "Cloudy", color: "#94a3b8" },
+  { label: "Rainy", color: "#3b82f6" },
+  { label: "Storm", color: "#a855f7" },
+];
 
 export default function WeatherForecastPage({
   isDarkMode = true,
@@ -349,11 +335,7 @@ export default function WeatherForecastPage({
   useEffect(() => {
     const fetchWeatherData = async () => {
       try {
-        const response = await fetch(
-          `https://multihazard.rosewillbome.space/api/v1/weather/dashboard`,
-        ); // <-- Replace with your actual API URL
-        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-        const data: any = await response.json();
+        const data = await weatherAPI.getDashboard();
         setWeatherData(data);
       } catch (err) {
         console.error("Failed to fetch weather data:", err);
@@ -671,9 +653,12 @@ export default function WeatherForecastPage({
                     style={{ minHeight: "350px" }}
                   >
                     <div className="flex-1 relative">
-                      <UgandaMap
+                      <UgandaBoundaryMap
                         isDarkMode={isDarkMode}
                         className="absolute inset-0 w-full h-full rounded-none"
+                        badgeText="Uganda"
+                        legendTitle="Weather"
+                        legendItems={WEATHER_LEGEND_ITEMS}
                       />
                     </div>
                     {/* Time Slider */}
@@ -1081,9 +1066,12 @@ export default function WeatherForecastPage({
               </div>
               <div className="relative aspect-[16/10] flex flex-col">
                 <div className="flex-1 relative">
-                  <UgandaMap
+                  <UgandaBoundaryMap
                     isDarkMode={isDarkMode}
                     className="absolute inset-0 w-full h-full"
+                    badgeText="Uganda"
+                    legendTitle="Weather"
+                    legendItems={WEATHER_LEGEND_ITEMS}
                   />
                 </div>
                 {/* Filter button on map */}
