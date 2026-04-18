@@ -23,16 +23,13 @@ import FloodMonitoringPage from "./pages/FloodMonitoringPage";
 import WeatherStationsPage from "./pages/WeatherStationsPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import HelpPage from "./pages/HelpPage";
-import { useFilterStore } from "./store/useFilterStore";
+import type { AppStoreState } from "./store/useAppStore";
+import { useAppStore } from "./store/useAppStore";
+import { useTheme } from "./hooks/useTheme";
+import { ThemeProvider } from "./components/providers/ThemeProvider";
 
-export type PageType =
-  | "overview"
-  | "weather"
-  | "drought"
-  | "flood"
-  | "stations"
-  | "resources"
-  | "help";
+// PageType derived from store for consistency
+export type PageType = AppStoreState['currentPage'];
 
 const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Overview", icon: Home },
@@ -83,13 +80,21 @@ const alertsData = [
 // FAO Blue Theme Color
 const FAO_BLUE = "#318DDE";
 
-function App() {
-  const [currentPage, setCurrentPage] = useState<PageType>("overview");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+function AppContent() {
+  const {
+    currentPage,
+    setCurrentPage,
+    sidebarOpen,
+    setSidebarOpen,
+    pageLoading,
+    setPageLoading,
+    showNotifications,
+    setShowNotifications,
+  } = useAppStore();
+
+  const { isDarkMode, toggleTheme } = useTheme();
+
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [pageLoading, setPageLoading] = useState(false);
   const [particles, setParticles] = useState<
     { id: number; left: string; top: string; delay: string; duration: string }[]
   >([]);
@@ -106,19 +111,6 @@ function App() {
         duration: `${3 + Math.random() * 4}s`,
       })),
     );
-  }, []);
-
-  // Detect system color scheme preference
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    setIsDarkMode(mediaQuery.matches);
-
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   // Close notifications when clicking outside
@@ -146,10 +138,6 @@ function App() {
         setPageLoading(false);
       }, 50);
     }, 300);
-  };
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
   };
 
   const renderPage = () => {
@@ -461,6 +449,18 @@ function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+/**
+ * Main App component with ThemeProvider wrapper
+ * This ensures theme is available throughout the entire app
+ */
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 
