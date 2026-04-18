@@ -14,6 +14,7 @@ import {
   Filter,
   X,
   Map as MapIcon,
+  TrendingUp,
 } from "lucide-react";
 import UgandaBoundaryMap from "../components/map/UgandaBoundaryMap";
 import { getTrendIcon, getTrendColor } from "../utils/chartHelpers";
