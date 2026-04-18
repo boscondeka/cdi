@@ -19,21 +19,52 @@ import { useState, useEffect } from 'react';
 import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
 import { ThresholdScale } from '../components/shared/ThresholdScale';
 import { getTrendIcon, getTrendColor } from '../utils/chartHelpers';
+import { overviewAPI, alertsAPI, weatherAPI } from '../services/api';
 
 interface OverviewPageProps {
   onNavigate: (page: PageType) => void;
   isDarkMode?: boolean;
 }
 
+interface StatCard {
+  label: string;
+  value: string;
+  change: string;
+  trend: 'up' | 'down';
+  icon: any;
+  color: string;
+  min: number;
+  max: number;
+  thresholds: Array<{ value: number; color: string; label: string }>;
+}
+
+interface MonitoringModule {
+  id: PageType;
+  title: string;
+  description: string;
+  icon: any;
+  metric: string;
+  alerts: number;
+  color: string;
+}
+
+interface AlertItem {
+  title: string;
+  location: string;
+  time: string;
+  type: string;
+  severity: 'high' | 'medium';
+}
+
 // FAO Blue color matching the logo
 const FAO_BLUE = '#318DDE';
 
-// Stat cards with thresholds for scale display
-const statCards = [
+// Default stat cards template
+const getDefaultStatCards = (): StatCard[] => [
   {
     label: 'Temperature',
-    value: '26.5°C',
-    change: '+2.3°C',
+    value: '--°C',
+    change: '---',
     trend: 'up',
     icon: Thermometer,
     color: FAO_BLUE,
@@ -48,8 +79,8 @@ const statCards = [
   },
   {
     label: 'Humidity',
-    value: '68%',
-    change: '-5%',
+    value: '--%',
+    change: '---',
     trend: 'down',
     icon: Droplets,
     color: FAO_BLUE,
@@ -64,8 +95,8 @@ const statCards = [
   },
   {
     label: 'Wind Speed',
-    value: '12 km/h',
-    change: '+3 km/h',
+    value: '-- km/h',
+    change: '---',
     trend: 'up',
     icon: Wind,
     color: FAO_BLUE,
@@ -80,8 +111,8 @@ const statCards = [
   },
   {
     label: 'Rainfall (24h)',
-    value: '15.2 mm',
-    change: '+8 mm',
+    value: '-- mm',
+    change: '---',
     trend: 'up',
     icon: CloudRain,
     color: FAO_BLUE,
@@ -96,13 +127,13 @@ const statCards = [
   },
 ];
 
-const monitoringModules = [
+const getDefaultMonitoringModules = (): MonitoringModule[] => [
   {
     id: 'weather' as PageType,
     title: 'Weather Forecast',
     description: '24-hour nowcasting & 7-day forecasts with high accuracy predictions',
     icon: Cloud,
-    metric: 'Accuracy: 87%',
+    metric: 'Accuracy: --',
     alerts: 0,
     color: FAO_BLUE,
   },
@@ -111,8 +142,8 @@ const monitoringModules = [
     title: 'Drought Monitor',
     description: 'Combined Drought Index with TDI, PDI, VDI components for risk assessment',
     icon: Sun,
-    metric: 'Districts at Risk: 12',
-    alerts: 3,
+    metric: 'Districts at Risk: --',
+    alerts: 0,
     color: FAO_BLUE,
   },
   {
@@ -120,8 +151,8 @@ const monitoringModules = [
     title: 'Flood Monitor',
     description: 'Real-time river discharge monitoring and early warning systems',
     icon: Waves,
-    metric: 'Alert Areas: 8',
-    alerts: 2,
+    metric: 'Alert Areas: --',
+    alerts: 0,
     color: FAO_BLUE,
   },
   {
@@ -129,43 +160,31 @@ const monitoringModules = [
     title: 'Weather Stations',
     description: 'Automatic Weather Station network monitoring across Uganda',
     icon: Radio,
-    metric: 'Online: 7/8',
-    alerts: 1,
+    metric: 'Online: --',
+    alerts: 0,
     color: FAO_BLUE,
   },
 ];
 
-const recentAlerts = [
-  {
-    title: 'Severe drought in Karamoja region',
-    location: 'Moroto',
-    time: '5 min ago',
-    type: 'drought',
-    severity: 'high'
-  },
-  {
-    title: 'High flood risk in Lake Victoria Basin',
-    location: 'Kalangala',
-    time: '12 min ago',
-    type: 'flood',
-    severity: 'high'
-  },
-  {
-    title: 'Weather station Gulu North offline',
-    location: 'Gulu',
-    time: '1 hour ago',
-    type: 'station',
-    severity: 'medium'
-  },
-  {
-    title: 'Heavy rainfall expected in Eastern region',
-    location: 'Mbale',
-    time: '2 hours ago',
-    type: 'weather',
-    severity: 'medium'
-  },
-];
 
+// Helper function to format time ago
+const formatTimeAgo = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return 'recently';
+  }
+};
 
 // Helper to get legend items based on selected module
 const getOverviewLegendItems = (selectedModule: string) => {
@@ -238,6 +257,13 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
   const [isLoading, setIsLoading] = useState(true);
   const [sliderValue, setSliderValue] = useState(((2026 - 2001) * 12) + 2); // Mar 2026
 
+  // API State
+  const [statCards, setStatCards] = useState<StatCard[]>(getDefaultStatCards());
+  const [monitoringModules, setMonitoringModules] = useState<MonitoringModule[]>(getDefaultMonitoringModules());
+  const [recentAlerts, setRecentAlerts] = useState<AlertItem[]>([]);
+  const [quickStats, setQuickStats] = useState({ activeAlerts: 0, stationsOnline: 0, stationsTotal: 0, lastUpdated: '' });
+  const [apiError, setApiError] = useState<string | null>(null);
+
   const getMonthYear = (months: number) => {
     const year = 2001 + Math.floor(months / 12);
     const month = months % 12;
@@ -245,10 +271,88 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
     return `${monthNames[month]} ${year}`;
   };
 
-  // Simulate loading
+  // Fetch overview module stats
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
+    const fetchOverviewStats = async () => {
+      try {
+        const [moduleStats, quickStatsData, weatherData, alertsData] = await Promise.all([
+          overviewAPI.getModuleStats(),
+          overviewAPI.getQuickStats(),
+          weatherAPI.getDashboard(),
+          alertsAPI.getRecent(5),
+        ]);
+
+        // Update monitoring modules with API data
+        if (moduleStats && moduleStats.weather_forecast) {
+          const updated = [...monitoringModules];
+          updated[0].metric = `Accuracy: ${moduleStats.weather_forecast.accuracy_pct || '--'}%`;
+          updated[1].metric = `Districts at Risk: ${moduleStats.drought_monitor?.districts_at_risk || '--'}`;
+          updated[2].metric = `Alert Areas: ${moduleStats.flood_monitor?.alert_areas || '--'}`;
+          updated[3].metric = `Online: ${moduleStats.weather_stations?.online || '--'}/${moduleStats.weather_stations?.total || '--'}`;
+          setMonitoringModules(updated);
+        }
+
+        // Update quick stats
+        if (quickStatsData) {
+          setQuickStats({
+            activeAlerts: quickStatsData.active_alerts || 0,
+            stationsOnline: quickStatsData.stations_online || 0,
+            stationsTotal: quickStatsData.stations_total || 0,
+            lastUpdated: quickStatsData.last_updated ? new Date(quickStatsData.last_updated).toLocaleString() : 'Just now',
+          });
+        }
+
+        // Update weather stat cards
+        if (weatherData) {
+          const updated = [...statCards];
+          if (weatherData.temperature !== undefined) {
+            updated[0].value = `${weatherData.temperature}°C`;
+            updated[0].change = weatherData.temp_change ? `${weatherData.temp_change > 0 ? '+' : ''}${weatherData.temp_change}°C` : 'No change';
+            updated[0].trend = weatherData.temp_change > 0 ? 'up' : 'down';
+          }
+          if (weatherData.humidity !== undefined) {
+            updated[1].value = `${weatherData.humidity}%`;
+            updated[1].change = weatherData.humidity_change ? `${weatherData.humidity_change > 0 ? '+' : ''}${weatherData.humidity_change}%` : 'No change';
+            updated[1].trend = weatherData.humidity_change > 0 ? 'up' : 'down';
+          }
+          if (weatherData.wind_speed !== undefined) {
+            updated[2].value = `${weatherData.wind_speed} km/h`;
+            updated[2].change = weatherData.wind_change ? `${weatherData.wind_change > 0 ? '+' : ''}${weatherData.wind_change} km/h` : 'No change';
+            updated[2].trend = weatherData.wind_change > 0 ? 'up' : 'down';
+          }
+          if (weatherData.precip_sum !== undefined) {
+            updated[3].value = `${weatherData.precip_sum} mm`;
+            updated[3].change = weatherData.precip_change ? `${weatherData.precip_change > 0 ? '+' : ''}${weatherData.precip_change} mm` : 'No change';
+            updated[3].trend = weatherData.precip_change > 0 ? 'up' : 'down';
+          }
+          setStatCards(updated);
+        }
+
+        // Update recent alerts
+        if (alertsData && Array.isArray(alertsData.results)) {
+          const formatted = alertsData.results.slice(0, 3).map((alert: any) => ({
+            title: alert.title || alert.message || 'Alert',
+            location: alert.location || 'Uganda',
+            time: alert.created_at ? formatTimeAgo(alert.created_at) : 'Recently',
+            type: alert.alert_type || 'alert',
+            severity: alert.severity === 'high' ? 'high' : 'medium',
+          }));
+          setRecentAlerts(formatted);
+        }
+
+        setApiError(null);
+      } catch (error) {
+        console.error('Error fetching overview data:', error);
+        setApiError('Unable to load overview data. Using cached values.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOverviewStats();
+    // Refresh data every 5 minutes
+    const interval = setInterval(fetchOverviewStats, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const cardBg = isDarkMode ? 'bg-slate-800/85' : 'bg-white/95';
@@ -282,7 +386,12 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
         </div>
       )}
 
-
+      {/* Error notification */}
+      {apiError && (
+        <div className={`mb-4 p-3 rounded-lg border-l-4 ${isDarkMode ? 'bg-yellow-900/20 border-yellow-600 text-yellow-200' : 'bg-yellow-50 border-yellow-400 text-yellow-800'}`}>
+          <p className="text-xs font-medium">{apiError}</p>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="relative z-10 max-w-[1600px] mx-auto">
@@ -520,15 +629,15 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className={`text-[11px] ${textMuted}`}>Active Alerts</span>
-                      <span className="text-[11px] font-medium text-red-500">6</span>
+                      <span className="text-[11px] font-medium text-red-500">{quickStats.activeAlerts}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className={`text-[11px] ${textMuted}`}>Stations Online</span>
-                      <span className="text-[11px] font-medium text-green-500">7/8</span>
+                      <span className="text-[11px] font-medium text-green-500">{quickStats.stationsOnline}/{quickStats.stationsTotal}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className={`text-[11px] ${textMuted}`}>Updated</span>
-                      <span className={`text-[11px] ${textSecondary}`}>2 min ago</span>
+                      <span className={`text-[11px] ${textSecondary}`}>{quickStats.lastUpdated}</span>
                     </div>
                   </div>
                 </div>
@@ -613,22 +722,28 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                     <span className="px-1.5 py-0.5 bg-red-500/20 text-red-500 rounded text-[10px] font-medium">4 New</span>
                   </div>
                   <div className="space-y-2 flex-1 overflow-y-auto max-h-[280px]">
-                    {recentAlerts.slice(0, 3).map((alert, idx) => (
-                      <div key={idx} className={`p-2 rounded-lg border ${isDarkMode ? 'bg-slate-900/50 border-slate-700/30' : 'bg-slate-50 border-slate-200'}`}>
-                        <div className="flex items-start gap-2">
-                          <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
-                            <AlertTriangle className={`w-3.5 h-3.5 ${alert.severity === 'high' ? 'text-red-500' : 'text-yellow-500'}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[11px] font-medium truncate ${headerText}`}>{alert.title}</p>
-                            <div className={`flex items-center gap-2 text-[10px] ${textMuted}`}>
-                              <span className="flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{alert.location}</span>
-                              <span>{alert.time}</span>
+                    {recentAlerts.length > 0 ? (
+                      recentAlerts.map((alert, idx) => (
+                        <div key={idx} className={`p-2 rounded-lg border ${isDarkMode ? 'bg-slate-900/50 border-slate-700/30' : 'bg-slate-50 border-slate-200'}`}>
+                          <div className="flex items-start gap-2">
+                            <div className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-500/20' : 'bg-yellow-500/20'}`}>
+                              <AlertTriangle className={`w-3.5 h-3.5 ${alert.severity === 'high' ? 'text-red-500' : 'text-yellow-500'}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[11px] font-medium truncate ${headerText}`}>{alert.title}</p>
+                              <div className={`flex items-center gap-2 text-[10px] ${textMuted}`}>
+                                <span className="flex items-center gap-0.5"><MapPin className="w-2.5 h-2.5" />{alert.location}</span>
+                                <span>{alert.time}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className={`p-3 text-center text-xs ${textMuted}`}>
+                        <p>No recent alerts</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>

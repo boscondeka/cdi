@@ -46,15 +46,40 @@ async function fetchData<T>(endpoint: string, options?: FetchOptions): Promise<T
 }
 
 /**
+ * Overview API
+ */
+export const overviewAPI = {
+  getModuleStats: async () => {
+    return fetchData('overview/modules/');
+  },
+
+  getQuickStats: async () => {
+    return fetchData('overview/quick-stats/');
+  },
+};
+
+/**
+ * Alerts API
+ */
+export const alertsAPI = {
+  getRecent: async (limit: number = 5) => {
+    return fetchData(`alerts/recent/?limit=${limit}`);
+  },
+};
+
+/**
  * Weather/Dashboard API
  */
 export const weatherAPI = {
-  getDashboard: async () => {
-    return fetchData(import.meta.env.VITE_API_WEATHER_ENDPOINT || 'weather/dashboard');
+  getDashboard: async (districtId?: number) => {
+    const endpoint = districtId
+      ? `weather/dashboard/?district_id=${districtId}`
+      : 'weather/dashboard';
+    return fetchData(endpoint);
   },
-  
+
   getForecast: async (districtId?: number) => {
-    const endpoint = districtId 
+    const endpoint = districtId
       ? `weather/forecast?district_id=${districtId}`
       : 'weather/forecast';
     return fetchData(endpoint);
@@ -130,6 +155,8 @@ export const geoAPI = {
 };
 
 export default {
+  overviewAPI,
+  alertsAPI,
   weatherAPI,
   droughtAPI,
   floodAPI,
