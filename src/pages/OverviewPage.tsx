@@ -9,9 +9,6 @@ import {
   Wind,
   CloudRain,
   MapPin,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Map as MapIcon,
   Filter,
   ArrowRight,
@@ -20,6 +17,8 @@ import {
 import type { PageType } from '../App';
 import { useState, useEffect } from 'react';
 import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
+import { ThresholdScale } from '../components/shared/ThresholdScale';
+import { getTrendIcon, getTrendColor } from '../utils/chartHelpers';
 
 interface OverviewPageProps {
   onNavigate: (page: PageType) => void;
@@ -167,65 +166,6 @@ const recentAlerts = [
   },
 ];
 
-const getTrendIcon = (trend: string) => {
-  switch (trend) {
-    case 'up': return <TrendingUp className="w-3 h-3" />;
-    case 'down': return <TrendingDown className="w-3 h-3" />;
-    default: return <Minus className="w-3 h-3" />;
-  }
-};
-
-const getTrendColor = (trend: string, isDarkMode: boolean) => {
-  if (trend === 'up') return 'text-green-500';
-  if (trend === 'down') return 'text-red-500';
-  return isDarkMode ? 'text-slate-400' : 'text-slate-500';
-};
-
-// Threshold Scale Component
-const ThresholdScale = ({
-  value,
-  min,
-  max,
-  thresholds,
-  isDarkMode
-}: {
-  value: number;
-  min: number;
-  max: number;
-  thresholds: { value: number; color: string; label: string }[];
-  isDarkMode: boolean;
-}) => {
-  const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
-
-  return (
-    <div className="mt-2">
-      <div className={`relative h-1.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
-        <div className="absolute inset-0 flex">
-          {thresholds.map((t, i) => {
-            const prevValue = i === 0 ? min : thresholds[i - 1].value;
-            const width = ((Math.min(t.value, max) - prevValue) / (max - min)) * 100;
-            return (
-              <div
-                key={i}
-                className="h-full"
-                style={{ width: `${width}%`, backgroundColor: t.color, opacity: 0.7 }}
-              />
-            );
-          })}
-        </div>
-        <div
-          className={`absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all duration-500 ${isDarkMode ? 'bg-white' : 'bg-black'}`}
-          style={{ left: `${percentage}%`, borderColor: isDarkMode ? '#334155' : 'white', transform: `translate(-50%, -50%)`, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
-        />
-      </div>
-      <div className="flex justify-between mt-0.5">
-        {thresholds.map((t, i) => (
-          <span key={i} className={`text-[9px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t.label}</span>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // OpenStreetMap Component for Uganda with Legend
 const UgandaMap = ({
