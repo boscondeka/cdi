@@ -70,9 +70,13 @@
   }
 }
 
-/* Dark theme is default for V5 */
+/* Dark theme is default - next-themes will handle class toggling */
 html {
   color-scheme: dark;
+}
+
+html.light {
+  color-scheme: light;
 }
 
 /* District labels for dark theme */

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { geoAPI } from '../../services/api';
 
 interface LegendItem {
   label: string;
@@ -28,10 +29,15 @@ export default function UgandaBoundaryMap({
   const [geoData, setGeoData] = useState<any>(null);
 
   useEffect(() => {
-    fetch('https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries/UGA.geojson')
-      .then((res) => res.json())
-      .then((data) => setGeoData(data))
-      .catch((err) => console.error('Error loading GeoJSON:', err));
+    const loadGeoData = async () => {
+      try {
+        const data = await geoAPI.getUgandaBoundary();
+        setGeoData(data);
+      } catch (err) {
+        console.error('Error loading GeoJSON:', err);
+      }
+    };
+    loadGeoData();
   }, []);
 
   return (
