@@ -103,18 +103,153 @@ export const droughtAPI = {
 };
 
 /**
+ * Flood API Types
+ */
+export interface FloodReading {
+  timestamp?: string;
+  level?: number;
+  discharge?: number;
+}
+
+export interface BasinTrend {
+  basin: string;
+  current_level_m: number | null;
+  trend: 'unknown' | 'rising' | 'falling' | 'stable';
+  readings: FloodReading[];
+}
+
+export interface BasinStatus {
+  name: string;
+  level: number;
+  status: 'normal' | 'minor' | 'moderate' | 'severe' | 'extreme';
+  population_at_risk: number;
+  discharge_rate: number;
+}
+
+export interface District {
+  id: number;
+  name: string;
+  flood_risk_level?: 'low' | 'medium' | 'high' | 'critical';
+  population_affected?: number;
+}
+
+export interface FloodDashboard {
+  status: 'no_data' | 'ok' | 'warning' | 'alert';
+  forecasts: any[];
+  summary?: {
+    critical_basins: number;
+    at_risk_population: number;
+    active_alerts: number;
+  };
+}
+
+export interface FloodForecast {
+  id: number;
+  basin: string;
+  forecast_date: string;
+  expected_level: number;
+  confidence: number;
+  impact_assessment?: string;
+}
+
+/**
  * Flood API
  */
 export const floodAPI = {
+  /**
+   * Get flood dashboard with overall status and recent forecasts
+   */
+  getDashboard: async () => {
+    return fetchData<FloodDashboard>('floods/dashboard/');
+  },
+
+  /**
+   * Get extended dashboard with additional metrics
+   */
+  getDashboardExtended: async () => {
+    return fetchData('floods/dashboard/extended/');
+  },
+
+  /**
+   * Get basin status for all rivers
+   */
+  getBasinStatus: async () => {
+    return fetchData<BasinStatus[]>('floods/basin-status/');
+  },
+
+  /**
+   * Get basin trend for a specific basin
+   */
+  getBasinTrend: async (basin?: string) => {
+    const endpoint = basin ? `floods/basin-trend/?basin=${basin}` : 'floods/basin-trend/';
+    return fetchData<BasinTrend>(endpoint);
+  },
+
+  /**
+   * Get all available forecast dates
+   */
+  getForecastDates: async () => {
+    return fetchData<string[]>('floods/dates/');
+  },
+
+  /**
+   * Get flood forecasts, optionally filtered by date
+   */
+  getForecasts: async (date?: string) => {
+    const endpoint = date ? `floods/forecasts/?date=${date}` : 'floods/forecasts/';
+    return fetchData<FloodForecast[]>(endpoint);
+  },
+
+  /**
+   * Get specific forecast by ID
+   */
+  getForecastById: async (id: number) => {
+    return fetchData<FloodForecast>(`floods/forecasts/${id}/`);
+  },
+
+  /**
+   * Get districts affected by floods
+   */
+  getDistricts: async () => {
+    return fetchData<{ date: string | null; districts: District[] }>('floods/districts/');
+  },
+
+  /**
+   * Get raw flood data (legacy endpoint)
+   */
   getData: async (districtId?: number) => {
     const endpoint = districtId
-      ? `${import.meta.env.VITE_API_FLOOD_ENDPOINT || 'flood/data'}?district_id=${districtId}`
-      : import.meta.env.VITE_API_FLOOD_ENDPOINT || 'flood/data';
+      ? `${import.meta.env.VITE_API_FLOOD_ENDPOINT || 'floods/data'}?district_id=${districtId}`
+      : import.meta.env.VITE_API_FLOOD_ENDPOINT || 'floods/data';
     return fetchData(endpoint);
   },
-  
+
+  /**
+   * Get flood-prone areas
+   */
   getAreas: async () => {
-    return fetchData('flood/areas');
+    return fetchData('floods/areas/');
+  },
+
+  /**
+   * Export flood data
+   */
+  exportData: async (format: 'csv' | 'pdf' | 'json' = 'csv') => {
+    return fetchData(`floods/export/?format=${format}`);
+  },
+
+  /**
+   * Get pipeline status
+   */
+  getPipelineStatus: async (jobId: string) => {
+    return fetchData(`floods/pipeline/status/${jobId}/`);
+  },
+
+  /**
+   * Trigger pipeline run
+   */
+  runPipeline: async () => {
+    return fetchData('floods/pipeline/run/', { method: 'POST' });
   },
 };
 
