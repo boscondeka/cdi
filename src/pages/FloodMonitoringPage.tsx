@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
 import { useFloodData, useBasinTrend } from '../hooks/useFloodData';
-import { BasinStatus } from '../services/api';
 
 interface FloodMonitoringPageProps {
   isDarkMode?: boolean;

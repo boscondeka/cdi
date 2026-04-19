@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { 
-  floodAPI, 
-  FloodDashboard, 
-  BasinStatus, 
-  BasinTrend, 
-  District, 
-  FloodForecast 
+import { floodAPI } from '../services/api';
+import type {
+  FloodDashboard,
+  BasinStatus,
+  BasinTrend,
+  District,
+  FloodForecast
 } from '../services/api';
 
 interface FloodDataCache {
