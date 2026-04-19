@@ -84,6 +84,7 @@ const FilterContent = ({
   textSecondary,
   borderColor,
   headerText,
+  riverBasins,
 }: {
   timeRange: string;
   setTimeRange: (val: string) => void;
@@ -94,6 +95,7 @@ const FilterContent = ({
   textSecondary: string;
   borderColor: string;
   headerText: string;
+  riverBasins: typeof fallbackRiverBasins;
 }) => (
   <div className="space-y-3">
     <div>
@@ -344,7 +346,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
               }}
             >
               <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-                <FilterContent 
+                <FilterContent
                   timeRange={timeRange}
                   setTimeRange={setTimeRange}
                   selectedBasin={selectedBasin}
@@ -354,6 +356,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                   textSecondary={textSecondary}
                   borderColor={borderColor}
                   headerText={headerText}
+                  riverBasins={riverBasins}
                 />
               </div>
 
@@ -632,7 +635,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <FilterContent 
+                  <FilterContent
                     timeRange={timeRange}
                     setTimeRange={setTimeRange}
                     selectedBasin={selectedBasin}
@@ -642,6 +645,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                     textSecondary={textSecondary}
                     borderColor={borderColor}
                     headerText={headerText}
+                    riverBasins={riverBasins}
                   />
                 </div>
               </>
