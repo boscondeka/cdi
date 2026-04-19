@@ -255,36 +255,37 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
       <div className="relative z-10 max-w-[1600px] mx-auto">
         {/* Fallback Data Banner */}
         {isUsingFallback && (
-          <div className="mb-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start justify-between">
-            <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Displaying Demo Data</p>
-                <p className={`text-xs ${isDarkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>
-                  Some real-time data sources are currently unavailable. Showing demo data instead. {basinStatus.length > 0 && 'Actual data will display once available.'}
-                </p>
-                {Object.entries(partialErrors).filter(([_, failed]) => failed).length > 0 && (
-                  <div className={`text-xs mt-1.5 space-y-0.5 ${isDarkMode ? 'text-blue-300/60' : 'text-blue-600/60'}`}>
-                    <p className="font-medium">Unavailable sources:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {Object.entries(partialErrors).filter(([_, failed]) => failed).map(([key]) => (
-                        <span key={key} className={`px-1.5 py-0.5 rounded text-[10px] ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-                          {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => refetch()}
-              disabled={dataLoading}
-              className={`flex-shrink-0 ml-2 text-xs font-medium px-2 py-1 rounded ${isDarkMode ? 'hover:bg-blue-500/20' : 'hover:bg-blue-100'} disabled:opacity-50`}
-            >
-              Retry
-            </button>
-          </div>
+          <div></div>
+          // <div className="mb-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start justify-between">
+          //   <div className="flex items-start gap-2">
+          //     <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          //     <div className="flex-1">
+          //       <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Displaying Demo Data</p>
+          //       <p className={`text-xs ${isDarkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>
+          //         Some real-time data sources are currently unavailable. Showing demo data instead. {basinStatus.length > 0 && 'Actual data will display once available.'}
+          //       </p>
+          //       {Object.entries(partialErrors).filter(([_, failed]) => failed).length > 0 && (
+          //         <div className={`text-xs mt-1.5 space-y-0.5 ${isDarkMode ? 'text-blue-300/60' : 'text-blue-600/60'}`}>
+          //           <p className="font-medium">Unavailable sources:</p>
+          //           <div className="flex flex-wrap gap-1">
+          //             {Object.entries(partialErrors).filter(([_, failed]) => failed).map(([key]) => (
+          //               <span key={key} className={`px-1.5 py-0.5 rounded text-[10px] ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+          //                 {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
+          //               </span>
+          //             ))}
+          //           </div>
+          //         </div>
+          //       )}
+          //     </div>
+          //   </div>
+          //   <button
+          //     onClick={() => refetch()}
+          //     disabled={dataLoading}
+          //     className={`flex-shrink-0 ml-2 text-xs font-medium px-2 py-1 rounded ${isDarkMode ? 'hover:bg-blue-500/20' : 'hover:bg-blue-100'} disabled:opacity-50`}
+          //   >
+          //     Retry
+          //   </button>
+          // </div>
         )}
 
         {/* Compact Header Banner */}
