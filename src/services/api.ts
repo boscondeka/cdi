@@ -3,16 +3,18 @@
  * Uses environment variables for endpoints
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://multihazard.rosewillbome.space/api/v1/';
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  "https://multihazard.rosewillbome.space/api/v1/";
 
-interface ApiResponse<T> {
-  data: T;
-  error: string | null;
-  loading: boolean;
-}
+// interface ApiResponse<T> {
+//   data: T;
+//   error: string | null;
+//   loading: boolean;
+// }
 
 interface FetchOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   headers?: Record<string, string>;
   body?: any;
 }
@@ -20,14 +22,19 @@ interface FetchOptions {
 /**
  * Generic fetch wrapper with error handling
  */
-async function fetchData<T>(endpoint: string, options?: FetchOptions): Promise<T> {
+async function fetchData<T>(
+  endpoint: string,
+  options?: FetchOptions,
+): Promise<T> {
   try {
-    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
-    
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${API_BASE}${endpoint}`;
+
     const response = await fetch(url, {
-      method: options?.method || 'GET',
+      method: options?.method || "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options?.headers,
       },
       body: options?.body ? JSON.stringify(options.body) : undefined,
@@ -50,11 +57,11 @@ async function fetchData<T>(endpoint: string, options?: FetchOptions): Promise<T
  */
 export const overviewAPI = {
   getModuleStats: async () => {
-    return fetchData('overview/modules/');
+    return fetchData("overview/modules/");
   },
 
   getQuickStats: async () => {
-    return fetchData('overview/quick-stats/');
+    return fetchData("overview/quick-stats/");
   },
 };
 
@@ -74,15 +81,29 @@ export const weatherAPI = {
   getDashboard: async (districtId?: number) => {
     const endpoint = districtId
       ? `weather/dashboard/?district_id=${districtId}`
-      : 'weather/dashboard';
+      : "weather/dashboard/";
     return fetchData(endpoint);
   },
 
-  getForecast: async (districtId?: number) => {
+  getForecastHourly: async (districtId?: number) => {
     const endpoint = districtId
-      ? `weather/forecast?district_id=${districtId}`
-      : 'weather/forecast';
+      ? `weather/forecast/hourly?district_id=${districtId}`
+      : "weather/hourly";
     return fetchData(endpoint);
+  },
+  getForecastDaily: async (districtId?: number) => {
+    const endpoint = districtId
+      ? `weather/forecast/forecast?district_id=${districtId}`
+      : "weather/forecast";
+    return fetchData(endpoint);
+  },
+  getExportData: async (districtId?: number) => {
+    const endpoint = districtId
+      ? `weather/export?district_id=${districtId}`
+      : "weather/export";
+
+    const url = `${API_BASE}${endpoint}`;
+    return fetch(url); // return raw Response, not fetchData()
   },
 };
 
@@ -92,13 +113,13 @@ export const weatherAPI = {
 export const droughtAPI = {
   getData: async (districtId?: number) => {
     const endpoint = districtId
-      ? `${import.meta.env.VITE_API_DROUGHT_ENDPOINT || 'drought/data'}?district_id=${districtId}`
-      : import.meta.env.VITE_API_DROUGHT_ENDPOINT || 'drought/data';
+      ? `${import.meta.env.VITE_API_DROUGHT_ENDPOINT || "drought/data"}?district_id=${districtId}`
+      : import.meta.env.VITE_API_DROUGHT_ENDPOINT || "drought/data";
     return fetchData(endpoint);
   },
-  
+
   getRegions: async () => {
-    return fetchData('drought/regions');
+    return fetchData("drought/regions");
   },
 };
 
@@ -108,13 +129,13 @@ export const droughtAPI = {
 export const floodAPI = {
   getData: async (districtId?: number) => {
     const endpoint = districtId
-      ? `${import.meta.env.VITE_API_FLOOD_ENDPOINT || 'flood/data'}?district_id=${districtId}`
-      : import.meta.env.VITE_API_FLOOD_ENDPOINT || 'flood/data';
+      ? `${import.meta.env.VITE_API_FLOOD_ENDPOINT || "flood/data"}?district_id=${districtId}`
+      : import.meta.env.VITE_API_FLOOD_ENDPOINT || "flood/data";
     return fetchData(endpoint);
   },
-  
+
   getAreas: async () => {
-    return fetchData('flood/areas');
+    return fetchData("flood/areas");
   },
 };
 
@@ -123,15 +144,17 @@ export const floodAPI = {
  */
 export const stationsAPI = {
   getAll: async () => {
-    return fetchData(import.meta.env.VITE_API_STATIONS_ENDPOINT || 'stations/data');
+    return fetchData(
+      import.meta.env.VITE_API_STATIONS_ENDPOINT || "stations/data",
+    );
   },
-  
+
   getById: async (stationId: string | number) => {
     return fetchData(`stations/${stationId}`);
   },
-  
+
   getStatus: async () => {
-    return fetchData('stations/status');
+    return fetchData("stations/status");
   },
 };
 
@@ -141,16 +164,16 @@ export const stationsAPI = {
 export const geoAPI = {
   getUgandaBoundary: async () => {
     return fetchData(
-      'https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries/UGA.geojson'
+      "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries/UGA.geojson",
     );
   },
-  
+
   getDistricts: async () => {
-    return fetchData('geojson/districts');
+    return fetchData("geojson/districts");
   },
-  
+
   getWaterAreas: async () => {
-    return fetchData('geojson/water-areas');
+    return fetchData("geojson/water-areas");
   },
 };
 
