@@ -67,7 +67,7 @@ export interface DailyForecastItem {
 export interface DailyForecastResponse {
   district: string;
   forecast_date: string; // Format: "YYYY-MM-DD"
-  fetched_at: string; // ISO 8601 Timestamp
+  fetched_at: string; // ISO 8601 Timestampp
   daily: DailyForecastItem[];
 }
 
