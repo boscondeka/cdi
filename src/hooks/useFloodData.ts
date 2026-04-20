@@ -190,7 +190,6 @@ export function useFloodData() {
         console.warn('Some flood APIs returned no data, using fallback data for:', failedApis);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch flood data';
       console.error('Flood data fetch error:', err);
       // Set all data to fallback on unexpected error
       setDashboard(FALLBACK_DASHBOARD);
