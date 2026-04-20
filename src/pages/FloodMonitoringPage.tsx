@@ -17,7 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
-import { useFloodData, useBasinTrend } from '../hooks/useFloodData';
+import { useFloodData } from '../hooks/useFloodData';
 
 interface FloodMonitoringPageProps {
   isDarkMode?: boolean;
@@ -95,7 +95,7 @@ const FilterContent = ({
   textSecondary: string;
   borderColor: string;
   headerText: string;
-  riverBasins: typeof fallbackRiverBasins;
+  riverBasins: Array<{ name: string; level: number; trend: string; population: number; rainfall: number; discharge: number; status: string }>;
 }) => (
   <div className="space-y-3">
     <div>
@@ -170,7 +170,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Fetch flood data from API
-  const { basinStatus, basinTrend, dashboard, loading: dataLoading, error: dataError, partialErrors = {}, refetch } = useFloodData();
+  const { basinStatus, basinTrend, loading: dataLoading, partialErrors = {}, refetch } = useFloodData();
   const [pageLoading, setPageLoading] = useState(true);
 
   const getMonthYear = (months: number) => {

@@ -352,12 +352,11 @@ export default function WeatherForecastPage({
       label: "Temperature",
       value: `${weatherData?.temperature ?? 0}°C`,
       change: `${(weatherData?.temperature_delta ?? 0) > 0 ? "+" : ""}${weatherData?.temperature_delta ?? 0}°C`,
-      trend:
-        (weatherData?.temperature_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.temperature_delta ?? 0) < 0
-            ? "down"
-            : "stable",
+      trend: ((weatherData?.temperature_delta ?? 0) > 0
+        ? "up"
+        : (weatherData?.temperature_delta ?? 0) < 0
+          ? "down"
+          : "stable") as 'up' | 'down' | 'stable',
       icon: Thermometer,
       color: FAO_BLUE,
       min: 15,
@@ -373,12 +372,11 @@ export default function WeatherForecastPage({
       label: "Humidity",
       value: `${weatherData?.humidity ?? 0}%`,
       change: `${(weatherData?.humidity_delta ?? 0) > 0 ? "+" : ""}${weatherData?.humidity_delta ?? 0}%`,
-      trend:
-        (weatherData?.humidity_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.humidity_delta ?? 0) < 0
-            ? "down"
-            : "stable",
+      trend: ((weatherData?.humidity_delta ?? 0) > 0
+        ? "up"
+        : (weatherData?.humidity_delta ?? 0) < 0
+          ? "down"
+          : "stable") as 'up' | 'down' | 'stable',
       icon: Droplets,
       color: FAO_BLUE,
       min: 0,
@@ -394,12 +392,11 @@ export default function WeatherForecastPage({
       label: "Wind Speed",
       value: `${weatherData?.wind_speed ?? 0} km/h`,
       change: `${(weatherData?.wind_speed_delta ?? 0) > 0 ? "+" : ""}${weatherData?.wind_speed_delta ?? 0} km/h`,
-      trend:
-        (weatherData?.wind_speed_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.wind_speed_delta ?? 0) < 0
-            ? "down"
-            : "stable",
+      trend: ((weatherData?.wind_speed_delta ?? 0) > 0
+        ? "up"
+        : (weatherData?.wind_speed_delta ?? 0) < 0
+          ? "down"
+          : "stable") as 'up' | 'down' | 'stable',
       icon: Wind,
       color: FAO_BLUE,
       min: 0,
@@ -415,12 +412,11 @@ export default function WeatherForecastPage({
       label: "Rainfall (24h)",
       value: `${weatherData?.rainfall_24h ?? 0} mm`,
       change: `${(weatherData?.rainfall_24h_delta ?? 0) > 0 ? "+" : ""}${weatherData?.rainfall_24h_delta ?? 0} mm`,
-      trend:
-        (weatherData?.rainfall_24h_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.rainfall_24h_delta ?? 0) < 0
-            ? "down"
-            : "stable",
+      trend: ((weatherData?.rainfall_24h_delta ?? 0) > 0
+        ? "up"
+        : (weatherData?.rainfall_24h_delta ?? 0) < 0
+          ? "down"
+          : "stable") as 'up' | 'down' | 'stable',
       icon: CloudRain,
       color: FAO_BLUE,
       min: 0,
