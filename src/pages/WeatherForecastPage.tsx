@@ -298,7 +298,6 @@ export default function WeatherForecastPage({
   const [isLoading, setIsLoading] = useState(true);
   const [sliderValue, setSliderValue] = useState((2026 - 2001) * 12 + 2); // Mar 2026
   const [weatherData, setWeatherData] = useState<any>(null);
-  const [weatherError, setWeatherError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const getMonthYear = (months: number) => {
@@ -340,7 +339,6 @@ export default function WeatherForecastPage({
         setWeatherData(data);
       } catch (err) {
         console.error("Failed to fetch weather data:", err);
-        setWeatherError("Failed to load weather data.");
       }
     };
 
@@ -359,7 +357,7 @@ export default function WeatherForecastPage({
           ? "up"
           : (weatherData?.temperature_delta ?? 0) < 0
             ? "down"
-            : "neutral",
+            : "stable",
       icon: Thermometer,
       color: FAO_BLUE,
       min: 15,
@@ -380,7 +378,7 @@ export default function WeatherForecastPage({
           ? "up"
           : (weatherData?.humidity_delta ?? 0) < 0
             ? "down"
-            : "neutral",
+            : "stable",
       icon: Droplets,
       color: FAO_BLUE,
       min: 0,
@@ -401,7 +399,7 @@ export default function WeatherForecastPage({
           ? "up"
           : (weatherData?.wind_speed_delta ?? 0) < 0
             ? "down"
-            : "neutral",
+            : "stable",
       icon: Wind,
       color: FAO_BLUE,
       min: 0,
@@ -422,7 +420,7 @@ export default function WeatherForecastPage({
           ? "up"
           : (weatherData?.rainfall_24h_delta ?? 0) < 0
             ? "down"
-            : "neutral",
+            : "stable",
       icon: CloudRain,
       color: FAO_BLUE,
       min: 0,

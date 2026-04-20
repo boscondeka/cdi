@@ -200,9 +200,9 @@ const getOverviewLegendItems = (selectedModule: string) => {
 };
 
 // Helper to get badge text based on selected module
-const getOverviewBadgeText = (selectedModule: string) => {
+const getOverviewBadgeText = (selectedModule: string, modules: MonitoringModule[]) => {
   if (selectedModule === 'all') return 'Uganda';
-  const module = monitoringModules.find(m => m.id === selectedModule);
+  const module = modules.find(m => m.id === selectedModule);
   return module ? module.title : 'Uganda';
 };
 
@@ -276,10 +276,10 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
     const fetchOverviewStats = async () => {
       try {
         const [moduleStats, quickStatsData, weatherData, alertsData] = await Promise.all([
-          overviewAPI.getModuleStats(),
-          overviewAPI.getQuickStats(),
-          weatherAPI.getDashboard(),
-          alertsAPI.getRecent(5),
+          overviewAPI.getModuleStats() as Promise<any>,
+          overviewAPI.getQuickStats() as Promise<any>,
+          weatherAPI.getDashboard() as Promise<any>,
+          alertsAPI.getRecent(5) as Promise<any>,
         ]);
 
         // Update monitoring modules with API data
@@ -475,7 +475,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                   <UgandaBoundaryMap
                     isDarkMode={isDarkMode}
                     className="absolute inset-0 w-full h-full rounded-xl md:rounded-2xl"
-                    badgeText={getOverviewBadgeText(selectedModule)}
+                    badgeText={getOverviewBadgeText(selectedModule, monitoringModules)}
                     legendTitle="Legend"
                     legendItems={getOverviewLegendItems(selectedModule)}
                   />
@@ -686,7 +686,7 @@ export default function OverviewPage({ onNavigate, isDarkMode = true }: Overview
                       <UgandaBoundaryMap
                         isDarkMode={isDarkMode}
                         className="absolute inset-0 w-full h-full rounded-xl md:rounded-2xl"
-                        badgeText={getOverviewBadgeText(selectedModule)}
+                        badgeText={getOverviewBadgeText(selectedModule, monitoringModules)}
                         legendTitle="Legend"
                         legendItems={getOverviewLegendItems(selectedModule)}
                       />

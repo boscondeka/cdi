@@ -5,12 +5,6 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://multihazard.rosewillbome.space/api/v1/';
 
-interface ApiResponse<T> {
-  data: T;
-  error: string | null;
-  loading: boolean;
-}
-
 interface FetchOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: Record<string, string>;
