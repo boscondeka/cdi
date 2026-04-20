@@ -190,19 +190,22 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
 
   // Map API data to component format
   const riverBasins = basinStatus.length > 0
-    ? basinStatus.map((basin) => ({
-        name: basin.name,
-        level: basin.level,
-        trend: basinTrend?.trend === 'rising' ? 'up' : basinTrend?.trend === 'falling' ? 'down' : 'stable',
-        population: basin.population_at_risk,
-        discharge: basin.discharge_rate,
-        rainfall: 0, // Not provided by API yet
-        status: basin.status,
-      }))
+    ? basinStatus.map((basin) => {
+        const trend: 'up' | 'stable' | 'down' = basinTrend?.trend === 'rising' ? 'up' : basinTrend?.trend === 'falling' ? 'down' : 'stable';
+        return {
+          name: basin.name,
+          level: basin.level,
+          trend,
+          population: basin.population_at_risk,
+          discharge: basin.discharge_rate,
+          rainfall: 0, // Not provided by API yet
+          status: basin.status,
+        };
+      })
     : fallbackRiverBasins;
 
   // Generate time series data from trend readings
-  const timeSeriesData = basinTrend?.readings?.length > 0
+  const timeSeriesData = (basinTrend && basinTrend.readings && basinTrend.readings.length > 0)
     ? basinTrend.readings.map((reading, idx) => ({
         time: `${String(idx * 3).padStart(2, '0')}:00`,
         level: reading.level || 0,
@@ -237,7 +240,6 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   }
 
   // Show error banner if data fetch failed
-  const hasError = dataError && !riverBasins;
   const isUsingFallback = basinStatus.length === 0 || Object.values(partialErrors).some(v => v === true);
 
   return (
