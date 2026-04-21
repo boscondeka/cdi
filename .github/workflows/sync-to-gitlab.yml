@@ -26,7 +26,7 @@ jobs:
           git config --global user.email "actions@github.com"
           GITLAB_URL="https://gitlab.com/${{ secrets.GITLAB_REPO }}.git"
           echo "Pushing to: $GITLAB_URL"
-          git remote add gitlab https://${{ secrets.GITLAB_USERNAME }}:${{ secrets.GITLAB_TOKEN }}@gitlab.com/${{ secrets.GITLAB_REPO }}.git
+          git remote add gitlab https://seveelly:${{ secrets.GITLAB_TOKEN }}@gitlab.com/ews9310013/cdi.git
           git log --oneline -5
           git push gitlab main --force
           echo "Push exit code: $?"
