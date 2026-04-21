@@ -9,7 +9,7 @@ deploy:
     - docker:dind
   script:
     - rm -rf dist node_modules
-    - docker ps
+    - docker ps -a
     - ls
     - docker build -t cdi_main .
     - docker stop cdi_main_container || true
