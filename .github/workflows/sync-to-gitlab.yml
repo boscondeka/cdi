@@ -16,6 +16,10 @@ jobs:
 
       - name: Push to GitLab
         run: |
+          echo "Checking secrets..."
+          if [ -z "${{ secrets.GITLAB_USERNAME }}" ]; then echo "USERNAME missing"; exit 1; fi
+          if [ -z "${{ secrets.GITLAB_TOKEN }}" ]; then echo "TOKEN missing"; exit 1; fi
+          if [ -z "${{ secrets.GITLAB_REPO }}" ]; then echo "REPO missing"; exit 1; fi
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git remote add gitlab https://${{ secrets.GITLAB_USERNAME }}:${{ secrets.GITLAB_TOKEN }}@gitlab.com/${{ secrets.GITLAB_REPO }}.git
