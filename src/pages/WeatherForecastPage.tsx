@@ -338,7 +338,6 @@ export default function WeatherForecastPage({
         setDailyForecast(daily as DailyForecastResponse);
       } catch (err) {
         console.error("Failed to fetch weather data:", err);
-        setWeatherError("Failed to load weather data.");
       }
     })();
   }, []);

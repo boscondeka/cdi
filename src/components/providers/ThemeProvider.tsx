@@ -15,7 +15,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       attribute="class"
       defaultTheme="dark"
       enableSystem
-      enableTransitionOnChange
+      disableTransitionOnChange={false}
       storageKey="app-theme"
       themes={['light', 'dark']}
     >
