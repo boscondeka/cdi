@@ -295,7 +295,7 @@ export default function WeatherForecastPage({
   );
   const [dailyForecasts, setDailyForecast] =
     useState<DailyForecastResponse | null>(null);
-  const [weatherError, setWeatherError] = useState<string | null>(null);
+  // const [weatherError, setWeatherError] = useState(null);
 
   const getMonthYear = (months: number) => {
     const year = 2001 + Math.floor(months / 12);
@@ -628,12 +628,12 @@ export default function WeatherForecastPage({
         </div>
 
         {/* Error banner */}
-        {weatherError && (
+        {/* {weatherError && (
           <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
             <X className="w-3.5 h-3.5 flex-shrink-0" />
             {weatherError} Showing zero state.
           </div>
-        )}
+        )} */}
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
