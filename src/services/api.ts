@@ -14,7 +14,7 @@ interface FetchOptions {
 }
 
 /**
- * Generic fetch wrapper with error handling
+ * Generic fetch wrapper with error  handling
  */
 async function fetchData<T>(
   endpoint: string,
