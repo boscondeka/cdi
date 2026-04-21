@@ -28,4 +28,3 @@ jobs:
           git remote -v
           git log --oneline -3
           GIT_TRACE=1 GIT_CURL_VERBOSE=1 git push gitlab main --force 2>&1
-test ci
