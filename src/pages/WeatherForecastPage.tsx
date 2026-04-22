@@ -35,6 +35,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import TabBar from "@/components/shared/TabBar";
+import HourlyCards from "@/components/shared/HourlyCards";
+import { DailyCards } from "@/components/shared/DailyCards";
 
 interface WeatherForecastPageProps {
   isDarkMode?: boolean;
@@ -51,7 +54,7 @@ const WEATHER_LEGEND_ITEMS = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const getWeatherIcon = (type?: string, className = "w-8 h-8") => {
+export const getWeatherIcon = (type?: string, className = "w-8 h-8") => {
   switch (type) {
     case "sun":
       return <Sun className={`${className} text-yellow-400`} />;
@@ -66,7 +69,7 @@ const getWeatherIcon = (type?: string, className = "w-8 h-8") => {
   }
 };
 
-const EmptyState = ({
+export const EmptyState = ({
   icon: Icon,
   message,
   isDarkMode,
@@ -287,7 +290,6 @@ export default function WeatherForecastPage({
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [selectedParameter, setSelectedParameter] = useState("temperature");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [sliderValue, setSliderValue] = useState((2026 - 2001) * 12 + 2);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [forecastData, setForecastData] = useState<ForecastPerHour | null>(
@@ -316,13 +318,6 @@ export default function WeatherForecastPage({
     ];
     return `${names[month]} ${year}`;
   };
-
-  // Loading spinner per tab switch
-  useEffect(() => {
-    setIsLoading(true);
-    const t = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(t);
-  }, [activeTab]);
 
   // Parallel data fetch
   useEffect(() => {
@@ -439,136 +434,6 @@ export default function WeatherForecastPage({
   const textSecondary = isDarkMode ? "text-slate-300" : "text-slate-600";
   const borderColor = isDarkMode ? "border-slate-700/30" : "border-slate-200";
   const headerText = isDarkMode ? "text-white" : "text-slate-900";
-
-  if (isLoading) {
-    return (
-      <div
-        className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}
-      >
-        <div className="text-center">
-          <div
-            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
-            style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}
-          />
-          <p className={textMuted}>Loading Weather Forecast...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Shared card renderers ─────────────────────────────────────────────────
-
-  const HourlyCards = () =>
-    hourlyForecast.length === 0 ? (
-      <EmptyState
-        icon={Cloud}
-        message="No forecast data available"
-        isDarkMode={isDarkMode}
-      />
-    ) : (
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {hourlyForecast.slice(0, 8).map((hour, idx) => (
-          <div
-            key={idx}
-            className={`flex-shrink-0 w-14 p-2 rounded-lg text-center transition-all hover:scale-105 ${idx === 0 ? "border" : isDarkMode ? "bg-slate-700/30" : "bg-slate-100"}`}
-            style={{
-              borderColor: idx === 0 ? FAO_BLUE : undefined,
-              backgroundColor: idx === 0 ? `${FAO_BLUE}20` : undefined,
-            }}
-          >
-            <p className={`text-[10px] ${textMuted} mb-1`}>
-              {hour.time ?? "—"}
-            </p>
-            {getWeatherIcon(hour.icon, "w-5 h-5 mx-auto")}
-            <p className={`text-sm font-bold mt-1 ${headerText}`}>
-              {hour.temp ?? 0}°
-            </p>
-            <p className="text-[10px]" style={{ color: FAO_BLUE }}>
-              {hour.rain ?? 0}mm
-            </p>
-          </div>
-        ))}
-      </div>
-    );
-
-  const DailyCards = ({ mobile = false }: { mobile?: boolean }) =>
-    dailyForecast.length === 0 ? (
-      <EmptyState
-        icon={Cloud}
-        message="No forecast data available"
-        isDarkMode={isDarkMode}
-      />
-    ) : (
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {dailyForecast.map((day, idx) =>
-          mobile ? (
-            <div
-              key={idx}
-              className={`flex-shrink-0 w-24 rounded-lg p-2 text-center transition-all hover:scale-105 ${isDarkMode ? "bg-slate-700/30" : "bg-slate-100"}`}
-            >
-              <p className={`text-xs ${textMuted}`}>{day.day ?? "—"}</p>
-              <p className="text-[10px] text-slate-500 mb-1">
-                {day.date ?? "—"}
-              </p>
-              {getWeatherIcon(day.icon, "w-5 h-5 mx-auto")}
-              <div className="flex items-center justify-center gap-1 mt-1">
-                <span className={`text-sm font-bold ${headerText}`}>
-                  {day.high ?? 0}°
-                </span>
-                <span className={`text-xs ${textMuted}`}>{day.low ?? 0}°</span>
-              </div>
-              <div
-                className="flex items-center justify-center gap-1 mt-0.5 text-[10px]"
-                style={{ color: FAO_BLUE }}
-              >
-                <CloudRain className="w-2.5 h-2.5" />
-                {day.rain ?? 0}mm
-              </div>
-            </div>
-          ) : (
-            <div
-              key={idx}
-              className={`flex-shrink-0 w-20 p-2 rounded-lg text-center transition-all hover:scale-105 ${isDarkMode ? "bg-slate-700/30" : "bg-slate-100"}`}
-            >
-              <p className={`text-[10px] ${textMuted}`}>{day.day ?? "—"}</p>
-              {getWeatherIcon(day.icon, "w-5 h-5 mx-auto my-1")}
-              <p className={`text-xs font-bold ${headerText}`}>
-                {day.high ?? 0}°
-              </p>
-              <p className={`text-[9px] ${textMuted}`}>{day.low ?? 0}°</p>
-            </div>
-          ),
-        )}
-      </div>
-    );
-
-  const TabBar = ({ mobile = false }: { mobile?: boolean }) => (
-    <div className={`flex border-b ${borderColor}`}>
-      {(["nowcast", "forecast"] as const).map((tab) => (
-        <button
-          key={tab}
-          onClick={() => setActiveTab(tab)}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-all ${activeTab === tab ? "text-white" : isDarkMode ? "bg-slate-800/50 text-slate-400 hover:text-white" : "bg-slate-100 text-slate-600"}`}
-          style={{ backgroundColor: activeTab === tab ? FAO_BLUE : undefined }}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${activeTab === tab ? "bg-white" : "bg-slate-400"}`}
-          />
-          {tab === "nowcast" ? (
-            <>
-              <Clock className="w-3.5 h-3.5" />
-              {mobile ? "Nowcast" : "24-Hour Nowcast"}
-            </>
-          ) : (
-            <>
-              <Calendar className="w-3.5 h-3.5" />
-              {mobile ? "Forecast" : "7-Day Forecast"}
-            </>
-          )}
-        </button>
-      ))}
-    </div>
-  );
 
   return (
     <div className="p-4 md:p-6 min-h-screen">
@@ -818,16 +683,30 @@ export default function WeatherForecastPage({
                 <div
                   className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}
                 >
-                  <TabBar />
+                  <TabBar
+                    mobile={false}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    borderColor={borderColor}
+                    isDarkMode={isDarkMode}
+                    FAO_BLUE={FAO_BLUE}
+                  />
                   <div className="p-3">
-                    {activeTab === "nowcast" ? (
+                    {activeTab?.toLowerCase() === "nowcast" ? (
                       <>
                         <h4
                           className={`text-xs font-semibold mb-2 ${headerText}`}
                         >
                           Hourly Forecast
                         </h4>
-                        <HourlyCards />
+
+                        <HourlyCards
+                          hourlyForecast={hourlyForecast}
+                          isDarkMode={isDarkMode}
+                          textMuted={textMuted}
+                          headerText={headerText}
+                          FAO_BLUE={FAO_BLUE}
+                        />
                       </>
                     ) : (
                       <>
@@ -836,7 +715,14 @@ export default function WeatherForecastPage({
                         >
                           7-Day Forecast
                         </h4>
-                        <DailyCards />
+
+                        <DailyCards
+                          dailyForecast={dailyForecast}
+                          isDarkMode={isDarkMode}
+                          textMuted={textMuted}
+                          headerText={headerText}
+                          FAO_BLUE={FAO_BLUE}
+                        />
                       </>
                     )}
                   </div>
@@ -875,7 +761,14 @@ export default function WeatherForecastPage({
           <div
             className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}
           >
-            <TabBar mobile />
+            <TabBar
+              mobile={true}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              borderColor={borderColor}
+              isDarkMode={isDarkMode}
+              FAO_BLUE={FAO_BLUE}
+            />
             <div className="p-3">
               {activeTab === "nowcast" ? (
                 <>
@@ -885,7 +778,14 @@ export default function WeatherForecastPage({
                     <Clock className="w-4 h-4" style={{ color: FAO_BLUE }} />
                     Hourly Forecast
                   </h3>
-                  <HourlyCards />
+
+                  <HourlyCards
+                    hourlyForecast={hourlyForecast}
+                    isDarkMode={isDarkMode}
+                    textMuted={textMuted}
+                    headerText={headerText}
+                    FAO_BLUE={FAO_BLUE}
+                  />
                 </>
               ) : (
                 <>
@@ -895,7 +795,15 @@ export default function WeatherForecastPage({
                     <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />
                     7-Day Forecast
                   </h3>
-                  <DailyCards mobile />
+
+                  <DailyCards
+                    dailyForecast={dailyForecast}
+                    isDarkMode={isDarkMode}
+                    textMuted={textMuted}
+                    headerText={headerText}
+                    FAO_BLUE={FAO_BLUE}
+                    mobile
+                  />
                 </>
               )}
             </div>
