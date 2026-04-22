@@ -27,9 +27,10 @@ import type { AppStoreState } from "./store/useAppStore";
 import { useAppStore } from "./store/useAppStore";
 import { useTheme } from "./hooks/useTheme";
 import { ThemeProvider } from "./components/providers/ThemeProvider";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // PageType derived from store for consistency
-export type PageType = AppStoreState['currentPage'];
+export type PageType = AppStoreState["currentPage"];
 
 const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Overview", icon: Home },
@@ -457,10 +458,13 @@ function AppContent() {
  * This ensures theme is available throughout the entire app
  */
 function App() {
+  const queryClient = new QueryClient();
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -298,9 +298,8 @@ export const stationsAPI = {
  */
 export const geoAPI = {
   getUgandaBoundary: async () => {
-    return fetchData(
-      "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries/UGA.geojson",
-    );
+    const res: any = await fetchData("boundaries/admin");
+    return res?.results;
   },
 
   getDistricts: async () => {

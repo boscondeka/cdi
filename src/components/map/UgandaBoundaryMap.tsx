@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import { geoAPI } from '../../services/api';
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { geoAPI } from "../../services/api";
+import { waterAreas } from "../../utils/waterAreas";
+import { capitalize } from "../../utils/capitalize";
+import { useQuery } from "@tanstack/react-query";
+import type { FeatureCollection } from "geojson";
 
 interface LegendItem {
   label: string;
@@ -14,79 +18,397 @@ interface UgandaBoundaryMapProps {
   badgeText?: string;
   legendTitle?: string;
   legendItems?: LegendItem[];
+  district?: string;
+  setDistrict?: (name: string) => void;
+  getTheBounds?: string; // from reference: fits map to a named district
+  zoom?: number;
+  minZoom?: number;
 }
 
-const FAO_BLUE = '#318DDE';
+const FAO_BLUE = "#318DDE";
+
+// ── Ray-casting point-in-polygon ──────────────────────────────────────────────
+// Tests whether a LatLng lies inside the actual polygon shape (not bounding box).
+// Handles both Polygon and MultiPolygon by flattening nested LatLng arrays.
+const isPointInPolygon = (latlng: L.LatLng, polyLatLngs: any): boolean => {
+  const rings: L.LatLng[][] = [];
+
+  const flatten = (arr: any) => {
+    if (!Array.isArray(arr) || arr.length === 0) return;
+    if (arr[0] instanceof L.LatLng) {
+      rings.push(arr as L.LatLng[]);
+    } else {
+      arr.forEach((item: any) => flatten(item));
+    }
+  };
+  flatten(polyLatLngs);
+
+  const x = latlng.lng;
+  const y = latlng.lat;
+
+  for (const ring of rings) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i].lng,
+        yi = ring[i].lat;
+      const xj = ring[j].lng,
+        yj = ring[j].lat;
+      const intersect =
+        yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+      if (intersect) inside = !inside;
+    }
+    if (inside) return true;
+  }
+  return false;
+};
 
 export default function UgandaBoundaryMap({
-  className = '',
+  className = "",
   isDarkMode,
-  badgeText = 'Uganda',
+  badgeText = "Uganda",
   legendTitle,
   legendItems = [],
+  district,
+  setDistrict,
+  getTheBounds,
+  zoom = 7,
+  minZoom = 6,
 }: UgandaBoundaryMapProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [geoData, setGeoData] = useState<any>(null);
+  // ── Refs ────────────────────────────────────────────────────────────────────
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const districtLayerRef = useRef<L.GeoJSON | null>(null);
+  const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
+  const riverLayerRef = useRef<L.GeoJSON | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
 
+  // ── Data ────────────────────────────────────────────────────────────────────
+  const { data: geoData, isLoading } = useQuery<FeatureCollection>({
+    queryKey: ["ugandaBoundary"],
+    queryFn: async () => {
+      const res = (await geoAPI.getUgandaBoundary()) as any;
+      if (res?.type === "FeatureCollection") return res;
+      if (res?.data?.type === "FeatureCollection") return res.data;
+      if (res?.results?.type === "FeatureCollection") return res.results;
+      if (Array.isArray(res?.features)) return res;
+      if (Array.isArray(res))
+        return { type: "FeatureCollection", features: res };
+      return res;
+    },
+  });
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
+  const isValidGeoJSON = (data: any): boolean =>
+    data &&
+    data.type === "FeatureCollection" &&
+    Array.isArray(data.features) &&
+    data.features.length > 0;
+
+  // Draw / replace the blue boundary highlight around a district
+  const drawBoundary = (geojson: any, color: string) => {
+    if (!mapRef.current) return;
+    if (boundaryLayerRef.current) {
+      mapRef.current.removeLayer(boundaryLayerRef.current);
+      boundaryLayerRef.current = null;
+    }
+    boundaryLayerRef.current = L.geoJSON(geojson, {
+      style: { color, weight: 4, fill: false },
+    })
+      .addTo(mapRef.current)
+      .bringToBack();
+  };
+
+  // Check whether a district label fits inside its polygon at current zoom
+  // (exact port of doesNameFitInLeafletBoundary from reference)
+  const doesNameFitInLeafletBoundary = (
+    layer: any,
+    name: string,
+    fontSize = 14,
+    fontFamily = "sans-serif",
+    padding = 5,
+  ): boolean => {
+    if (!mapRef.current) return false;
+    const bounds = layer.getBounds();
+    const topLeft = mapRef.current.latLngToLayerPoint(bounds.getNorthWest());
+    const bottomRight = mapRef.current.latLngToLayerPoint(
+      bounds.getSouthEast(),
+    );
+    const availableWidth = bottomRight.x - topLeft.x;
+    const availableHeight = bottomRight.y - topLeft.y;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d")!;
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    const textWidth = ctx.measureText(name).width;
+    const textHeight = fontSize;
+    const paddedW = textWidth + padding * 2;
+    const paddedH = textHeight + padding * 2;
+
+    console.log(
+      "does it fit?",
+      paddedW <= availableWidth && paddedH <= availableHeight,
+    );
+
+    return paddedW <= availableWidth && paddedH <= availableHeight;
+  };
+
+  // ── Initialise map once geoData arrives ────────────────────────────────────
   useEffect(() => {
-    const loadGeoData = async () => {
-      try {
-        const data = await geoAPI.getUgandaBoundary();
-        setGeoData(data);
-      } catch (err) {
-        console.error('Error loading GeoJSON:', err);
-      }
-    };
-    loadGeoData();
-  }, []);
+    if (!mapContainerRef.current || !geoData) return;
+    if (!isValidGeoJSON(geoData)) {
+      console.error("UgandaBoundaryMap: invalid GeoJSON:", geoData);
+      return;
+    }
 
+    // Destroy stale instance (StrictMode / hot-reload safety)
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+
+    // ── Tile layer ────────────────────────────────────────────────────────
+    const tileUrl = isDarkMode
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+    tileLayerRef.current = L.tileLayer(tileUrl);
+
+    mapRef.current = L.map(mapContainerRef.current, {
+      center: [1.3733, 32.2903],
+      zoom,
+      minZoom,
+      layers: [tileLayerRef.current],
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    // ── District boundary polygons — gray thin borders ────────────────────
+    districtLayerRef.current = L.geoJSON(geoData, {
+      style: { color: "gray", weight: 0.3, fill: false },
+    }).addTo(mapRef.current);
+
+    // ── District name labels ──────────────────────────────────────────────
+    // Exact port from reference: calls doesNameFitInLeafletBoundary,
+    // binds tooltip, opens it, and calls bringToFront() — then chains
+    // .addTo(mapRef.current) at the end of eachLayer like the reference does.
+    const updateLabelVisibility = () => {
+      if (!mapRef.current || !districtLayerRef.current) return;
+
+      districtLayerRef.current.eachLayer((layer: any) => {
+        layer.closeTooltip();
+        const name = layer.feature?.properties?.name;
+        if (!name) return;
+
+        const fits = doesNameFitInLeafletBoundary(layer, name);
+        if (fits) {
+          layer
+            .bindTooltip(name, {
+              permanent: true,
+              direction: "center",
+              className: "district-label",
+            })
+            .openTooltip();
+          layer.bringToFront();
+        }
+      });
+    };
+
+    mapRef.current.on("zoomend", updateLabelVisibility);
+    updateLabelVisibility();
+
+    // ── Click → highlight clicked district (ray-casting, not bounding box) ─
+    // Reference uses getBounds().contains() which gives rectangles.
+    // We use isPointInPolygon() so the highlight matches the actual shape.
+    mapRef.current.on("click", (ev: L.LeafletMouseEvent) => {
+      let clickedFeature: any = null;
+
+      districtLayerRef.current?.eachLayer((layer: any) => {
+        if (clickedFeature) return; // stop after first match
+
+        if (layer instanceof L.Polygon || (layer as any)) {
+          if (isPointInPolygon(ev.latlng, layer.getLatLngs())) {
+            clickedFeature = layer.feature;
+          }
+        }
+      });
+
+      if (!clickedFeature) return;
+
+      if (setDistrict) {
+        setDistrict(clickedFeature.properties.name?.toUpperCase());
+      }
+
+      // Highlight only the clicked feature — pass the single Feature directly
+      if (boundaryLayerRef.current) {
+        mapRef.current!.removeLayer(boundaryLayerRef.current);
+        boundaryLayerRef.current = null;
+      }
+      boundaryLayerRef.current = L.geoJSON(clickedFeature, {
+        style: { color: "#308DE0", weight: 4, fill: false },
+      })
+        .addTo(mapRef.current!)
+        .bringToFront();
+    });
+
+    // ── Water / lake overlay (from reference) ─────────────────────────────
+    if (riverLayerRef.current) {
+      mapRef.current.removeLayer(riverLayerRef.current);
+      riverLayerRef.current = null;
+    }
+    if (waterAreas) {
+      riverLayerRef.current = L.geoJSON(waterAreas as any, {
+        style: {
+          color: "#d2efff",
+          weight: 0.1,
+          fillColor: "#d2efff",
+          fillOpacity: 1.0,
+        },
+        onEachFeature(feature, layer: any) {
+          const waterName = feature.properties?.NAME;
+          if (waterName) {
+            layer.bindTooltip(waterName, {
+              permanent: true,
+              direction: "center",
+              className: "waterAreas-label",
+            });
+            // layer.bringToFront();
+          }
+        },
+      }).addTo(mapRef.current);
+      riverLayerRef.current.bringToBack();
+    }
+
+    // ── ResizeObserver ────────────────────────────────────────────────────
+    const ro = new ResizeObserver(() => mapRef.current?.invalidateSize());
+    ro.observe(mapContainerRef.current);
+
+    return () => {
+      ro.disconnect();
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+  }, [geoData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Swap tile layer on dark mode toggle ─────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !tileLayerRef.current) return;
+    mapRef.current.removeLayer(tileLayerRef.current);
+    const tileUrl = isDarkMode
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    tileLayerRef.current = L.tileLayer(tileUrl).addTo(mapRef.current);
+    tileLayerRef.current.bringToBack();
+  }, [isDarkMode]);
+
+  // ── Highlight district when `district` prop changes externally ──────────────
+  useEffect(() => {
+    if (!mapRef.current || !geoData || !isValidGeoJSON(geoData)) return;
+
+    if (
+      !district ||
+      district.trim() === "" ||
+      district.trim().toLowerCase() === "all"
+    ) {
+      if (boundaryLayerRef.current) {
+        mapRef.current.removeLayer(boundaryLayerRef.current);
+        boundaryLayerRef.current = null;
+      }
+      return;
+    }
+
+    const matched = geoData.features.filter(
+      (f: any) => f?.properties?.name === capitalize(district.toLowerCase()),
+    );
+    if (!matched.length) return;
+
+    drawBoundary({ type: "FeatureCollection", features: matched }, FAO_BLUE);
+  }, [district, geoData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── getTheBounds: fit viewport to a named district (from reference) ─────────
+  // Mirrors the third useEffect in UgandaMap — fits map bounds to a district
+  // and locks the viewport to it, or resets to full Uganda view when "all".
+  useEffect(() => {
+    if (!mapRef.current || !geoData || !isValidGeoJSON(geoData)) return;
+    if (!getTheBounds || getTheBounds.trim().length === 0) return;
+
+    if (
+      getTheBounds.trim().toLowerCase() === "all" ||
+      getTheBounds.trim() === ""
+    ) {
+      if (boundaryLayerRef.current) {
+        mapRef.current.removeLayer(boundaryLayerRef.current);
+        boundaryLayerRef.current = null;
+      }
+      mapRef.current.setView([1.3733, 32.2903], zoom);
+      mapRef.current.setMinZoom(minZoom);
+      return;
+    }
+
+    const matched = geoData.features.filter(
+      (f: any) =>
+        f?.properties?.name === capitalize(getTheBounds.toLowerCase()),
+    );
+    if (!matched.length) return;
+
+    const updatedGeoJSON = { ...geoData, features: matched };
+
+    if (boundaryLayerRef.current) {
+      mapRef.current.removeLayer(boundaryLayerRef.current);
+      boundaryLayerRef.current = null;
+    }
+
+    boundaryLayerRef.current = L.geoJSON(updatedGeoJSON, {
+      style: { color: "blue", weight: 4, fill: false },
+    })
+      .addTo(mapRef.current)
+      .bringToBack();
+
+    const bounds = boundaryLayerRef.current.getBounds();
+    if (bounds.isValid()) {
+      mapRef.current.fitBounds(bounds);
+      mapRef.current.setMaxBounds(bounds);
+    }
+  }, [getTheBounds, geoData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <div className="absolute inset-0">
-        <MapContainer
-          center={[1.3733, 32.2903]}
-          zoom={7}
-          style={{ height: '100%', width: '100%', background: isDarkMode ? '#0f172a' : '#f1f5f9' }}
-          zoomControl={false}
-          attributionControl={false}
+      {/* Map container — always in DOM, never conditionally rendered */}
+      <div
+        ref={mapContainerRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: isDarkMode ? "#0f172a" : "#f1f5f9",
+        }}
+      />
+
+      {/* Loading overlay — sits on top until geoData arrives */}
+      {(isLoading || !geoData) && (
+        <div
+          className={`absolute inset-0 z-[500] flex items-center justify-center ${
+            isDarkMode ? "bg-slate-900/80" : "bg-white/80"
+          }`}
         >
-          <TileLayer
-            url={
-              isDarkMode
-                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-            }
-          />
-          {geoData && (
-            <GeoJSON
-              data={geoData}
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="w-6 h-6 rounded-full border-2 animate-spin"
               style={{
-                fillColor: 'transparent',
-                weight: 2,
-                opacity: 1,
-                color: FAO_BLUE,
-                dashArray: '3',
-                fillOpacity: 0,
+                borderColor: `${FAO_BLUE}30`,
+                borderTopColor: FAO_BLUE,
               }}
             />
-          )}
-        </MapContainer>
-      </div>
-
-      {legendTitle && legendItems.length > 0 && (
-        <div className={`absolute bottom-2 left-2 z-[400] rounded-lg p-2 shadow-sm ${isDarkMode ? 'bg-slate-800/90' : 'bg-white/90'}`}>
-          <div className={`mb-1 text-[10px] font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{legendTitle}</div>
-          <div className="space-y-1">
-            {legendItems.map((item) => (
-              <div key={item.label} className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className={`text-[9px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{item.label}</span>
-              </div>
-            ))}
+            <span
+              className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
+            >
+              Loading map…
+            </span>
           </div>
         </div>
       )}
 
+      {/* Badge */}
       <div className="absolute top-2 left-2 z-[400]">
         <span
           className="rounded px-2 py-0.5 text-[10px] font-medium shadow-sm"
@@ -98,6 +420,62 @@ export default function UgandaBoundaryMap({
           {badgeText}
         </span>
       </div>
+
+      {/* Legend */}
+      {legendTitle && legendItems.length > 0 && (
+        <div
+          className={`absolute bottom-2 left-2 z-[400] rounded-lg p-2 shadow-sm ${
+            isDarkMode ? "bg-slate-800/90" : "bg-white/90"
+          }`}
+        >
+          <div
+            className={`mb-1 text-[10px] font-medium ${
+              isDarkMode ? "text-slate-300" : "text-slate-700"
+            }`}
+          >
+            {legendTitle}
+          </div>
+          <div className="space-y-1">
+            {legendItems.map((item) => (
+              <div key={item.label} className="flex items-center gap-1.5">
+                <div
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span
+                  className={`text-[9px] ${
+                    isDarkMode ? "text-slate-400" : "text-slate-600"
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leaflet label styles */}
+      <style>{`
+        .district-label {
+          background:     transparent !important;
+          border:         none !important;
+          box-shadow:     none !important;
+          font-size:      11px;
+          font-weight:    500;
+          color:          ${isDarkMode ? "#94a3b8" : "#475569"};
+          white-space:    nowrap;
+          pointer-events: none;
+        }
+        .waterAreas-label {
+          background:     transparent !important;
+          border:         none !important;
+          box-shadow:     none !important;
+          font-size:      10px;
+          color:          #5b9bd5;
+          pointer-events: none;
+        }
+      `}</style>
     </div>
   );
 }
