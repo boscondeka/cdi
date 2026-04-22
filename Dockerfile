@@ -25,6 +25,12 @@ RUN echo 'server { \
     proxy_set_header X-Real-IP $remote_addr; \
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
   } \
+  location /geoserver/ { \
+    proxy_pass http://host.docker.internal:8090/geoserver/; \
+    proxy_set_header Host $host; \
+    proxy_set_header X-Real-IP $remote_addr; \
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+  } \
   location / { \
     try_files $uri $uri/ /index.html; \
   } \
