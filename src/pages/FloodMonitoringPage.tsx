@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { 
+import {
   Waves,
   MapPin,
   Download,
@@ -13,9 +13,11 @@ import {
   Users,
   Filter,
   X,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import UgandaBoundaryMap from '../components/map/UgandaBoundaryMap';
+import { useFloodData } from '../hooks/useFloodData';
 
 interface FloodMonitoringPageProps {
   isDarkMode?: boolean;
@@ -23,21 +25,19 @@ interface FloodMonitoringPageProps {
 
 const FAO_BLUE = '#318DDE';
 
-const riverBasins = [
-  { name: 'Nile Basin', level: 4.2, trend: 'up', population: 620000, rainfall: 85, discharge: 3200, status: 'severe' },
-  { name: 'Victoria Nile', level: 3.8, trend: 'up', population: 620000, rainfall: 78, discharge: 2800, status: 'severe' },
-  { name: 'Albert Nile', level: 2.9, trend: 'stable', population: 540000, rainfall: 65, discharge: 1900, status: 'moderate' },
-  { name: 'Kafu River', level: 2.4, trend: 'up', population: 180000, rainfall: 72, discharge: 1200, status: 'moderate' },
-  { name: 'Mpologoma', level: 1.8, trend: 'down', population: 95000, rainfall: 45, discharge: 800, status: 'minor' },
-  { name: 'Manafwa', level: 1.5, trend: 'stable', population: 78000, rainfall: 38, discharge: 650, status: 'minor' },
-  { name: 'Malaba', level: 0.9, trend: 'stable', population: 65000, rainfall: 28, discharge: 420, status: 'normal' },
-  { name: 'Okot', level: 0.7, trend: 'down', population: 32000, rainfall: 22, discharge: 310, status: 'normal' },
+// Fallback mock data for when API data is not available
+const fallbackRiverBasins = [
+  { name: 'Nile Basin', level: 4.2, trend: 'up' as const, population: 620000, rainfall: 85, discharge: 3200, status: 'severe' as const },
+  { name: 'Victoria Nile', level: 3.8, trend: 'up' as const, population: 620000, rainfall: 78, discharge: 2800, status: 'severe' as const },
+  { name: 'Albert Nile', level: 2.9, trend: 'stable' as const, population: 540000, rainfall: 65, discharge: 1900, status: 'moderate' as const },
+  { name: 'Kafu River', level: 2.4, trend: 'up' as const, population: 180000, rainfall: 72, discharge: 1200, status: 'moderate' as const },
+  { name: 'Mpologoma', level: 1.8, trend: 'down' as const, population: 95000, rainfall: 45, discharge: 800, status: 'minor' as const },
+  { name: 'Manafwa', level: 1.5, trend: 'stable' as const, population: 78000, rainfall: 38, discharge: 650, status: 'minor' as const },
+  { name: 'Malaba', level: 0.9, trend: 'stable' as const, population: 65000, rainfall: 28, discharge: 420, status: 'normal' as const },
+  { name: 'Okot', level: 0.7, trend: 'down' as const, population: 32000, rainfall: 22, discharge: 310, status: 'normal' as const },
 ];
 
-
-
-// Time series data for Nile Basin
-const timeSeriesData = [
+const fallbackTimeSeriesData = [
   { time: '00:00', level: 3.8 },
   { time: '03:00', level: 3.9 },
   { time: '06:00', level: 4.0 },
@@ -84,6 +84,7 @@ const FilterContent = ({
   textSecondary,
   borderColor,
   headerText,
+  riverBasins,
 }: {
   timeRange: string;
   setTimeRange: (val: string) => void;
@@ -94,6 +95,7 @@ const FilterContent = ({
   textSecondary: string;
   borderColor: string;
   headerText: string;
+  riverBasins: Array<{ name: string; level: number; trend: string; population: number; rainfall: number; discharge: number; status: string }>;
 }) => (
   <div className="space-y-3">
     <div>
@@ -164,9 +166,12 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   const [timeRange, setTimeRange] = useState('Last 24 Hours');
   const [selectedBasin, setSelectedBasin] = useState('Nile Basin');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [sliderValue, setSliderValue] = useState(((2026 - 2001) * 12) + 2); // Mar 2026
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Fetch flood data from API
+  const { basinStatus, basinTrend, loading: dataLoading, partialErrors = {}, refetch } = useFloodData();
+  const [pageLoading, setPageLoading] = useState(true);
 
   const getMonthYear = (months: number) => {
     const year = 2001 + Math.floor(months / 12);
@@ -175,10 +180,45 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
     return `${monthNames[month]} ${year}`;
   };
 
+  // Handle initial loading
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [selectedBasin]);
+    if (!dataLoading) {
+      const timer = setTimeout(() => setPageLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [dataLoading]);
+
+  // Map API data to component format
+  const riverBasins = basinStatus.length > 0
+    ? basinStatus.map((basin) => {
+        const trend: 'up' | 'stable' | 'down' = basinTrend?.trend === 'rising' ? 'up' : basinTrend?.trend === 'falling' ? 'down' : 'stable';
+        return {
+          name: basin.name,
+          level: basin.level,
+          trend,
+          population: basin.population_at_risk,
+          discharge: basin.discharge_rate,
+          rainfall: 0, // Not provided by API yet
+          status: basin.status,
+        };
+      })
+    : fallbackRiverBasins;
+
+  // Generate time series data from trend readings
+  const timeSeriesData = (basinTrend && basinTrend.readings && basinTrend.readings.length > 0)
+    ? basinTrend.readings.map((reading, idx) => ({
+        time: `${String(idx * 3).padStart(2, '0')}:00`,
+        level: reading.level || 0,
+      }))
+    : fallbackTimeSeriesData;
+
+  // Calculate statistics from available data
+  const criticalBasins = riverBasins.filter(b => b.status === 'severe' || b.status === 'extreme').length;
+  const atRiskPopulation = riverBasins.reduce((sum, b) => sum + b.population, 0);
+  const severeCount = riverBasins.filter(b => b.status === 'severe').length;
+  const moderateCount = riverBasins.filter(b => b.status === 'moderate').length;
+  const minorCount = riverBasins.filter(b => b.status === 'minor').length;
+  const normalCount = riverBasins.filter(b => b.status === 'normal').length;
 
   const cardBg = isDarkMode ? 'bg-slate-800/85' : 'bg-white/95';
   const textMuted = isDarkMode ? 'text-slate-400' : 'text-slate-500';
@@ -186,11 +226,11 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   const borderColor = isDarkMode ? 'border-slate-700/30' : 'border-slate-200';
   const headerText = isDarkMode ? 'text-white' : 'text-slate-900';
 
-  if (isLoading) {
+  if (pageLoading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4" 
+          <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
             style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}>
           </div>
           <p className={textMuted}>Loading Flood Monitoring...</p>
@@ -198,6 +238,9 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
       </div>
     );
   }
+
+  // Show error banner if data fetch failed
+  const isUsingFallback = basinStatus.length === 0 || Object.values(partialErrors).some(v => v === true);
 
   return (
     <div className="p-4 md:p-6 min-h-screen">
@@ -212,8 +255,43 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
 
 
       <div className="relative z-10 max-w-[1600px] mx-auto">
-        {/* Compact Header Banner - No alert buttons */}
-        <div 
+        {/* Fallback Data Banner */}
+        {isUsingFallback && (
+          <div></div>
+          // <div className="mb-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start justify-between">
+          //   <div className="flex items-start gap-2">
+          //     <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          //     <div className="flex-1">
+          //       <p className={`text-xs font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Displaying Demo Data</p>
+          //       <p className={`text-xs ${isDarkMode ? 'text-blue-300/70' : 'text-blue-600/70'}`}>
+          //         Some real-time data sources are currently unavailable. Showing demo data instead. {basinStatus.length > 0 && 'Actual data will display once available.'}
+          //       </p>
+          //       {Object.entries(partialErrors).filter(([_, failed]) => failed).length > 0 && (
+          //         <div className={`text-xs mt-1.5 space-y-0.5 ${isDarkMode ? 'text-blue-300/60' : 'text-blue-600/60'}`}>
+          //           <p className="font-medium">Unavailable sources:</p>
+          //           <div className="flex flex-wrap gap-1">
+          //             {Object.entries(partialErrors).filter(([_, failed]) => failed).map(([key]) => (
+          //               <span key={key} className={`px-1.5 py-0.5 rounded text-[10px] ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+          //                 {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
+          //               </span>
+          //             ))}
+          //           </div>
+          //         </div>
+          //       )}
+          //     </div>
+          //   </div>
+          //   <button
+          //     onClick={() => refetch()}
+          //     disabled={dataLoading}
+          //     className={`flex-shrink-0 ml-2 text-xs font-medium px-2 py-1 rounded ${isDarkMode ? 'hover:bg-blue-500/20' : 'hover:bg-blue-100'} disabled:opacity-50`}
+          //   >
+          //     Retry
+          //   </button>
+          // </div>
+        )}
+
+        {/* Compact Header Banner */}
+        <div
           className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up"
           style={{ background: `linear-gradient(135deg, ${FAO_BLUE}e6 0%, ${FAO_BLUE}99 100%)` }}
         >
@@ -221,23 +299,34 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
                 <h1 className="text-lg md:text-xl font-bold text-white">Flood Monitoring</h1>
-                <p className="text-slate-200 text-xs md:text-sm">Real-time rainfall data and flood risk assessment</p>
+                <p className="text-slate-200 text-xs md:text-sm">Real-time rainfall data and flood risk assessment {isUsingFallback && '(Demo Data)'}</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span 
-                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
-                    style={{ backgroundColor: 'rgba(239, 68, 68, 0.4)' }}
-                  >
-                    <AlertTriangle className="w-3 h-3" />2 Severe Alerts
-                  </span>
-                  <span 
-                    className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-                  >
-                    <Droplets className="w-3 h-3" />Heavy Rainfall
-                  </span>
+                  {criticalBasins > 0 && (
+                    <span
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                      style={{ backgroundColor: 'rgba(239, 68, 68, 0.4)' }}
+                    >
+                      <AlertTriangle className="w-3 h-3" />{criticalBasins} Severe Alert{criticalBasins !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {basinTrend?.trend === 'rising' && (
+                    <span
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+                    >
+                      <Droplets className="w-3 h-3" />Rising Levels
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => refetch()}
+                  disabled={dataLoading}
+                  className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
+                >
+                  <RefreshCw className={`w-3 h-3 ${dataLoading ? 'animate-spin' : ''}`} /><span className="hidden sm:inline">Refresh</span>
+                </button>
                 <button className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 rounded-lg text-xs font-medium text-white transition-colors">
                   <Download className="w-3 h-3" /><span className="hidden sm:inline">Export</span>
                 </button>
@@ -260,7 +349,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
               }}
             >
               <div className={`p-3 rounded-xl ${isDarkMode ? 'bg-slate-800/80' : 'bg-white/90'} border ${isDarkMode ? 'border-slate-700/30' : 'border-slate-200'}`}>
-                <FilterContent 
+                <FilterContent
                   timeRange={timeRange}
                   setTimeRange={setTimeRange}
                   selectedBasin={selectedBasin}
@@ -270,6 +359,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                   textSecondary={textSecondary}
                   borderColor={borderColor}
                   headerText={headerText}
+                  riverBasins={riverBasins}
                 />
               </div>
 
@@ -332,19 +422,19 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                   <h3 className={`text-sm font-semibold mb-2 ${headerText}`}>Flood Summary</h3>
                   <div className="grid grid-cols-4 gap-2">
                     <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-center">
-                      <p className="text-lg font-bold text-red-500">2</p>
+                      <p className="text-lg font-bold text-red-500">{severeCount}</p>
                       <p className={`text-[10px] ${textMuted}`}>Severe</p>
                     </div>
                     <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 text-center">
-                      <p className="text-lg font-bold text-orange-500">2</p>
+                      <p className="text-lg font-bold text-orange-500">{moderateCount}</p>
                       <p className={`text-[10px] ${textMuted}`}>Moderate</p>
                     </div>
                     <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center">
-                      <p className="text-lg font-bold text-yellow-500">2</p>
+                      <p className="text-lg font-bold text-yellow-500">{minorCount}</p>
                       <p className={`text-[10px] ${textMuted}`}>Minor</p>
                     </div>
                     <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
-                      <p className="text-lg font-bold text-green-500">2</p>
+                      <p className="text-lg font-bold text-green-500">{normalCount}</p>
                       <p className={`text-[10px] ${textMuted}`}>Normal</p>
                     </div>
                   </div>
@@ -354,7 +444,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                         <Users className={`w-3.5 h-3.5 ${textMuted}`} />
                         <span className={`text-xs ${textMuted}`}>Population at Risk</span>
                       </div>
-                      <span className={`text-sm font-bold ${headerText}`}>1.6M</span>
+                      <span className={`text-sm font-bold ${headerText}`}>{(atRiskPopulation / 1000000).toFixed(1)}M</span>
                     </div>
                   </div>
                 </div>
@@ -476,19 +566,19 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
             <h3 className={`text-sm font-semibold mb-2 ${headerText}`}>Flood Summary</h3>
             <div className="grid grid-cols-4 gap-2">
               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-red-500">2</p>
+                <p className="text-lg font-bold text-red-500">{severeCount}</p>
                 <p className={`text-[10px] ${textMuted}`}>Severe</p>
               </div>
               <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-orange-500">2</p>
+                <p className="text-lg font-bold text-orange-500">{moderateCount}</p>
                 <p className={`text-[10px] ${textMuted}`}>Moderate</p>
               </div>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-yellow-500">2</p>
+                <p className="text-lg font-bold text-yellow-500">{minorCount}</p>
                 <p className={`text-[10px] ${textMuted}`}>Minor</p>
               </div>
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
-                <p className="text-lg font-bold text-green-500">2</p>
+                <p className="text-lg font-bold text-green-500">{normalCount}</p>
                 <p className={`text-[10px] ${textMuted}`}>Normal</p>
               </div>
             </div>
@@ -548,7 +638,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <FilterContent 
+                  <FilterContent
                     timeRange={timeRange}
                     setTimeRange={setTimeRange}
                     selectedBasin={selectedBasin}
@@ -558,6 +648,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
                     textSecondary={textSecondary}
                     borderColor={borderColor}
                     headerText={headerText}
+                    riverBasins={riverBasins}
                   />
                 </div>
               </>
