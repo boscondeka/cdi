@@ -347,36 +347,28 @@ export default function OverviewPage({
           });
         }
 
-        // Update weather stat cards
+        // Update weather stat cards - using exact same data as WeatherForecastPage
         if (weatherData) {
           const updated = [...statCards];
           if (weatherData.temperature !== undefined) {
             updated[0].value = `${weatherData.temperature}°C`;
-            updated[0].change = weatherData.temp_change
-              ? `${weatherData.temp_change > 0 ? "+" : ""}${weatherData.temp_change}°C`
-              : "No change";
-            updated[0].trend = weatherData.temp_change > 0 ? "up" : "down";
+            updated[0].change = `${(weatherData.temperature_delta ?? 0) > 0 ? "+" : ""}${weatherData.temperature_delta ?? 0}°C`;
+            updated[0].trend = (weatherData.temperature_delta ?? 0) > 0 ? "up" : (weatherData.temperature_delta ?? 0) < 0 ? "down" : "neutral";
           }
           if (weatherData.humidity !== undefined) {
             updated[1].value = `${weatherData.humidity}%`;
-            updated[1].change = weatherData.humidity_change
-              ? `${weatherData.humidity_change > 0 ? "+" : ""}${weatherData.humidity_change}%`
-              : "No change";
-            updated[1].trend = weatherData.humidity_change > 0 ? "up" : "down";
+            updated[1].change = `${(weatherData.humidity_delta ?? 0) > 0 ? "+" : ""}${weatherData.humidity_delta ?? 0}%`;
+            updated[1].trend = (weatherData.humidity_delta ?? 0) > 0 ? "up" : (weatherData.humidity_delta ?? 0) < 0 ? "down" : "neutral";
           }
           if (weatherData.wind_speed !== undefined) {
             updated[2].value = `${weatherData.wind_speed} km/h`;
-            updated[2].change = weatherData.wind_change
-              ? `${weatherData.wind_change > 0 ? "+" : ""}${weatherData.wind_change} km/h`
-              : "No change";
-            updated[2].trend = weatherData.wind_change > 0 ? "up" : "down";
+            updated[2].change = `${(weatherData.wind_speed_delta ?? 0) > 0 ? "+" : ""}${weatherData.wind_speed_delta ?? 0} km/h`;
+            updated[2].trend = (weatherData.wind_speed_delta ?? 0) > 0 ? "up" : (weatherData.wind_speed_delta ?? 0) < 0 ? "down" : "neutral";
           }
           if (weatherData.rainfall_24h !== undefined) {
             updated[3].value = `${weatherData.rainfall_24h} mm`;
-            updated[3].change = weatherData.rainfall_24h_delta
-              ? `${weatherData.rainfall_24h_delta > 0 ? "+" : ""}${weatherData.rainfall_24h_delta} mm`
-              : "No change";
-            updated[3].trend = weatherData.rainfall_24h_delta > 0 ? "up" : "down";
+            updated[3].change = `${(weatherData.rainfall_24h_delta ?? 0) > 0 ? "+" : ""}${weatherData.rainfall_24h_delta ?? 0} mm`;
+            updated[3].trend = (weatherData.rainfall_24h_delta ?? 0) > 0 ? "up" : (weatherData.rainfall_24h_delta ?? 0) < 0 ? "down" : "neutral";
           }
           setStatCards(updated);
         }
