@@ -85,16 +85,7 @@ export default function UgandaBoundaryMap({
   // ── Data ────────────────────────────────────────────────────────────────────
   const { data: geoData, isLoading } = useQuery<FeatureCollection>({
     queryKey: ["ugandaBoundary"],
-    queryFn: async () => {
-      const res = (await geoAPI.getUgandaBoundary()) as any;
-      if (res?.type === "FeatureCollection") return res;
-      if (res?.data?.type === "FeatureCollection") return res.data;
-      if (res?.results?.type === "FeatureCollection") return res.results;
-      if (Array.isArray(res?.features)) return res;
-      if (Array.isArray(res))
-        return { type: "FeatureCollection", features: res };
-      return res;
-    },
+    queryFn: geoAPI.getUgandaBoundary,
   });
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
