@@ -28,6 +28,7 @@ import { useAppStore } from "./store/useAppStore";
 import { useTheme } from "./hooks/useTheme";
 import { ThemeProvider } from "./components/providers/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { alertsAPI } from "./services/api";
 
 // PageType derived from store for consistency
 export type PageType = AppStoreState["currentPage"];
@@ -42,41 +43,24 @@ const navItems: { id: PageType; label: string; icon: LucideIcon }[] = [
   { id: "help", label: "Help", icon: HelpCircle },
 ];
 
-// Sample alerts data for each page
-const alertsData = [
-  {
-    id: 1,
-    title: "Severe drought in Karamoja",
-    location: "Moroto",
-    time: "5 min ago",
-    severity: "high",
-    type: "drought",
-  },
-  {
-    id: 2,
-    title: "High flood risk detected",
-    location: "Kalangala",
-    time: "12 min ago",
-    severity: "high",
-    type: "flood",
-  },
-  {
-    id: 3,
-    title: "Weather station offline",
-    location: "Gulu",
-    time: "1 hour ago",
-    severity: "medium",
-    type: "station",
-  },
-  {
-    id: 4,
-    title: "Heavy rainfall expected",
-    location: "Mbale",
-    time: "2 hours ago",
-    severity: "medium",
-    type: "weather",
-  },
-];
+// Helper function to format time ago
+const formatTimeAgo = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return "recently";
+  }
+};
 
 // FAO Blue Theme Color
 const FAO_BLUE = "#318DDE";
@@ -99,6 +83,7 @@ function AppContent() {
   const [particles, setParticles] = useState<
     { id: number; left: string; top: string; delay: string; duration: string }[]
   >([]);
+  const [alertsData, setAlertsData] = useState<any[]>([]);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Generate particles once to avoid impure function calls during render
@@ -112,6 +97,36 @@ function AppContent() {
         duration: `${3 + Math.random() * 4}s`,
       })),
     );
+  }, []);
+
+  // Fetch alerts from API
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const response: any = await alertsAPI.getRecent(5);
+        if (response && Array.isArray(response.results)) {
+          const formatted = response.results.map((alert: any) => ({
+            id: alert.id || Math.random(),
+            title: alert.title || alert.message || "Alert",
+            location: alert.location || "Uganda",
+            time: alert.created_at
+              ? formatTimeAgo(alert.created_at)
+              : "Recently",
+            type: alert.alert_type || "alert",
+            severity: alert.severity === "high" ? "high" : "medium",
+          }));
+          setAlertsData(formatted);
+        }
+      } catch (error) {
+        console.error("Failed to fetch alerts:", error);
+        // Keep empty array on error
+      }
+    };
+
+    fetchAlerts();
+    // Refresh alerts every 5 minutes
+    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Close notifications when clicking outside

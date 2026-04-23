@@ -371,12 +371,12 @@ export default function OverviewPage({
               : "No change";
             updated[2].trend = weatherData.wind_change > 0 ? "up" : "down";
           }
-          if (weatherData.precip_sum !== undefined) {
-            updated[3].value = `${weatherData.precip_sum} mm`;
-            updated[3].change = weatherData.precip_change
-              ? `${weatherData.precip_change > 0 ? "+" : ""}${weatherData.precip_change} mm`
+          if (weatherData.rainfall_24h !== undefined) {
+            updated[3].value = `${weatherData.rainfall_24h} mm`;
+            updated[3].change = weatherData.rainfall_24h_delta
+              ? `${weatherData.rainfall_24h_delta > 0 ? "+" : ""}${weatherData.rainfall_24h_delta} mm`
               : "No change";
-            updated[3].trend = weatherData.precip_change > 0 ? "up" : "down";
+            updated[3].trend = weatherData.rainfall_24h_delta > 0 ? "up" : "down";
           }
           setStatCards(updated);
         }
