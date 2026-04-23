@@ -13,6 +13,9 @@ import {
   Filter,
   ArrowRight,
   X,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import type { PageType } from "../App";
 import { useState, useEffect } from "react";
@@ -30,7 +33,7 @@ interface StatCard {
   label: string;
   value: string;
   change: string;
-  trend: "up" | "down";
+  trend: "up" | "down" | "neutral";
   icon: any;
   color: string;
   min: number;
@@ -59,17 +62,25 @@ interface AlertItem {
 // FAO Blue color matching the logo
 const FAO_BLUE = "#318DDE";
 
-// Default stat cards template
-const getDefaultStatCards = (): StatCard[] => [
+// Helper: derive trend from delta
+const trendOf = (delta: number): "up" | "down" | "neutral" =>
+  delta > 0 ? "up" : delta < 0 ? "down" : "neutral";
+
+// Helper: format delta with sign and suffix
+const fmtDelta = (delta: number, suffix: string) =>
+  `${delta > 0 ? "+" : ""}${delta}${suffix}`;
+
+// Build stat cards directly from API weather data — mirrors WeatherForecastPage exactly
+const buildStatCards = (weatherData: any): StatCard[] => [
   {
     label: "Temperature",
-    value: "--°C",
-    change: "---",
-    trend: "up",
     icon: Thermometer,
     color: FAO_BLUE,
     min: 15,
     max: 40,
+    value: `${weatherData?.temperature ?? 0}°C`,
+    change: fmtDelta(weatherData?.temperature_delta ?? 0, "°C"),
+    trend: trendOf(weatherData?.temperature_delta ?? 0),
     thresholds: [
       { value: 20, color: "#3b82f6", label: "Cool" },
       { value: 28, color: "#22c55e", label: "Normal" },
@@ -79,13 +90,13 @@ const getDefaultStatCards = (): StatCard[] => [
   },
   {
     label: "Humidity",
-    value: "--%",
-    change: "---",
-    trend: "down",
     icon: Droplets,
     color: FAO_BLUE,
     min: 0,
     max: 100,
+    value: `${weatherData?.humidity ?? 0}%`,
+    change: fmtDelta(weatherData?.humidity_delta ?? 0, "%"),
+    trend: trendOf(weatherData?.humidity_delta ?? 0),
     thresholds: [
       { value: 30, color: "#dc2626", label: "Dry" },
       { value: 50, color: "#fbbf24", label: "Low" },
@@ -95,13 +106,13 @@ const getDefaultStatCards = (): StatCard[] => [
   },
   {
     label: "Wind Speed",
-    value: "-- km/h",
-    change: "---",
-    trend: "up",
     icon: Wind,
     color: FAO_BLUE,
     min: 0,
     max: 60,
+    value: `${weatherData?.wind_speed ?? 0} km/h`,
+    change: fmtDelta(weatherData?.wind_speed_delta ?? 0, " km/h"),
+    trend: trendOf(weatherData?.wind_speed_delta ?? 0),
     thresholds: [
       { value: 10, color: "#22c55e", label: "Calm" },
       { value: 25, color: "#3b82f6", label: "Breezy" },
@@ -111,21 +122,24 @@ const getDefaultStatCards = (): StatCard[] => [
   },
   {
     label: "Rainfall (24h)",
-    value: "-- mm",
-    change: "---",
-    trend: "up",
     icon: CloudRain,
     color: FAO_BLUE,
     min: 0,
     max: 100,
+    value: `${weatherData?.rainfall_24h ?? 0} mm`,
+    change: fmtDelta(weatherData?.rainfall_24h_delta ?? 0, " mm"),
+    trend: trendOf(weatherData?.rainfall_24h_delta ?? 0),
     thresholds: [
-      { value: 5, color: "#22c55e", label: "Dry" },
-      { value: 20, color: "#3b82f6", label: "Light" },
-      { value: 50, color: "#f97316", label: "Moderate" },
+      { value: 5,   color: "#22c55e", label: "Dry" },
+      { value: 20,  color: "#3b82f6", label: "Light" },
+      { value: 50,  color: "#f97316", label: "Moderate" },
       { value: 100, color: "#dc2626", label: "Heavy" },
     ],
   },
 ];
+
+// Loading placeholder cards — neutral until real data arrives
+const getDefaultStatCards = (): StatCard[] => buildStatCards(null);
 
 const getDefaultMonitoringModules = (): MonitoringModule[] => [
   {
@@ -277,9 +291,9 @@ export default function OverviewPage({
   const [selectedModule, setSelectedModule] = useState("all");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [sliderValue, setSliderValue] = useState((2026 - 2001) * 12 + 2); // Mar 2026
+  const [sliderValue, setSliderValue] = useState((2026 - 2001) * 12 + 2);
 
-  // API State
+  // State
   const [statCards, setStatCards] = useState<StatCard[]>(getDefaultStatCards());
   const [monitoringModules, setMonitoringModules] = useState(
     getDefaultMonitoringModules(),
@@ -297,23 +311,12 @@ export default function OverviewPage({
     const year = 2001 + Math.floor(months / 12);
     const month = months % 12;
     const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
     return `${monthNames[month]} ${year}`;
   };
 
-  // Fetch overview module stats
   useEffect(() => {
     const fetchOverviewStats = async () => {
       try {
@@ -327,12 +330,14 @@ export default function OverviewPage({
 
         // Update monitoring modules with API data
         if (moduleStats && moduleStats.weather_forecast) {
-          const updated = [...monitoringModules];
-          updated[0].metric = `Accuracy: ${moduleStats.weather_forecast.accuracy_pct || "--"}%`;
-          updated[1].metric = `Districts at Risk: ${moduleStats.drought_monitor?.districts_at_risk || "--"}`;
-          updated[2].metric = `Alert Areas: ${moduleStats.flood_monitor?.alert_areas || "--"}`;
-          updated[3].metric = `Online: ${moduleStats.weather_stations?.online || "--"}/${moduleStats.weather_stations?.total || "--"}`;
-          setMonitoringModules(updated);
+          setMonitoringModules((prev) => {
+            const updated = [...prev];
+            updated[0].metric = `Accuracy: ${moduleStats.weather_forecast.accuracy_pct || "--"}%`;
+            updated[1].metric = `Districts at Risk: ${moduleStats.drought_monitor?.districts_at_risk || "--"}`;
+            updated[2].metric = `Alert Areas: ${moduleStats.flood_monitor?.alert_areas || "--"}`;
+            updated[3].metric = `Online: ${moduleStats.weather_stations?.online || "--"}/${moduleStats.weather_stations?.total || "--"}`;
+            return updated;
+          });
         }
 
         // Update quick stats
@@ -347,30 +352,11 @@ export default function OverviewPage({
           });
         }
 
-        // Update weather stat cards - using exact same data as WeatherForecastPage
+        // ── KEY FIX: Build fresh stat cards from API data ──────────────────
+        // Never spread stale state. Always build new objects from weatherData
+        // so deltas and trends are correct on every fetch.
         if (weatherData) {
-          const updated = [...statCards];
-          if (weatherData.temperature !== undefined) {
-            updated[0].value = `${weatherData.temperature}°C`;
-            updated[0].change = `${(weatherData.temperature_delta ?? 0) > 0 ? "+" : ""}${weatherData.temperature_delta ?? 0}°C`;
-            updated[0].trend = (weatherData.temperature_delta ?? 0) > 0 ? "up" : (weatherData.temperature_delta ?? 0) < 0 ? "down" : "neutral";
-          }
-          if (weatherData.humidity !== undefined) {
-            updated[1].value = `${weatherData.humidity}%`;
-            updated[1].change = `${(weatherData.humidity_delta ?? 0) > 0 ? "+" : ""}${weatherData.humidity_delta ?? 0}%`;
-            updated[1].trend = (weatherData.humidity_delta ?? 0) > 0 ? "up" : (weatherData.humidity_delta ?? 0) < 0 ? "down" : "neutral";
-          }
-          if (weatherData.wind_speed !== undefined) {
-            updated[2].value = `${weatherData.wind_speed} km/h`;
-            updated[2].change = `${(weatherData.wind_speed_delta ?? 0) > 0 ? "+" : ""}${weatherData.wind_speed_delta ?? 0} km/h`;
-            updated[2].trend = (weatherData.wind_speed_delta ?? 0) > 0 ? "up" : (weatherData.wind_speed_delta ?? 0) < 0 ? "down" : "neutral";
-          }
-          if (weatherData.rainfall_24h !== undefined) {
-            updated[3].value = `${weatherData.rainfall_24h} mm`;
-            updated[3].change = `${(weatherData.rainfall_24h_delta ?? 0) > 0 ? "+" : ""}${weatherData.rainfall_24h_delta ?? 0} mm`;
-            updated[3].trend = (weatherData.rainfall_24h_delta ?? 0) > 0 ? "up" : (weatherData.rainfall_24h_delta ?? 0) < 0 ? "down" : "neutral";
-          }
-          setStatCards(updated);
+          setStatCards(buildStatCards(weatherData));
         }
 
         // Update recent alerts
@@ -399,7 +385,6 @@ export default function OverviewPage({
     };
 
     fetchOverviewStats();
-    // Refresh data every 5 minutes
     const interval = setInterval(fetchOverviewStats, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -465,7 +450,7 @@ export default function OverviewPage({
           </p>
         </div>
 
-        {/* Stat Cards */}
+        {/* Stat Cards — identical structure to WeatherForecastPage */}
         <div className="mb-4 md:mb-6">
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
@@ -475,7 +460,7 @@ export default function OverviewPage({
               Kampala, Central Region
             </span>
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full`}
+              className="text-[10px] px-1.5 py-0.5 rounded-full"
               style={{
                 backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
                 color: FAO_BLUE,
@@ -490,7 +475,7 @@ export default function OverviewPage({
               const Icon = card.icon;
               const numericValue = parseFloat(
                 card.value.replace(/[^0-9.]/g, ""),
-              );
+              ) || 0;
               return (
                 <div
                   key={index}
@@ -499,14 +484,10 @@ export default function OverviewPage({
                 >
                   <div className="flex items-start justify-between mb-1.5">
                     <div>
-                      <p
-                        className={`text-[10px] md:text-xs ${textMuted} mb-0.5`}
-                      >
+                      <p className={`text-[10px] md:text-xs ${textMuted} mb-0.5`}>
                         {card.label}
                       </p>
-                      <p
-                        className={`text-base md:text-lg font-bold ${headerText}`}
-                      >
+                      <p className={`text-base md:text-lg font-bold ${headerText}`}>
                         {card.value}
                       </p>
                     </div>
@@ -539,9 +520,8 @@ export default function OverviewPage({
           </div>
         </div>
 
-        {/* MOBILE LAYOUT - Hidden monitoring modules and alerts */}
+        {/* MOBILE LAYOUT */}
         <div className="block lg:hidden space-y-3">
-          {/* Map Section - Mobile with Overlay Filter */}
           <div className="relative">
             <div
               className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg overflow-hidden shadow-sm`}
@@ -550,20 +530,15 @@ export default function OverviewPage({
                 className={`flex items-center justify-between p-2 border-b ${borderColor}`}
               >
                 <div className="flex items-center gap-1.5">
-                  <MapIcon
-                    className="w-3.5 h-3.5"
-                    style={{ color: FAO_BLUE }}
-                  />
+                  <MapIcon className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
                   <h2 className={`text-xs font-semibold ${headerText}`}>
                     Uganda Map
                   </h2>
                 </div>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
+                  className="px-1.5 py-0.5 rounded text-[10px] font-medium"
                   style={{
-                    backgroundColor: isDarkMode
-                      ? `${FAO_BLUE}30`
-                      : `${FAO_BLUE}20`,
+                    backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
                     color: FAO_BLUE,
                   }}
                 >
@@ -575,15 +550,11 @@ export default function OverviewPage({
                   <UgandaBoundaryMap
                     isDarkMode={isDarkMode}
                     className="absolute inset-0 w-full h-full rounded-xl md:rounded-2xl"
-                    badgeText={getOverviewBadgeText(
-                      selectedModule,
-                      monitoringModules,
-                    )}
+                    badgeText={getOverviewBadgeText(selectedModule, monitoringModules)}
                     legendTitle="Legend"
                     legendItems={getOverviewLegendItems(selectedModule)}
                   />
                 </div>
-                {/* Filter button on map */}
                 <button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-[1001] text-white"
@@ -591,14 +562,10 @@ export default function OverviewPage({
                 >
                   <Filter className="w-4 h-4" />
                 </button>
-
-                {/* Time Slider */}
                 <div
                   className={`px-2 py-2 border-t ${borderColor} flex items-center gap-2 ${isDarkMode ? "bg-slate-800/80" : "bg-slate-50"} z-[1001]`}
                 >
-                  <span className={`text-[10px] font-medium ${textMuted}`}>
-                    2001
-                  </span>
+                  <span className={`text-[10px] font-medium ${textMuted}`}>2001</span>
                   <input
                     type="range"
                     min="0"
@@ -613,17 +580,13 @@ export default function OverviewPage({
                   />
                   <span
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap"
-                    style={{
-                      backgroundColor: `${FAO_BLUE}20`,
-                      color: FAO_BLUE,
-                    }}
+                    style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}
                   >
                     {getMonthYear(sliderValue)}
                   </span>
                 </div>
               </div>
             </div>
-            {/* Filter Popup */}
             {showMobileFilters && (
               <>
                 <div
@@ -634,9 +597,7 @@ export default function OverviewPage({
                   className={`absolute right-2 top-1/2 -translate-y-1/2 z-[1003] w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className={`text-xs font-semibold ${headerText}`}>
-                      Map Filters
-                    </h4>
+                    <h4 className={`text-xs font-semibold ${headerText}`}>Map Filters</h4>
                     <button
                       onClick={() => setShowMobileFilters(false)}
                       className={`p-1 rounded-md ${isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"}`}
@@ -660,7 +621,7 @@ export default function OverviewPage({
 
         {/* DESKTOP LAYOUT */}
         <div className="hidden lg:flex lg:flex-col gap-4">
-          {/* Monitoring Modules Section - Now above the grid and full width */}
+          {/* Monitoring Modules */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -698,29 +659,20 @@ export default function OverviewPage({
                     }}
                   >
                     <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 pointer-events-none transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-                      <Icon
-                        className="w-24 h-24"
-                        style={{ color: module.color }}
-                      />
+                      <Icon className="w-24 h-24" style={{ color: module.color }} />
                     </div>
-
                     <div className="relative z-10 flex-1 flex flex-col justify-between w-full">
                       <div className="flex items-center justify-between mb-3">
                         <div
                           className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
                           style={{
-                            backgroundColor: isDarkMode
-                              ? `${module.color}30`
-                              : "white",
+                            backgroundColor: isDarkMode ? `${module.color}30` : "white",
                             border: isDarkMode
                               ? `1px solid ${module.color}40`
                               : `1px solid ${module.color}20`,
                           }}
                         >
-                          <Icon
-                            className="w-5 h-5"
-                            style={{ color: module.color }}
-                          />
+                          <Icon className="w-5 h-5" style={{ color: module.color }} />
                         </div>
                         <div
                           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isDarkMode ? "bg-slate-800/50" : "bg-white/60"} group-hover:shadow-sm`}
@@ -732,29 +684,21 @@ export default function OverviewPage({
                         </div>
                       </div>
                       <div>
-                        <p
-                          className={`text-sm font-semibold mb-1 ${headerText}`}
-                        >
+                        <p className={`text-sm font-semibold mb-1 ${headerText}`}>
                           {module.title}
                         </p>
-                        <p
-                          className={`text-[11px] ${textMuted} line-clamp-2 leading-relaxed mb-3`}
-                        >
+                        <p className={`text-[11px] ${textMuted} line-clamp-2 leading-relaxed mb-3`}>
                           {module.description}
                         </p>
                         <div
                           className="inline-flex items-center px-2 py-1 rounded border"
                           style={{
-                            backgroundColor: isDarkMode
-                              ? `${module.color}10`
-                              : "white",
+                            backgroundColor: isDarkMode ? `${module.color}10` : "white",
                             borderColor: `${module.color}30`,
                             color: module.color,
                           }}
                         >
-                          <span className="text-[10px] font-medium">
-                            {module.metric}
-                          </span>
+                          <span className="text-[10px] font-medium">{module.metric}</span>
                         </div>
                       </div>
                     </div>
@@ -766,7 +710,7 @@ export default function OverviewPage({
 
           {/* Map and Sidebar Grid */}
           <div className="grid lg:grid-cols-12 gap-4">
-            {/* Left Sidebar - Filters perfectly aligned with map row */}
+            {/* Left Sidebar */}
             <div className="lg:col-span-3 flex flex-col">
               <div
                 className="flex-1 rounded-xl p-3 shadow-sm flex flex-col"
@@ -802,25 +746,19 @@ export default function OverviewPage({
                   </h3>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className={`text-[11px] ${textMuted}`}>
-                        Active Alerts
-                      </span>
+                      <span className={`text-[11px] ${textMuted}`}>Active Alerts</span>
                       <span className="text-[11px] font-medium text-red-500">
                         {quickStats.activeAlerts}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className={`text-[11px] ${textMuted}`}>
-                        Stations Online
-                      </span>
+                      <span className={`text-[11px] ${textMuted}`}>Stations Online</span>
                       <span className="text-[11px] font-medium text-green-500">
                         {quickStats.stationsOnline}/{quickStats.stationsTotal}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className={`text-[11px] ${textMuted}`}>
-                        Updated
-                      </span>
+                      <span className={`text-[11px] ${textMuted}`}>Updated</span>
                       <span className={`text-[11px] ${textSecondary}`}>
                         {quickStats.lastUpdated}
                       </span>
@@ -828,7 +766,6 @@ export default function OverviewPage({
                   </div>
                 </div>
 
-                {/* Illustration at bottom */}
                 <div className="mt-auto pt-3">
                   <div
                     className="rounded-xl overflow-hidden"
@@ -845,7 +782,7 @@ export default function OverviewPage({
 
             {/* Map and Alerts Row */}
             <div className="lg:col-span-9 grid grid-cols-12 gap-4">
-              {/* Map Section - 9 columns */}
+              {/* Map */}
               <div className="col-span-9">
                 <div
                   className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-xl overflow-hidden shadow-sm h-full flex flex-col`}
@@ -854,27 +791,18 @@ export default function OverviewPage({
                     className={`flex items-center justify-between p-2 border-b ${borderColor}`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <MapIcon
-                        className="w-4 h-4"
-                        style={{ color: FAO_BLUE }}
-                      />
+                      <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
                       <h2 className={`text-sm font-semibold ${headerText}`}>
                         Uganda Map View
                       </h2>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[11px] ${textMuted}`}>
-                        Lat: 1.3733° N
-                      </span>
-                      <span className={`text-[11px] ${textMuted}`}>
-                        Long: 32.2903° E
-                      </span>
+                      <span className={`text-[11px] ${textMuted}`}>Lat: 1.3733° N</span>
+                      <span className={`text-[11px] ${textMuted}`}>Long: 32.2903° E</span>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium`}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-medium"
                         style={{
-                          backgroundColor: isDarkMode
-                            ? `${FAO_BLUE}30`
-                            : `${FAO_BLUE}20`,
+                          backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
                           color: FAO_BLUE,
                         }}
                       >
@@ -887,29 +815,21 @@ export default function OverviewPage({
                       <UgandaBoundaryMap
                         isDarkMode={isDarkMode}
                         className="absolute inset-0 w-full h-full rounded-xl md:rounded-2xl"
-                        badgeText={getOverviewBadgeText(
-                          selectedModule,
-                          monitoringModules,
-                        )}
+                        badgeText={getOverviewBadgeText(selectedModule, monitoringModules)}
                         legendTitle="Legend"
                         legendItems={getOverviewLegendItems(selectedModule)}
                       />
                     </div>
-                    {/* Time Slider */}
                     <div
                       className={`px-4 py-3 border-t ${borderColor} flex items-center gap-4 ${isDarkMode ? "bg-slate-800/80" : "bg-slate-50"}`}
                     >
-                      <span className={`text-xs font-medium ${textMuted}`}>
-                        2001
-                      </span>
+                      <span className={`text-xs font-medium ${textMuted}`}>2001</span>
                       <input
                         type="range"
                         min="0"
                         max={(2026 - 2001 + 1) * 12 - 1}
                         value={sliderValue}
-                        onChange={(e) =>
-                          setSliderValue(parseInt(e.target.value))
-                        }
+                        onChange={(e) => setSliderValue(parseInt(e.target.value))}
                         className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer"
                         style={{
                           backgroundColor: isDarkMode ? "#334155" : "#cbd5e1",
@@ -918,10 +838,7 @@ export default function OverviewPage({
                       />
                       <span
                         className="text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap"
-                        style={{
-                          backgroundColor: `${FAO_BLUE}20`,
-                          color: FAO_BLUE,
-                        }}
+                        style={{ backgroundColor: `${FAO_BLUE}20`, color: FAO_BLUE }}
                       >
                         {getMonthYear(sliderValue)}
                       </span>
@@ -930,17 +847,14 @@ export default function OverviewPage({
                 </div>
               </div>
 
-              {/* Recent Alerts - 3 columns */}
+              {/* Recent Alerts */}
               <div className="col-span-3">
                 <div
                   className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-xl p-3 shadow-sm h-full flex flex-col`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
-                      <AlertTriangle
-                        className="w-4 h-4"
-                        style={{ color: FAO_BLUE }}
-                      />
+                      <AlertTriangle className="w-4 h-4" style={{ color: FAO_BLUE }} />
                       <h3 className={`text-sm font-semibold ${headerText}`}>
                         Recent Alerts
                       </h3>
@@ -965,14 +879,10 @@ export default function OverviewPage({
                               />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p
-                                className={`text-[11px] font-medium truncate ${headerText}`}
-                              >
+                              <p className={`text-[11px] font-medium truncate ${headerText}`}>
                                 {alert.title}
                               </p>
-                              <div
-                                className={`flex items-center gap-2 text-[10px] ${textMuted}`}
-                              >
+                              <div className={`flex items-center gap-2 text-[10px] ${textMuted}`}>
                                 <span className="flex items-center gap-0.5">
                                   <MapPin className="w-2.5 h-2.5" />
                                   {alert.location}
@@ -1013,12 +923,12 @@ export default function OverviewPage({
       </div>
 
       <style>{`
-        @keyframes fadeInUp { 
-          from { opacity: 0; transform: translateY(10px); } 
-          to { opacity: 1; transform: translateY(0); } 
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in-up { 
-          animation: fadeInUp 0.4s ease-out forwards; 
+        .animate-fade-in-up {
+          animation: fadeInUp 0.4s ease-out forwards;
         }
       `}</style>
     </div>
