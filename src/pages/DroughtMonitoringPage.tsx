@@ -90,13 +90,13 @@ export default function DroughtMonitoringPage({
             <div className="w-10 h-10 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
           </div>
         )}
-        <iframe
+        {/* <iframe
           src="https://cdi.rosewillbome.com"
           className="w-full h-full border-0"
           title="CDI Drought Monitoring System"
           onLoad={() => setIframeLoaded(true)}
           sandbox="allow-scripts allow-same-origin allow-popups"
-        />
+        /> */}
       </div>
     </div>
   );
