@@ -5,7 +5,7 @@
 
 const API_BASE =
   import.meta.env.VITE_API_URL ||
-  "https://multihazard.rosewillbome.space/api/v1/";
+  "https://multihazard.rosewillbome.com/api/v1/";
 
 interface FetchOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
