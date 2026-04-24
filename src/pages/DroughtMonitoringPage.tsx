@@ -91,7 +91,7 @@ export default function DroughtMonitoringPage({
           </div>
         )}
         <iframe
-          src="https://front-end-cdi-c7ob.vercel.app"
+          src="https://cdi.rosewillbome.com"
           className="w-full h-full border-0"
           title="CDI Drought Monitoring System"
           onLoad={() => setIframeLoaded(true)}
