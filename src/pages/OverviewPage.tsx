@@ -13,9 +13,7 @@ import {
   Filter,
   ArrowRight,
   X,
-  TrendingUp,
-  TrendingDown,
-  Minus,
+
 } from "lucide-react";
 import type { PageType } from "../App";
 import { useState, useEffect } from "react";
