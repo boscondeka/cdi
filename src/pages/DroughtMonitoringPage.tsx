@@ -10,7 +10,7 @@ const FAO_BLUE = "#318DDE";
 export default function DroughtMonitoringPage({
   isDarkMode = true,
 }: DroughtMonitoringPageProps) {
-  const [iframeLoaded, setIframeLoaded] = useState(false);
+  // const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function DroughtMonitoringPage({
       </div>
 
       {/* Embedded CDI iframe - takes remaining spacee */}
-      <div className="flex-1 relative bg-slate-900 overflow-hidden">
+      {/* <div className="flex-1 relative bg-slate-900 overflow-hidden">
         {!iframeLoaded && (
           <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-900/50 backdrop-blur-sm">
             <div className="w-10 h-10 border-4 border-orange-500/30 border-t-orange-500 rounded-full animate-spin"></div>
@@ -97,7 +97,7 @@ export default function DroughtMonitoringPage({
           onLoad={() => setIframeLoaded(true)}
           sandbox="allow-scripts allow-same-origin allow-popups"
         />
-      </div>
+      </div> */}
     </div>
   );
 }
