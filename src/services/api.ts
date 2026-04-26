@@ -5,7 +5,7 @@
 
 const API_BASE =
   import.meta.env.VITE_API_URL ||
-  "https://multihazard.rosewillbome.space/api/v1/";
+  "https://multihazard.rosewillbome.com/api/v1/";
 
 interface FetchOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -298,9 +298,8 @@ export const stationsAPI = {
  */
 export const geoAPI = {
   getUgandaBoundary: async () => {
-    return fetchData(
-      "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries/UGA.geojson",
-    );
+    const res: any = await fetchData("boundaries/admin");
+    return res?.results;
   },
 
   getDistricts: async () => {
