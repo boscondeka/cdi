@@ -235,7 +235,7 @@ const MapFilters = ({
   const modules = [
     { id: "all", label: "All Modules", icon: Filter, color: FAO_BLUE },
     { id: "weather", label: "Weather Forecast", icon: Cloud, color: FAO_BLUE },
-    { id: "drought", label: "Drought Monitor", icon: Sun, color: FAO_BLUE },
+    // { id: "drought", label: "Drought Monitor", icon: Sun, color: FAO_BLUE },
     { id: "flood", label: "Flood Monitor", icon: Waves, color: FAO_BLUE },
     { id: "stations", label: "Weather Stations", icon: Radio, color: FAO_BLUE },
   ];

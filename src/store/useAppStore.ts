@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 /**
  * Comprehensive Zustand store for global app state
@@ -12,8 +12,15 @@ export interface AppStoreState {
   setIsDarkMode: (mode: boolean) => void;
 
   // Navigation
-  currentPage: 'overview' | 'weather' | 'drought' | 'flood' | 'stations' | 'resources' | 'help';
-  setCurrentPage: (page: AppStoreState['currentPage']) => void;
+  currentPage:
+    | "overview"
+    | "weather"
+    | "drought"
+    | "flood"
+    | "stations"
+    | "resources"
+    | "help";
+  setCurrentPage: (page: AppStoreState["currentPage"]) => void;
 
   // Filters & Selection
   selectedDistrictId: number;
@@ -63,6 +70,12 @@ export interface AppStoreState {
   setShowNotifications: (show: boolean) => void;
   pageLoading: boolean;
   setPageLoading: (loading: boolean) => void;
+
+  // Map Filters
+  selectedParameter: string;
+  setSelectedParameter: (parameter: string) => void;
+  dateRange: string;
+  setDateRange: (dateRange: string) => void;
 }
 
 export const useAppStore = create<AppStoreState>()(
@@ -73,7 +86,7 @@ export const useAppStore = create<AppStoreState>()(
       setIsDarkMode: (mode) => set({ isDarkMode: mode }),
 
       // Navigation
-      currentPage: 'overview',
+      currentPage: "overview",
       setCurrentPage: (page) => set({ currentPage: page }),
 
       // Filters
@@ -83,7 +96,7 @@ export const useAppStore = create<AppStoreState>()(
       setSelectedRegionId: (id) => set({ selectedRegionId: id }),
 
       // Constants
-      FAO_BLUE: '#318DDE',
+      FAO_BLUE: "#318DDE",
 
       // Weather State
       weatherData: null,
@@ -124,13 +137,20 @@ export const useAppStore = create<AppStoreState>()(
       setShowNotifications: (show) => set({ showNotifications: show }),
       pageLoading: false,
       setPageLoading: (loading) => set({ pageLoading: loading }),
+
+      //filter map
+      selectedParameter: "temperature",
+      setSelectedParameter: (parameter: any) =>
+        set({ selectedParameter: parameter }),
+      dateRange: "",
+      setDateRange: (dateRange: any) => set({ dateRange: dateRange }),
     }),
     {
-      name: 'app-store', // Name of the persisted store
+      name: "app-store", // Name of the persisted store
       partialize: (state) => ({
         isDarkMode: state.isDarkMode,
         selectedDistrictId: state.selectedDistrictId,
       }), // Only persist theme and selected district
-    }
-  )
+    },
+  ),
 );
