@@ -6,6 +6,7 @@ import { waterAreas } from "../../utils/waterAreas";
 import { capitalize } from "../../utils/capitalize";
 import { useQuery } from "@tanstack/react-query";
 import type { FeatureCollection } from "geojson";
+import { useAppStore } from "@/store/useAppStore";
 
 interface LegendItem {
   label: string;
@@ -74,6 +75,7 @@ export default function UgandaBoundaryMap({
   zoom = 7,
   minZoom = 6,
 }: UgandaBoundaryMapProps) {
+  const { selectedParameter, dateRange } = useAppStore((state) => state);
   // ── Refs ────────────────────────────────────────────────────────────────────
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -81,6 +83,7 @@ export default function UgandaBoundaryMap({
   const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
   const riverLayerRef = useRef<L.GeoJSON | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const rasterLayerRef = useRef<L.TileLayer | null>(null);
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const { data: geoData, isLoading } = useQuery<FeatureCollection>({
@@ -361,6 +364,47 @@ export default function UgandaBoundaryMap({
       mapRef.current.setMaxBounds(bounds);
     }
   }, [getTheBounds, geoData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update the raster layer when indicator, month, or timerange changes
+  // Replace your existing raster layer effect with this:
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove old raster layer
+    if (rasterLayerRef.current) {
+      mapRef.current.removeLayer(rasterLayerRef.current);
+      rasterLayerRef.current = null;
+    }
+
+    //if (!indicator) return; // indicator = layer name e.g. "flood_20260301_24h"
+    const param = () => {
+      switch (selectedParameter?.toLocaleLowerCase()) {
+        case "temperature":
+          return "chirts_tmax";
+        case "precipitation":
+          return "precip";
+        case "drought":
+          return "drought";
+        case "rainfall":
+          return "chirps_rainfall";
+        default:
+          return null;
+      }
+    };
+
+    const GEO_SERVER_URL = `https://multihazard.rosewillbome.com/geoserver/wfews/wms`;
+    const layerName = `wfews:${param()}_${dateRange?.replace(/-/g, "")}`; // e.g. "wfews:flood_20260301_24h"
+
+    rasterLayerRef.current = L.tileLayer
+      .wms(GEO_SERVER_URL, {
+        layers: layerName,
+        format: "image/png",
+        transparent: true,
+        version: "1.1.0",
+        opacity: 1.0,
+      })
+      .addTo(mapRef.current);
+  }, [geoData, selectedParameter, dateRange]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (

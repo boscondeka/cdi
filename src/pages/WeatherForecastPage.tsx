@@ -38,6 +38,7 @@ import {
 import TabBar from "@/components/shared/TabBar";
 import HourlyCards from "@/components/shared/HourlyCards";
 import { DailyCards } from "@/components/shared/DailyCards";
+import { useAppStore } from "@/store/useAppStore";
 
 interface WeatherForecastPageProps {
   isDarkMode?: boolean;
@@ -190,6 +191,8 @@ const FilterContent = ({
   textSecondary,
   borderColor,
   weatherData,
+  dateRange,
+  setDateRange,
 }: {
   selectedRegion: string;
   setSelectedRegion: (v: string) => void;
@@ -200,6 +203,8 @@ const FilterContent = ({
   textSecondary: string;
   borderColor: string;
   weatherData: WeatherData | null;
+  dateRange: string;
+  setDateRange: (dateRange: string) => void;
 }) => (
   <div className="space-y-3">
     <div>
@@ -239,6 +244,8 @@ const FilterContent = ({
       <label className={`text-xs ${textMuted} mb-1 block`}>Date Range</label>
       <input
         type="date"
+        value={dateRange}
+        onChange={(e) => setDateRange(e.target.value)}
         className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-900"}`}
       />
     </div>
@@ -286,9 +293,11 @@ const FilterContent = ({
 export default function WeatherForecastPage({
   isDarkMode = true,
 }: WeatherForecastPageProps) {
+  const { selectedParameter, setSelectedParameter, dateRange, setDateRange } =
+    useAppStore((state) => state);
   const [activeTab, setActiveTab] = useState<"nowcast" | "forecast">("nowcast");
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
-  const [selectedParameter, setSelectedParameter] = useState("temperature");
+  // const [selectedParameter, setSelectedParameter] = useState("temperature");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [sliderValue, setSliderValue] = useState((2026 - 2001) * 12 + 2);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
@@ -580,6 +589,8 @@ export default function WeatherForecastPage({
                   textSecondary={textSecondary}
                   borderColor={borderColor}
                   weatherData={weatherData}
+                  dateRange={dateRange}
+                  setDateRange={setDateRange}
                 />
               </div>
               <div className="mt-auto pt-3">
@@ -912,6 +923,8 @@ export default function WeatherForecastPage({
                     textSecondary={textSecondary}
                     borderColor={borderColor}
                     weatherData={weatherData}
+                    dateRange={dateRange}
+                    setDateRange={setDateRange}
                   />
                 </div>
               </>
