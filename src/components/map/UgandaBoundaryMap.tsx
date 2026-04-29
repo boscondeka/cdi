@@ -530,7 +530,7 @@ export default function UgandaBoundaryMap({
         }}
       />
 
-      {/* Loading overlay — sits on top until geoData arrives */}
+      {/* Loading overlay — sits on top until geoData arrivess */}
       {(isLoading || !geoData) && (
         <div
           className={`absolute inset-0 z-[500] flex items-center justify-center ${
