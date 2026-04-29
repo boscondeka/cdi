@@ -148,9 +148,8 @@ export const useAppStore = create<AppStoreState>()(
     {
       name: "app-store", // Name of the persisted store
       partialize: (state) => ({
-        isDarkMode: state.isDarkMode,
         selectedDistrictId: state.selectedDistrictId,
-      }), // Only persist theme and selected district
+      }), // Only persist selected district
     },
   ),
 );
