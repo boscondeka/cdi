@@ -150,7 +150,9 @@ export default function UgandaBoundaryMap({
   zoom = 7,
   minZoom = 6,
 }: UgandaBoundaryMapProps) {
-  const { selectedParameter, dateRange } = useAppStore((state) => state);
+  const { selectedParameter, dateRange, currentPage } = useAppStore(
+    (state) => state,
+  );
   // ── Refs ────────────────────────────────────────────────────────────────────
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
