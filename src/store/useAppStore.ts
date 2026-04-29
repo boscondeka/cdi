@@ -82,7 +82,7 @@ export const useAppStore = create<AppStoreState>()(
   persist(
     (set) => ({
       // Theme
-      isDarkMode: true,
+      isDarkMode: false,
       setIsDarkMode: (mode) => set({ isDarkMode: mode }),
 
       // Navigation
@@ -148,7 +148,6 @@ export const useAppStore = create<AppStoreState>()(
     {
       name: "app-store", // Name of the persisted store
       partialize: (state) => ({
-        isDarkMode: state.isDarkMode,
         selectedDistrictId: state.selectedDistrictId,
       }), // Only persist theme and selected districts
     },
