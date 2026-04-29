@@ -348,7 +348,7 @@ export default function UgandaBoundaryMap({
       return;
     }
 
-    // Destroy stale instance (StrictMode / hot-reload safety)
+    // Destroy stale instance (StrictMode / hot-reload safetyy)
     if (mapRef.current) {
       mapRef.current.remove();
       mapRef.current = null;
