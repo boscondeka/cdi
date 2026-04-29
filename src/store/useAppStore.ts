@@ -82,7 +82,7 @@ export const useAppStore = create<AppStoreState>()(
   persist(
     (set) => ({
       // Theme
-      isDarkMode: true,
+      isDarkMode: false,
       setIsDarkMode: (mode) => set({ isDarkMode: mode }),
 
       // Navigation
