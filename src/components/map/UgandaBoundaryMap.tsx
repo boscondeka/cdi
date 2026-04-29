@@ -69,6 +69,7 @@ interface LayerDef {
   label: string;
   wms: string;
   date?: string;
+  pages: string[]; // list of page paths where this layer should be available, e.g. ["/", "/flood", "/weather"]
 }
 
 // ── Layer panel definitions (matches screenshot) ──────────────────────────────
@@ -78,61 +79,139 @@ const today = new Date().toLocaleDateString("en-GB", {
   year: "numeric",
 });
 
+// const LAYER_GROUPS: { title: string; layers: LayerDef[] }[] = [
+//   {
+//     title: "BOUNDARIES",
+//     layers: [
+//       { id: "country", label: "Country", wms: "country" },
+//       { id: "districts", label: "Districts", wms: "districts" },
+//     ],
+//   },
+//   {
+//     title: "HYDROLOGY",
+//     layers: [
+//       { id: "rivers", label: "Rivers", wms: "rivers" },
+//       { id: "waterways", label: "Waterways", wms: "waterways" },
+//       { id: "water_bodies", label: "Water Bodies", wms: "water_bodies" },
+//     ],
+//   },
+//   {
+//     title: "INFRASTRUCTURE",
+//     layers: [
+//       { id: "roads", label: "Roads", wms: "roads" },
+//       { id: "places", label: "Places", wms: "places" },
+//       { id: "landuse", label: "Land Use", wms: "landuse" },
+//       { id: "buildings", label: "Buildings", wms: "buildings" },
+//     ],
+//   },
+//   {
+//     title: "POPULATION",
+//     layers: [{ id: "worldpop", label: "World Pop", wms: "worldpop" }],
+//   },
+//   {
+//     title: "FORECASTS",
+//     layers: [
+//       {
+//         id: "flood",
+//         label: "Flood Forecast",
+//         wms: "flood_20260301_24h",
+//         date: today,
+//       },
+//       {
+//         id: "rainfall",
+//         label: "Rainfall (CHIRPS-GEFS)",
+//         wms: "chirps_gefs",
+//         date: today,
+//       },
+//       {
+//         id: "heat_stress",
+//         label: "Heat Stress WBGT",
+//         wms: "wbgt",
+//         date: today,
+//       },
+//       {
+//         id: "tmax",
+//         label: "Max Temp (Tmax)",
+//         wms: "chirts_tmax_20260428",
+//         date: today,
+//       },
+//     ],
+//   },
+// ];
+
 const LAYER_GROUPS: { title: string; layers: LayerDef[] }[] = [
   {
     title: "BOUNDARIES",
     layers: [
-      { id: "country", label: "Country", wms: "country" },
-      { id: "districts", label: "Districts", wms: "districts" },
+      { id: "country", label: "Country", wms: "country", pages: ["*"] },
+      { id: "districts", label: "Districts", wms: "districts", pages: ["*"] },
     ],
   },
   {
     title: "HYDROLOGY",
     layers: [
-      { id: "rivers", label: "Rivers", wms: "rivers" },
-      { id: "waterways", label: "Waterways", wms: "waterways" },
-      { id: "water_bodies", label: "Water Bodies", wms: "water_bodies" },
+      { id: "rivers", label: "Rivers", wms: "rivers", pages: ["flood"] },
+      {
+        id: "waterways",
+        label: "Waterways",
+        wms: "waterways",
+        pages: ["flood"],
+      },
+      {
+        id: "water_bodies",
+        label: "Water Bodies",
+        wms: "water_bodies",
+        pages: ["flood"],
+      },
     ],
   },
   {
     title: "INFRASTRUCTURE",
     layers: [
-      { id: "roads", label: "Roads", wms: "roads" },
-      { id: "places", label: "Places", wms: "places" },
-      { id: "landuse", label: "Land Use", wms: "landuse" },
-      { id: "buildings", label: "Buildings", wms: "buildings" },
+      { id: "roads", label: "Roads", wms: "roads", pages: ["*"] },
+      { id: "places", label: "Places", wms: "places", pages: ["*"] },
+      { id: "landuse", label: "Land Use", wms: "landuse", pages: ["*"] },
+      { id: "buildings", label: "Buildings", wms: "buildings", pages: ["*"] },
     ],
   },
   {
     title: "POPULATION",
-    layers: [{ id: "worldpop", label: "World Pop", wms: "worldpop" }],
+    layers: [
+      { id: "worldpop", label: "World Pop", wms: "worldpop", pages: ["*"] },
+    ],
   },
   {
     title: "FORECASTS",
     layers: [
+      // flood monitor tab only
       {
         id: "flood",
         label: "Flood Forecast",
         wms: "flood_20260301_24h",
         date: today,
+        pages: ["flood"],
       },
+      // weather forecast tab only
       {
         id: "rainfall",
         label: "Rainfall (CHIRPS-GEFS)",
         wms: "chirps_gefs",
         date: today,
+        pages: ["weather"],
       },
       {
         id: "heat_stress",
         label: "Heat Stress WBGT",
         wms: "wbgt",
         date: today,
+        pages: ["weather"],
       },
       {
         id: "tmax",
         label: "Max Temp (Tmax)",
         wms: "chirts_tmax_20260428",
         date: today,
+        pages: ["weather"],
       },
     ],
   },
@@ -519,6 +598,16 @@ export default function UgandaBoundaryMap({
       .addTo(mapRef.current);
   }, [geoData, selectedParameter, dateRange]);
 
+  // In the component, below where you destructure currentPage from the store
+  const isVisibleOnPage = (layer: LayerDef): boolean => {
+    if (!layer.pages || layer.pages.includes("*")) return true;
+    return layer.pages.some((route) => (currentPage ?? "").startsWith(route));
+  };
+
+  const visibleGroups = LAYER_GROUPS.map((group) => ({
+    ...group,
+    layers: group.layers.filter(isVisibleOnPage),
+  })).filter((group) => group.layers.length > 0);
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className={`relative overflow-hidden ${className}`}>
@@ -627,7 +716,7 @@ export default function UgandaBoundaryMap({
 
             {/* Scrollable layer list */}
             <div className="overflow-y-auto flex-1 py-1 h-[calc(100%-40px)]">
-              {LAYER_GROUPS.map((group) => (
+              {visibleGroups?.map((group) => (
                 <div key={group.title} className="mb-1">
                   {/* Group heading */}
                   <p
