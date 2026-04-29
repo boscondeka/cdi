@@ -150,7 +150,7 @@ export const useAppStore = create<AppStoreState>()(
       partialize: (state) => ({
         isDarkMode: state.isDarkMode,
         selectedDistrictId: state.selectedDistrictId,
-      }), // Only persist theme and selected district
+      }), // Only persist theme and selected districts
     },
   ),
 );
