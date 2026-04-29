@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { geoAPI } from "../../services/api";
@@ -7,6 +7,7 @@ import { capitalize } from "../../utils/capitalize";
 import { useQuery } from "@tanstack/react-query";
 import type { FeatureCollection } from "geojson";
 import { useAppStore } from "@/store/useAppStore";
+import { X, Layers } from "lucide-react";
 
 interface LegendItem {
   label: string;
@@ -63,6 +64,80 @@ const isPointInPolygon = (latlng: L.LatLng, polyLatLngs: any): boolean => {
   return false;
 };
 
+interface LayerDef {
+  id: string;
+  label: string;
+  wms: string;
+  date?: string;
+}
+
+// ── Layer panel definitions (matches screenshot) ──────────────────────────────
+const today = new Date().toLocaleDateString("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
+const LAYER_GROUPS: { title: string; layers: LayerDef[] }[] = [
+  {
+    title: "BOUNDARIES",
+    layers: [
+      { id: "country", label: "Country", wms: "country" },
+      { id: "districts", label: "Districts", wms: "districts" },
+    ],
+  },
+  {
+    title: "HYDROLOGY",
+    layers: [
+      { id: "rivers", label: "Rivers", wms: "rivers" },
+      { id: "waterways", label: "Waterways", wms: "waterways" },
+      { id: "water_bodies", label: "Water Bodies", wms: "water_bodies" },
+    ],
+  },
+  {
+    title: "INFRASTRUCTURE",
+    layers: [
+      { id: "roads", label: "Roads", wms: "roads" },
+      { id: "places", label: "Places", wms: "places" },
+      { id: "landuse", label: "Land Use", wms: "landuse" },
+      { id: "buildings", label: "Buildings", wms: "buildings" },
+    ],
+  },
+  {
+    title: "POPULATION",
+    layers: [{ id: "worldpop", label: "World Pop", wms: "worldpop" }],
+  },
+  {
+    title: "FORECASTS",
+    layers: [
+      {
+        id: "flood",
+        label: "Flood Forecast",
+        wms: "flood_20260301_24h",
+        date: today,
+      },
+      {
+        id: "rainfall",
+        label: "Rainfall (CHIRPS-GEFS)",
+        wms: "chirps_gefs",
+        date: today,
+      },
+      {
+        id: "heat_stress",
+        label: "Heat Stress WBGT",
+        wms: "wbgt",
+        date: today,
+      },
+      {
+        id: "tmax",
+        label: "Max Temp (Tmax)",
+        wms: "chirts_tmax_20260428",
+        date: today,
+      },
+    ],
+  },
+];
+
 export default function UgandaBoundaryMap({
   className = "",
   isDarkMode,
@@ -84,6 +159,13 @@ export default function UgandaBoundaryMap({
   const riverLayerRef = useRef<L.GeoJSON | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const rasterLayerRef = useRef<L.TileLayer | null>(null);
+  const wmsLayersRef = useRef<Record<string, L.TileLayer.WMS>>({});
+
+  // ── UI state ────────────────────────────────────────────────────────────────
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set());
+
+  const GEO_SERVER_URL = `https://multihazard.rosewillbome.com/geoserver/wfews/wms`;
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const { data: geoData, isLoading } = useQuery<FeatureCollection>({
@@ -145,6 +227,36 @@ export default function UgandaBoundaryMap({
     );
 
     return paddedW <= availableWidth && paddedH <= availableHeight;
+  };
+
+  // Toggle a panel layer on/off
+  const toggleLayer = (layerDef: LayerDef) => {
+    if (!mapRef.current) return;
+
+    if (activeLayers.has(layerDef.id)) {
+      if (wmsLayersRef.current[layerDef.id]) {
+        mapRef.current.removeLayer(wmsLayersRef.current[layerDef.id]);
+        delete wmsLayersRef.current[layerDef.id];
+      }
+      setActiveLayers((prev) => {
+        const next = new Set(prev);
+        next.delete(layerDef.id);
+        return next;
+      });
+    } else {
+      const wmsLayer = L.tileLayer
+        .wms(GEO_SERVER_URL, {
+          layers: `wfews:${layerDef.wms}`,
+          format: "image/png",
+          transparent: true,
+          version: "1.1.0",
+          opacity: 1.0,
+        })
+        .addTo(mapRef.current);
+      wmsLayer.bringToFront();
+      wmsLayersRef.current[layerDef.id] = wmsLayer;
+      setActiveLayers((prev) => new Set(prev).add(layerDef.id));
+    }
   };
 
   // ── Initialise map once geoData arrives ────────────────────────────────────
@@ -392,7 +504,6 @@ export default function UgandaBoundaryMap({
       }
     };
 
-    const GEO_SERVER_URL = `https://multihazard.rosewillbome.com/geoserver/wfews/wms`;
     const layerName = `wfews:${param()}_${dateRange?.replace(/-/g, "")}`; // e.g. "wfews:flood_20260301_24h"
 
     rasterLayerRef.current = L.tileLayer
@@ -419,7 +530,7 @@ export default function UgandaBoundaryMap({
         }}
       />
 
-      {/* Loading overlay — sits on top until geoData arrives */}
+      {/* Loading overlay — sits on top until geoData arrivess */}
       {(isLoading || !geoData) && (
         <div
           className={`absolute inset-0 z-[500] flex items-center justify-center ${
@@ -455,6 +566,139 @@ export default function UgandaBoundaryMap({
           {badgeText}
         </span>
       </div>
+
+      {/* MAP LAYERS toggle button */}
+      <button
+        onClick={() => setShowLayerPanel((v) => !v)}
+        className="absolute top-2 right-2 z-[400] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-md transition-all"
+        style={{
+          backgroundColor: showLayerPanel
+            ? FAO_BLUE
+            : isDarkMode
+              ? "#1e293b"
+              : "#ffffff",
+          color: showLayerPanel ? "#ffffff" : FAO_BLUE,
+          border: `1px solid ${FAO_BLUE}55`,
+        }}
+      >
+        <Layers className="w-3.5 h-3.5" />
+        MAP LAYERS
+      </button>
+
+      {/* Layer panel */}
+      {showLayerPanel && (
+        <>
+          {/* Backdrop — closes panel on outside click */}
+          <div
+            className="fixed inset-0 z-1"
+            onClick={() => setShowLayerPanel(false)}
+          />
+
+          <div
+            className={`
+              absolute top-10 right-2 z-[700] w-64 overflow-y-auto  rounded-xl shadow-xl
+              flex flex-col
+              ${isDarkMode ? "bg-slate-800 border border-slate-700" : "bg-white border border-slate-200"}
+            `}
+            style={{
+              // Panel grows with content but never exceeds 70% of viewport height
+              maxHeight: "90%",
+            }}
+          >
+            {/* Panel header — always visible */}
+            <div
+              className="flex items-center justify-between px-3 py-2.5 flex-shrink-0 border-b"
+              style={{ borderColor: isDarkMode ? "#334155" : "#e2e8f0" }}
+            >
+              <span
+                className={`text-xs font-bold tracking-wide ${isDarkMode ? "text-white" : "text-slate-800"}`}
+              >
+                MAP LAYERS
+              </span>
+              <button
+                onClick={() => setShowLayerPanel(false)}
+                className={`p-0.5 rounded transition-colors ${isDarkMode ? "hover:bg-slate-700 text-slate-400" : "hover:bg-slate-100 text-slate-500"}`}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Scrollable layer list */}
+            <div className="overflow-y-auto flex-1 py-1 h-[calc(100%-40px)]">
+              {LAYER_GROUPS.map((group) => (
+                <div key={group.title} className="mb-1">
+                  {/* Group heading */}
+                  <p
+                    className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-widest"
+                    style={{ color: FAO_BLUE }}
+                  >
+                    {group.title}
+                  </p>
+
+                  {/* Layer rows */}
+                  {group.layers.map((layerDef) => {
+                    const isActive = activeLayers.has(layerDef.id);
+                    return (
+                      <div
+                        key={layerDef.id}
+                        onClick={() => toggleLayer(layerDef)}
+                        className={`flex items-center justify-between px-3 py-1.5 cursor-pointer transition-colors select-none ${isDarkMode ? "hover:bg-slate-700/50" : "hover:bg-slate-50"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* Checkbox */}
+                          <div
+                            className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all"
+                            style={{
+                              backgroundColor: isActive
+                                ? FAO_BLUE
+                                : "transparent",
+                              borderColor: isActive
+                                ? FAO_BLUE
+                                : isDarkMode
+                                  ? "#475569"
+                                  : "#cbd5e1",
+                            }}
+                          >
+                            {isActive && (
+                              <svg
+                                className="w-2.5 h-2.5 text-white"
+                                viewBox="0 0 10 10"
+                                fill="none"
+                              >
+                                <path
+                                  d="M1.5 5L4 7.5L8.5 2.5"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                          <span
+                            className={`text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
+                          >
+                            {layerDef.label}
+                          </span>
+                        </div>
+
+                        {/* Date badge */}
+                        {layerDef.date && (
+                          <span
+                            className={`text-[10px] ml-2 flex-shrink-0 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
+                          >
+                            {layerDef.date}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Legend */}
       {legendTitle && legendItems.length > 0 && (
