@@ -193,11 +193,11 @@ export function FloodHourSlider({
     if (idx > 0) setForecastStep(FORECAST_STEPS[idx - 1]);
   };
 
-  const bg = isDarkMode ? "bg-slate-700/90" : "bg-slate-600/90";
-
   const pill = (
     <div
-      className={`${bg} backdrop-blur-sm rounded-2xl px-4 py-2 flex items-center gap-3 shadow-lg`}
+      className={`rounded-md border border-white/15 px-3 py-2 shadow-2xl backdrop-blur-md flex items-center gap-3 ${
+        isDarkMode ? "bg-black/70" : "bg-slate-800/85"
+      }`}
     >
       {/* Play / Pause */}
       <button
@@ -206,13 +206,13 @@ export function FloodHourSlider({
           e.stopPropagation();
           setPlaying((p) => !p);
         }}
-        className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
+        className="flex items-center justify-center w-7 h-7 rounded-full bg-cyan-400/90 hover:bg-cyan-300 transition-colors flex-shrink-0 shadow-lg shadow-cyan-950/30"
         title={playing ? "Pause" : "Play"}
       >
         {playing ? (
-          <Pause className="w-3.5 h-3.5 text-white" />
+          <Pause className="w-3.5 h-3.5 text-slate-950" />
         ) : (
-          <Play className="w-3.5 h-3.5 text-white fill-white" />
+          <Play className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
         )}
       </button>
 
@@ -224,7 +224,7 @@ export function FloodHourSlider({
             onUp={stepUp}
             onDown={stepDown}
           />
-          <span className="text-white/50 text-xs font-medium whitespace-nowrap">
+          <span className="text-white/55 text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
             ahead
           </span>
         </>
@@ -241,7 +241,7 @@ export function FloodHourSlider({
             onUp={() => setMonth((m) => (m + 1) % 12)}
             onDown={() => setMonth((m) => (m + 11) % 12)}
           />
-          <span className="text-white/50 font-bold text-xs leading-5 tabular-nums">
+          <span className="text-white/55 font-bold text-xs leading-5 tabular-nums">
             {year}
           </span>
           <span className="text-white/60 font-bold text-sm">·</span>
@@ -261,7 +261,7 @@ export function FloodHourSlider({
           e.stopPropagation();
           skipToEnd();
         }}
-        className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
+        className="flex items-center justify-center w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 transition-colors flex-shrink-0"
         title={
           isForecast
             ? `Skip to +${FORECAST_STEPS[FORECAST_STEPS.length - 1]}h`
