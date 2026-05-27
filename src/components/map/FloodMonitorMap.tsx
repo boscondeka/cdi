@@ -24,6 +24,7 @@ import {
   PARAM_LEGENDS,
 } from "@/utils/woker_fn";
 import { geoData } from "@/utils/geodata";
+import { clippedWms } from "./clippedWmsLayer";
 import type { LayerDef, UgandaBoundaryMapProps } from "@/types/data_types";
 
 const FAO_BLUE = "#318DDE";
@@ -183,15 +184,13 @@ export default function FloodMonitorMap({
     } else {
       // flood forecast is handled via the raster effect; skip adding a generic WMS layer
       if (layerDef.id !== "flood") {
-        const wmsLayer = L.tileLayer
-          .wms(GEO_SERVER_URL, {
-            ...WMS_BASE_OPTIONS,
-            layers: `wfews:${layerDef.wms}`,
-            opacity: 1.0,
-          })
-          .addTo(FloodMonitormapRef.current);
+        const wmsLayer = clippedWms(GEO_SERVER_URL, {
+          ...WMS_BASE_OPTIONS,
+          layers: `wfews:${layerDef.wms}`,
+          opacity: 1.0,
+        }).addTo(FloodMonitormapRef.current);
         wmsLayer.bringToFront();
-        FloodMonitorwmsLayersRef.current[layerDef.id] = wmsLayer;
+        FloodMonitorwmsLayersRef.current[layerDef.id] = wmsLayer as any;
       }
       setActiveLayers((prev) => new Set(prev).add(layerDef.id));
     }
@@ -436,13 +435,15 @@ export default function FloodMonitorMap({
       if (!selectedFloodForecastData) return;
       const formattedDate = dateRange?.replace(/-/g, "").slice(0, 8) ?? "";
       const layerName = `wfews:${selectedFloodForecastData}_${formattedDate}_${forecastStep}h`;
-      FloodMonitorrasterLayerRef.current = L.tileLayer
-        .wms(GEO_SERVER_URL, { ...WMS_BASE_OPTIONS, layers: layerName })
+      FloodMonitorrasterLayerRef.current = clippedWms(
+        GEO_SERVER_URL,
+        { ...WMS_BASE_OPTIONS, layers: layerName },
+      )
         .on("loading", () => setRasterIsLoading(true))
         .on("load", () => setRasterIsLoading(false))
         .on("tileerror", () => setRasterIsLoading(false))
-        .addTo(FloodMonitormapRef.current);
-      FloodMonitorrasterLayerRef.current.bringToFront();
+        .addTo(FloodMonitormapRef.current) as any;
+      FloodMonitorrasterLayerRef.current!.bringToFront();
       return;
     }
 
@@ -467,13 +468,15 @@ export default function FloodMonitorMap({
 
     if (!layerName) return;
 
-    FloodMonitorrasterLayerRef.current = L.tileLayer
-      .wms(GEO_SERVER_URL, { ...WMS_BASE_OPTIONS, layers: layerName })
+    FloodMonitorrasterLayerRef.current = clippedWms(
+      GEO_SERVER_URL,
+      { ...WMS_BASE_OPTIONS, layers: layerName },
+    )
       .on("loading", () => setRasterIsLoading(true))
       .on("load", () => setRasterIsLoading(false))
       .on("tileerror", () => setRasterIsLoading(false))
-      .addTo(FloodMonitormapRef.current);
-    FloodMonitorrasterLayerRef.current.bringToFront();
+      .addTo(FloodMonitormapRef.current) as any;
+    FloodMonitorrasterLayerRef.current!.bringToFront();
   }, [
     geoData,
     selectedParameter,
