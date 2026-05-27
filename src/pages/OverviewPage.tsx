@@ -423,7 +423,7 @@ export default function OverviewPage({
   }
 
   return (
-    <div className="p-4 md:p-6 min-h-screen relative">
+    <div className="p-4 md:p-6 3xl:p-8 4xl:p-10 min-h-screen relative">
       {/* Animated Background - Only in Dark Mode */}
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -448,15 +448,15 @@ export default function OverviewPage({
       )}
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-[1600px] mx-auto">
+      <div className="relative z-10 w-full">
         {/* Header */}
         <div className="mb-4 md:mb-6 animate-fade-in-up">
           <h1
-            className={`text-xl md:text-2xl font-bold mb-0.5 md:mb-1 ${headerText}`}
+            className={`text-xl md:text-2xl 3xl:text-3xl 4xl:text-4xl font-bold mb-0.5 md:mb-1 ${headerText}`}
           >
             Dashboard Overview
           </h1>
-          <p className={`text-sm ${textMuted}`}>
+          <p className={`text-sm 3xl:text-base 4xl:text-lg ${textMuted}`}>
             Welcome to Uganda Multi Hazard Observatory System
           </p>
         </div>
@@ -837,7 +837,7 @@ export default function OverviewPage({
             </div>
 
             {/* Map and Alerts Row */}
-            <div className="lg:col-span-9 grid grid-cols-12 gap-4 h-[520px] xl:h-[600px] 2xl:h-[680px]">
+            <div className="lg:col-span-9 grid grid-cols-12 gap-4 h-[520px] xl:h-[600px] 2xl:h-[680px] 3xl:h-[820px] 4xl:h-[1000px] 5xl:h-[1240px]">
               {/* Map */}
               <div className="col-span-9 h-full">
                 <div

@@ -61,8 +61,8 @@ export default function ResourcesPage({ isDarkMode = true }: ResourcesPageProps)
   })).filter(cat => cat.items.length > 0);
 
   return (
-    <div className="p-4 md:p-6 min-h-screen">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 3xl:p-8 4xl:p-10 min-h-screen">
+      <div className="max-w-6xl 3xl:max-w-[1800px] 4xl:max-w-[2600px] 5xl:max-w-[3200px] mx-auto space-y-6">
         
         {/* Header Section */}
         <div 

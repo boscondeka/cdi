@@ -39,7 +39,7 @@ export default function DroughtMonitoringPage({
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* Compact Header Banner - Ribbons only */}
-      <div className="px-4 md:px-6 py-3">
+      <div className="px-4 md:px-6 3xl:px-10 4xl:px-14 py-3 3xl:py-4">
         <div
           className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 animate-fade-in-up"
           style={{
@@ -49,10 +49,10 @@ export default function DroughtMonitoringPage({
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-lg md:text-xl font-bold text-white">
+                <h1 className="text-lg md:text-xl 3xl:text-2xl 4xl:text-3xl font-bold text-white">
                   Drought Monitoring
                 </h1>
-                <p className="text-slate-200 text-xs md:text-sm">
+                <p className="text-slate-200 text-xs md:text-sm 3xl:text-base 4xl:text-lg">
                   CDI (Combined Drought Index) and vegetation health analysis
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">

@@ -269,8 +269,8 @@ export default function HelpPage({ isDarkMode = true }: HelpPageProps) {
   })).filter(cat => cat.questions.length > 0);
 
   return (
-    <div className="p-4 md:p-6 min-h-screen">
-      <div className="relative z-10 max-w-[1000px] mx-auto">
+    <div className="p-4 md:p-6 3xl:p-8 4xl:p-10 min-h-screen">
+      <div className="relative z-10 max-w-[1000px] 3xl:max-w-[1400px] 4xl:max-w-[2000px] 5xl:max-w-[2600px] mx-auto">
         {/* Header Ribbon */}
         <div 
           className="relative overflow-hidden rounded-lg md:rounded-xl p-6 md:p-8 mb-6 text-center animate-fade-in-up"

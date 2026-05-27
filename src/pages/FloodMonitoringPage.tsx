@@ -341,7 +341,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
   }
 
   return (
-    <div className="p-4 md:p-6 min-h-screen">
+    <div className="p-4 md:p-6 3xl:p-8 4xl:p-10 min-h-screen">
       {/* Animated background */}
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -357,7 +357,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
         </div>
       )}
 
-      <div className="relative z-10 max-w-[1600px] mx-auto">
+      <div className="relative z-10 w-full">
         {/* Fallback data banner (hidden when data loads ok) */}
         {isUsingFallback && <div />}
 
@@ -367,8 +367,8 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
           <div className="relative z-10">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-lg md:text-xl font-bold text-white">Flood Monitoring</h1>
-                <p className="text-slate-200 text-xs md:text-sm">
+                <h1 className="text-lg md:text-xl 3xl:text-2xl 4xl:text-3xl font-bold text-white">Flood Monitoring</h1>
+                <p className="text-slate-200 text-xs md:text-sm 3xl:text-base 4xl:text-lg">
                   Real-time rainfall data and flood risk assessment{isUsingFallback && " (Demo Data)"}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -434,7 +434,7 @@ export default function FloodMonitoringPage({ isDarkMode = true }: FloodMonitori
 
           {/* Main content */}
           <div className="lg:col-span-9">
-            <div className="grid grid-cols-12 gap-3 h-[550px] xl:h-[620px] 2xl:h-[700px]">
+            <div className="grid grid-cols-12 gap-3 h-[550px] xl:h-[620px] 2xl:h-[700px] 3xl:h-[840px] 4xl:h-[1020px] 5xl:h-[1260px]">
 
               {/* Map — 7 columns */}
               <div className="col-span-7 flex h-full">

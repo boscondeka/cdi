@@ -609,7 +609,7 @@ export default function WeatherForecastPage({
   const headerText = isDarkMode ? "text-white" : "text-slate-900";
 
   return (
-    <div className="p-3 md:p-5 min-h-screen">
+    <div className="p-3 md:p-5 3xl:p-8 4xl:p-10 min-h-screen">
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           {[...Array(5)].map((_, i) => (
@@ -638,10 +638,10 @@ export default function WeatherForecastPage({
         >
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-white">
+              <h1 className="text-lg md:text-xl 3xl:text-2xl 4xl:text-3xl font-bold text-white">
                 Weather Forecast
               </h1>
-              <p className="text-slate-200 text-xs md:text-sm">
+              <p className="text-slate-200 text-xs md:text-sm 3xl:text-base 4xl:text-lg">
                 24-hour nowcasting & 7-day forecasts
               </p>
               <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -785,8 +785,7 @@ export default function WeatherForecastPage({
           <div className="lg:col-span-9 space-y-3">
             {/* Map + cards row — fixed shared height */}
             <div
-              className="grid grid-cols-12 gap-3"
-              style={{ height: "clamp(480px, 58vh, 900px)" }}
+              className="grid grid-cols-12 gap-3 h-[550px] xl:h-[620px] 2xl:h-[700px] 3xl:h-[840px] 4xl:h-[1020px] 5xl:h-[1260px]"
             >
               {/* Map — left */}
               <div className="col-span-7 flex h-full">
