@@ -6,7 +6,6 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  Settings,
   Thermometer,
   Wind,
   Gauge,
@@ -81,7 +80,6 @@ const FilterContent = ({
   setActiveParams,
   isDarkMode,
   textMuted,
-  textSecondary,
   borderColor,
   headerText,
   onlineCount,
@@ -97,7 +95,6 @@ const FilterContent = ({
   setActiveParams: React.Dispatch<React.SetStateAction<ActiveParams>>;
   isDarkMode: boolean;
   textMuted: string;
-  textSecondary: string;
   borderColor: string;
   headerText: string;
   onlineCount: number;
@@ -307,8 +304,6 @@ const CustomTooltip = ({
 const StationReadingsPanel = ({
   selectedStation,
   stationCode,
-  stations,
-  onSelectStation,
   readings,
   isLoading,
   activeParameter,
@@ -323,8 +318,6 @@ const StationReadingsPanel = ({
 }: {
   selectedStation: WeatherStation | null;
   stationCode?: string;
-  stations: WeatherStation[];
-  onSelectStation: (station: WeatherStation) => void;
   readings: any[];
   isLoading: boolean;
   activeParameter: "temperature" | "humidity" | "wind_speed" | "pressure" | "rainfall";
@@ -839,7 +832,6 @@ export default function WeatherStationsPage({
                   setActiveParams={setActiveParams}
                   isDarkMode={isDarkMode}
                   textMuted={textMuted}
-                  textSecondary={textSecondary}
                   borderColor={borderColor}
                   headerText={headerText}
                   onlineCount={onlineCount}
@@ -962,8 +954,6 @@ export default function WeatherStationsPage({
                   key={selectedStation?.id ?? "none"}
                   selectedStation={selectedStation}
                   stationCode={selectedRaw?.code}
-                  stations={stations}
-                  onSelectStation={setSelectedStation}
                   readings={readings}
                   isLoading={readingsLoading}
                   activeParameter={activeParameter}
@@ -1179,7 +1169,6 @@ export default function WeatherStationsPage({
                     setActiveParams={setActiveParams}
                     isDarkMode={isDarkMode}
                     textMuted={textMuted}
-                    textSecondary={textSecondary}
                     borderColor={borderColor}
                     headerText={headerText}
                     onlineCount={onlineCount}
@@ -1198,8 +1187,6 @@ export default function WeatherStationsPage({
               key={selectedStation?.id ?? "none"}
               selectedStation={selectedStation}
               stationCode={selectedRaw?.code}
-              stations={stations}
-              onSelectStation={setSelectedStation}
               readings={readings}
               isLoading={readingsLoading}
               activeParameter={activeParameter}
