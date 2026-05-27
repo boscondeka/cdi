@@ -31,6 +31,8 @@ import {
 } from "@/utils/woker_fn";
 import { geoData } from "@/utils/geodata";
 import { clippedWms } from "./clippedWmsLayer";
+import { weatherAPI } from "@/services/api";
+import { GEOSERVER_WFEWS_WMS, GEOSERVER_WEATHER_WMS } from "@/config";
 import type {
   district,
   LayerDef,
@@ -38,13 +40,10 @@ import type {
 } from "@/types/data_types";
 
 const FAO_BLUE = "#318DDE";
-const GEO_SERVER_URL =
-  "https://multihazard.rosewillbome.com/geoserver/wfews/wms";
+const GEO_SERVER_URL = GEOSERVER_WFEWS_WMS;
 
 // Local Uganda Weather GeoServer (ICON, GFS, IMERG satellite precipitation)
-const LOCAL_GEO_SERVER_URL =
-  (import.meta.env.VITE_LOCAL_GEOSERVER_URL as string) ||
-  "http://localhost:8080/geoserver/uganda_weather/wms";
+const LOCAL_GEO_SERVER_URL = GEOSERVER_WEATHER_WMS;
 
 /** Shared WMS options used for every raster layer */
 const WMS_BASE_OPTIONS = {
@@ -143,12 +142,12 @@ export default function WeatherForcastMap({
   );
   const weatherMarkersRef = useRef<L.Marker[]>([]);
 
-  const [selectedForcastData, setSelectedForcastData] = useState<string | null>(
+  const [_selectedForcastData, setSelectedForcastData] = useState<string | null>(
     null,
   );
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [activeLayers, setActiveLayers] = useState<Set<string>>(
-    new Set(["country", "gfs_precipitation"]),
+    new Set(["country"]),
   );
   const [isRasterLoading, setRasterIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -211,6 +210,7 @@ export default function WeatherForcastMap({
     if (!weatherforcastMapRef.current) return;
 
     if (activeLayers.has(layerDef.id)) {
+      // Toggle off — remove the layer
       if (weatherforcastwmsLayersRef.current[layerDef.id]) {
         weatherforcastMapRef.current.removeLayer(
           weatherforcastwmsLayersRef.current[layerDef.id],
@@ -223,6 +223,18 @@ export default function WeatherForcastMap({
         return next;
       });
     } else {
+      // Remove any existing weather raster layer first (one at a time)
+      // Keep boundary/infrastructure layers (country, districts, rivers, etc.)
+      const keepLayers = new Set(["country", "districts", "rivers", "waterways", "water_bodies", "roads", "places", "landuse", "buildings"]);
+      for (const [id, layer] of Object.entries(weatherforcastwmsLayersRef.current)) {
+        if (!keepLayers.has(id)) {
+          weatherforcastMapRef.current.removeLayer(layer);
+          delete weatherforcastwmsLayersRef.current[id];
+        }
+      }
+      // Also clear the raster layer ref if active
+      clearLayer(weatherforcastMapRef.current, weatherforcastrasterLayerRef);
+
       // tmax / tmin are handled via the raster useEffect; skip adding a WMS layer here
       if (layerDef.id !== "tmax" && layerDef.id !== "tmin") {
         // Route to local GeoServer for ICON/GFS/IMERG layers
@@ -232,7 +244,6 @@ export default function WeatherForcastMap({
           ? layerDef.wms.replace("local:", "")
           : `wfews:${layerDef.wms}`;
 
-        // Use clipped layer for weather rasters so they conform to Uganda boundary
         const wmsLayer = clippedWms(serverUrl, {
           layers: layerName,
           format: "image/png",
@@ -243,7 +254,12 @@ export default function WeatherForcastMap({
         wmsLayer.bringToFront();
         weatherforcastwmsLayersRef.current[layerDef.id] = wmsLayer as any;
       }
-      setActiveLayers((prev) => new Set(prev).add(layerDef.id));
+      // Replace active set with only keep layers + the new one
+      setActiveLayers((prev) => {
+        const next = new Set([...prev].filter((id) => keepLayers.has(id)));
+        next.add(layerDef.id);
+        return next;
+      });
     }
   };
 
@@ -407,20 +423,11 @@ export default function WeatherForcastMap({
         opacity: 0.92,
       })
       .addTo(weatherforcastMapRef.current);
-    // Default the weather map to the GFS precipitation layer so the first view
-    // behaves like a forecast animation map instead of an empty basemap.
-    const gfsPrecipitationWms = clippedWms(LOCAL_GEO_SERVER_URL, {
-      layers: "gfs_precipitation",
-      format: "image/png",
-      transparent: true,
-      version: "1.1.0",
-      opacity: 0.78,
-    }).addTo(weatherforcastMapRef.current);
-    gfsPrecipitationWms.bringToFront();
-    weatherforcastwmsLayersRef.current["gfs_precipitation"] =
-      gfsPrecipitationWms as any;
     countryWms.bringToFront();
     weatherforcastwmsLayersRef.current["country"] = countryWms;
+
+    // The raster layer useEffect will load the initial weather layer
+    // based on the current selectedParameter — no need to add one here.
 
     // ── ResizeObserver ────────────────────────────────────────────────────
     const ro = new ResizeObserver(() =>
@@ -495,76 +502,86 @@ export default function WeatherForcastMap({
     }
   }, [getTheBounds, geoData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Raster layer — handles daily / monthly and forecast modes ───────────────
+  // ── Raster layer — driven by the weather raster frames API ───────────────────
   useEffect(() => {
     if (!weatherforcastMapRef.current) return;
 
     clearLayer(weatherforcastMapRef.current, weatherforcastrasterLayerRef);
 
-    if (layerMode === "forecast") {
-      if (!selectedForcastData) return;
-      const formattedDate = dateRange?.replace(/-/g, "").slice(0, 8) ?? "";
-      const layerName = `wfews:${selectedForcastData}_${forecastStep}h_${formattedDate}`;
-      weatherforcastrasterLayerRef.current = clippedWms(
-        GEO_SERVER_URL,
-        { ...WMS_BASE_OPTIONS, layers: layerName },
-      )
-        .on("loading", () => setRasterIsLoading(true))
-        .on("load", () => setRasterIsLoading(false))
-        .on("tileerror", () => setRasterIsLoading(false))
-        .addTo(weatherforcastMapRef.current) as any;
-      weatherforcastrasterLayerRef.current!.bringToFront();
-      return;
-    }
+    // Map UI parameter names to API parameter names
+    const paramMap: Record<string, string> = {
+      rainfall: "precipitation",
+      precipitation: "precipitation",
+      temperature: "temperature",
+      wind: "wind-u",
+      humidity: "humidity",
+      cloud_cover: "cloud-cover",
+      clouds: "cloud-cover",
+      pressure: "pressure",
+    };
 
-    // ── Daily / monthly branch ────────────────────────────────────────────
-    const hour =
-      sliderhourIndexValue === "000"
-        ? "00"
-        : String(sliderhourIndexValue).padStart(2, "0");
+    const apiParam = paramMap[selectedParameter?.toLowerCase()] || selectedParameter?.toLowerCase();
+    const model = layerMode === "forecast" ? "gfs" : "icon";
 
-    const layerName =
-      layerMode === "monthly"
-        ? mapLayerName({
-            parameter: selectedParameter,
-            date: dateRange,
-            mode: "monthly",
+    // Determine the forecast hour from the slider
+    const hour = sliderhourIndexValue === "000"
+      ? 0
+      : parseInt(String(sliderhourIndexValue), 10) || 0;
+
+    // Fetch frames from the raster API
+    weatherAPI.getRasterFrames(model, apiParam)
+      .then((data) => {
+        if (!weatherforcastMapRef.current) return;
+        if (!data.frames.length) return;
+
+        // Find the frame matching the selected hour (or closest)
+        const frame = data.frames.find((f) => f.forecast_hour === hour)
+          || data.frames[0];
+
+        const wmsUrl = data.geoserver.wms_url;
+        const layerName = frame.wms_layer;
+
+        // Clear any previous raster and add the new one
+        clearLayer(weatherforcastMapRef.current!, weatherforcastrasterLayerRef);
+
+        weatherforcastrasterLayerRef.current = clippedWms(wmsUrl, {
+          ...WMS_BASE_OPTIONS,
+          layers: layerName,
+        })
+          .on("loading", () => setRasterIsLoading(true))
+          .on("load", () => setRasterIsLoading(false))
+          .on("tileerror", () => setRasterIsLoading(false))
+          .addTo(weatherforcastMapRef.current!) as any;
+        weatherforcastrasterLayerRef.current!.bringToFront();
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch raster frames:", err);
+        // Fallback to mapLayerName for offline/error scenarios
+        const layerName = mapLayerName({
+          parameter: selectedParameter,
+          date: dateRange,
+          mode: layerMode === "forecast" ? "forecast" : "daily",
+        });
+        if (layerName && weatherforcastMapRef.current) {
+          const isLocal = layerName.startsWith("local:");
+          const serverUrl = isLocal ? LOCAL_GEO_SERVER_URL : GEO_SERVER_URL;
+          const wmsLayerName = isLocal ? layerName.replace("local:", "") : layerName;
+          weatherforcastrasterLayerRef.current = clippedWms(serverUrl, {
+            ...WMS_BASE_OPTIONS,
+            layers: wmsLayerName,
           })
-        : (mapLayerName({
-            parameter: selectedParameter,
-            date: dateRange,
-            mode: "daily",
-            hour,
-          }) ??
-          mapLayerName({
-            parameter: selectedParameter,
-            date: dateRange,
-            mode: "monthly",
-          }));
-
-    if (layerName) {
-      const isLocal = layerName.startsWith("local:");
-      const serverUrl = isLocal ? LOCAL_GEO_SERVER_URL : GEO_SERVER_URL;
-      const wmsLayerName = isLocal ? layerName.replace("local:", "") : layerName;
-      weatherforcastrasterLayerRef.current = clippedWms(
-        serverUrl,
-        { ...WMS_BASE_OPTIONS, layers: wmsLayerName },
-      )
-        .on("loading", () => setRasterIsLoading(true))
-        .on("load", () => setRasterIsLoading(false))
-        .on("tileerror", () => setRasterIsLoading(false))
-        .addTo(weatherforcastMapRef.current) as any;
-      weatherforcastrasterLayerRef.current!.bringToFront();
-    }
-
+            .on("loading", () => setRasterIsLoading(true))
+            .on("load", () => setRasterIsLoading(false))
+            .on("tileerror", () => setRasterIsLoading(false))
+            .addTo(weatherforcastMapRef.current) as any;
+          weatherforcastrasterLayerRef.current!.bringToFront();
+        }
+      });
   }, [
-    geoData,
     selectedParameter,
-    dateRange,
     sliderhourIndexValue,
     layerMode,
     forecastStep,
-    selectedForcastData,
   ]);
 
   // ── Weather district markers — selected district or Kampala by default ────────

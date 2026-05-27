@@ -4,10 +4,7 @@
  */
 
 import type { WeatherStation, StationReading, StationAlert, NetworkSummary } from "@/types/data_types";
-
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  "https://multihazard.rosewillbome.com/api/v1/";
+import { API_BASE } from "@/config";
 
 interface FetchOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -86,6 +83,35 @@ export const weatherAPI = {
       ? `weather/forecast/?district_id=${districtId}`
       : "weather/forecast/";
     return fetchData(endpoint);
+  },
+
+  /**
+   * Fetch available raster frames from the weather raster API.
+   * Returns frames with wms_layer names and geoserver WMS URL.
+   */
+  getRasterFrames: async (model: string, parameter?: string) => {
+    let endpoint = `weather/raster/frames/${model}/`;
+    if (parameter) endpoint += `?parameter=${parameter}`;
+    return fetchData<{
+      model: string;
+      count: number;
+      frames: Array<{
+        model: string;
+        parameter: string;
+        level: string;
+        run: string;
+        run_epoch: number;
+        forecast_hour: number;
+        file: string;
+        wms_layer: string;
+        future_wms_layer: string;
+        frame_url: string;
+      }>;
+      geoserver: {
+        workspace: string;
+        wms_url: string;
+      };
+    }>(endpoint);
   },
 
   getForecastHourly: async (districtId?: number) => {

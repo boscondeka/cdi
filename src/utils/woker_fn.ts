@@ -130,79 +130,54 @@ export interface LayerNameOptions {
 export function mapLayerName(opts: LayerNameOptions): string | null {
   const {
     parameter,
-    date,
     mode = "daily",
-    hour = "00",
-    forecastStep = 24,
   } = opts;
 
   const param = parameter?.toLowerCase().trim();
 
-  // ── Derive date parts ──────────────────────────────────────────────────────
-  // Accept "2026-05-13", "20260513", or a Date-parseable string
-  const clean = date?.replace(/-/g, "") ?? ""; // "20260513"
-  const yyyymm = clean.slice(0, 6); // "202605"
-  const yyyymmdd = clean.slice(0, 8); // "20260513"
-  const hh = String(hour ?? "00").padStart(2, "0"); // "00"
-  const step = forecastStep ?? 24;
+  // All modes now route to local GeoServer ICON/GFS layers.
+  // The layer name is prefixed with "local:" so the map component
+  // knows to use LOCAL_GEO_SERVER_URL instead of the remote one.
 
-  if (!yyyymm) return null;
-  console.log("yyyymmdd ", yyyymmdd, "hh ", hh);
-
-  // ── Monthly ────────────────────────────────────────────────────────────────
-  if (mode === "monthly") {
-    switch (param) {
-      case "rainfall":
-        return `wfews:chirps_rainfall_${yyyymm}`;
-      case "temperature":
-        return `wfews:era5_temperature_${yyyymm}`;
-      case "wind":
-        return `wfews:era5_wind_${yyyymm}`;
-      case "humidity":
-        return `wfews:era5_humidity_${yyyymm}`; // MISSING
-      default:
-        return null;
-    }
-  }
-
-  // ── Daily ──────────────────────────────────────────────────────────────────
-
-  if (mode === "daily") {
-    if (!yyyymmdd) return null;
-    switch (param) {
-      case "rainfall":
-        return `wfews:gsmap_rainfall_${yyyymmdd}_${hh}`;
-      case "wind":
-        return `wfews:era5_wind_${yyyymmdd}_${hh}`;
-      case "temperature":
-        return `wfews:era5_temperature_${yyyymmdd}_${hh}`;
-      case "humidity":
-        return `wfews:era5_humidity_${yyyymmdd}_${hh}`; // MISSING
-      default:
-        return null;
-    }
-  }
-
-  // ── Forecast ───────────────────────────────────────────────────────────────
-  if (mode === "forecast") {
-    if (!yyyymmdd) return null;
+  // ── Monthly / Daily — use ICON layers (latest run) ─────────────────────────
+  if (mode === "monthly" || mode === "daily") {
     switch (param) {
       case "rainfall":
       case "precipitation":
-        return `wfews:gfs_precip_${step}h_${yyyymmdd}`;
+        return `local:precipitation`;
       case "temperature":
-        // gfs_tmp = instantaneous temp; gfs_tmax / gfs_tmin for extremes
-        return `wfews:gfs_tmp_${step}h_${yyyymmdd}`;
-      case "temperature_max":
-        return `wfews:gfs_tmax_${step}h_${yyyymmdd}`;
-      case "temperature_min":
-        return `wfews:gfs_tmin_${step}h_${yyyymmdd}`;
+        return `local:temperature_2m`;
       case "wind":
-        return `wfews:gfs_10m_windspd_${step}h_${yyyymmdd}`;
-      case "wind_direction":
-        return `wfews:gfs_10m_winddir_${step}h_${yyyymmdd}`;
+        return `local:wind_u_10m`;
+      case "humidity":
+        return `local:humidity`;
+      case "cloud_cover":
+      case "clouds":
+        return `local:cloud_cover`;
+      case "pressure":
+        return `local:pressure_msl`;
+      default:
+        return null;
+    }
+  }
+
+  // ── Forecast — use GFS layers ──────────────────────────────────────────────
+  if (mode === "forecast") {
+    switch (param) {
+      case "rainfall":
+      case "precipitation":
+        return `local:gfs_precipitation`;
+      case "temperature":
+        return `local:gfs_temperature_2m`;
+      case "wind":
+        return `local:gfs_wind_u_10m`;
       case "humidity":
         return `local:gfs_humidity`;
+      case "cloud_cover":
+      case "clouds":
+        return `local:gfs_cloud_cover`;
+      case "pressure":
+        return `local:gfs_pressure_msl`;
       default:
         return null;
     }
