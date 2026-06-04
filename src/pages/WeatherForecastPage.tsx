@@ -7,7 +7,6 @@ import {
   Wind,
   Droplets,
   Thermometer,
-  Calendar,
   Clock,
   Navigation,
   Filter,
@@ -803,7 +802,7 @@ export default function WeatherForecastPage({
   const headerText = isDarkMode ? "text-white" : "text-slate-900";
 
   return (
-    <div className="p-3 md:p-5 min-h-screen">
+    <div className="lg:p-3 xl:p-5 min-h-screen">
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           {[...Array(5)].map((_, i) => (
@@ -825,7 +824,7 @@ export default function WeatherForecastPage({
       <div className="relative z-10 w-full">
         {/* Header */}
         <div
-          className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up"
+          className="hidden lg:block relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up"
           style={{
             background: `linear-gradient(135deg, ${FAO_BLUE}e6 0%, ${FAO_BLUE}99 100%)`,
           }}
@@ -859,8 +858,8 @@ export default function WeatherForecastPage({
           </div>
         </div>
 
-        {/* Stat cards */}
-        <div className="flex items-center gap-2 mb-3">
+        {/* Stat cards — desktop only; mobile uses floating pills */}
+        <div className="hidden lg:flex items-center gap-2 mb-3">
           <MapPin className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
           <span
             className={`text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
@@ -877,7 +876,7 @@ export default function WeatherForecastPage({
             Live
           </span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
+        <div className="hidden lg:grid grid-cols-4 gap-2 md:gap-3 mb-3">
           {statCards.map((card, index) => {
             const Icon = card.icon;
             const numericValue =
@@ -1171,224 +1170,300 @@ export default function WeatherForecastPage({
           </div>
         </div>
 
-        {/* ── Mobile ── */}
-        <div className="block lg:hidden space-y-3">
-          <div
-            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}
-          >
-            <TabBar
-              mobile={true}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              borderColor={borderColor}
+        {/* ── Mobile (Full-Screen Map) ── */}
+        <div
+          className="block lg:hidden relative overflow-hidden"
+          style={{ height: "calc(100svh - 7.5rem)" }}
+        >
+          {/* Full-screen map as background */}
+          <div className="absolute inset-0 z-0">
+            <WeatherForcastMap
               isDarkMode={isDarkMode}
-              FAO_BLUE={FAO_BLUE}
+              className="w-full h-full"
+              badgeText={selectedDistrictId?.name ?? "Uganda"}
+              getTheBounds={selectedDistrictId?.name ?? ""}
+              district_list={district_list}
             />
-            <div className="p-3">
-              {activeTab === "nowcast" ? (
-                <>
-                  <h3
-                    className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}
-                  >
-                    <Clock className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                    Hourly Forecast
-                  </h3>
-                  <HourlyCards
-                    hourlyForecast={hourlyForecast}
-                    isDarkMode={isDarkMode}
-                    textMuted={textMuted}
-                    headerText={headerText}
-                    FAO_BLUE={FAO_BLUE}
-                    selectedIndex={selectedCardIndex}
-                    onSelectCard={setSelectedCardIndex}
-                  />
-                </>
-              ) : (
-                <>
-                  <h3
-                    className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}
-                  >
-                    <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                    7-Day Forecast
-                  </h3>
-                  <DailyCards
-                    dailyForecast={dailyForecast}
-                    isDarkMode={isDarkMode}
-                    textMuted={textMuted}
-                    headerText={headerText}
-                    FAO_BLUE={FAO_BLUE}
-                    mobile
-                    selectedIndex={selectedCardIndex}
-                    onSelectCard={setSelectedCardIndex}
-                  />
-                </>
-              )}
-            </div>
           </div>
 
-          {/* Map */}
-          <div className="relative">
+          {/* Top floating layer: gradient + location + tab toggle + stat pills */}
+          <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
+            {/* Gradient scrim for readability */}
             <div
-              className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm`}
-            >
-              <div
-                className={`flex items-center justify-between px-2 pt-2 pb-0 border-b ${borderColor}`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                  <h3 className={`text-sm font-semibold ${headerText}`}>
-                    Weather Map
-                  </h3>
-                </div>
+              className="absolute top-0 left-0 right-0 pointer-events-none"
+              style={{
+                height: 160,
+                background: "linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)",
+              }}
+            />
 
-                {/* Compact pill tab switcher */}
-                <div
-                  className="flex items-center rounded-full overflow-hidden"
-                  style={{
-                    border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                  }}
-                >
-                  {(["nowcast", "forecast"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className="px-2.5 py-0.5 text-[10px] font-semibold transition-all whitespace-nowrap"
-                      style={{
-                        backgroundColor: activeTab === tab ? FAO_BLUE : "transparent",
-                        color: activeTab === tab ? "#fff" : isDarkMode ? "#94a3b8" : "#64748b",
-                      }}
-                    >
-                      {tab === "nowcast" ? "Hourly" : "7-Day"}
-                    </button>
-                  ))}
-                </div>
-
+            {/* Location badge + Hourly/7-Day toggle */}
+            <div className="relative flex items-center justify-between px-3 pt-3 pb-2 pointer-events-auto">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-white/80" />
+                <span className="text-xs font-medium text-white/90">
+                  {statsLabel}, Uganda
+                </span>
                 <span
-                  className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                  style={{
-                    backgroundColor: isDarkMode
-                      ? `${FAO_BLUE}30`
-                      : `${FAO_BLUE}20`,
-                    color: FAO_BLUE,
-                  }}
+                  className="text-[10px] px-1.5 py-0.5 rounded-full text-white font-semibold"
+                  style={{ backgroundColor: `${FAO_BLUE}cc` }}
                 >
                   Live
                 </span>
               </div>
-              <div className="relative aspect-[16/11]">
-                <WeatherForcastMap
-                  isDarkMode={isDarkMode}
-                  className="absolute inset-0 w-full h-full"
-                  badgeText={selectedDistrictId?.name ?? "Uganda"}
-                  getTheBounds={selectedDistrictId?.name ?? ""}
-                  district_list={district_list}
-                />
-                <button
-                  onClick={() => setShowMobileFilters(!showMobileFilters)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-[1001] text-white"
-                  style={{ backgroundColor: FAO_BLUE }}
-                >
-                  <Filter className="w-4 h-4" />
-                </button>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[500]">
-                  <FloodHourSlider
-                    floating
-                    isDarkMode={isDarkMode}
-                    borderColor={borderColor}
-                    textMuted={textMuted}
-                    maxForecastTime={maxForecastTime}
-                  />
-                </div>
-              </div>
-            </div>
-            {showMobileFilters && (
-              <>
-                <div
-                  className="fixed inset-0 z-[1002]"
-                  onClick={() => setShowMobileFilters(false)}
-                />
-                <div
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-[1003] w-64 rounded-xl shadow-lg border p-3 max-h-[70vh] overflow-y-auto ${isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className={`text-xs font-semibold ${headerText}`}>
-                      Filters
-                    </h4>
-                    <button
-                      onClick={() => setShowMobileFilters(false)}
-                      className={`p-1 rounded-md ${isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"}`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <FilterContent
-                    selectedRegion={selectedRegion}
-                    setSelectedRegion={setSelectedRegion}
-                    selectedParameter={selectedParameter}
-                    setSelectedParameter={setSelectedParameter}
-                    isDarkMode={isDarkMode}
-                    textMuted={textMuted}
-                    textSecondary={textSecondary}
-                    borderColor={borderColor}
-                    weatherData={weatherData}
-                    dateRange={dateRange}
-                    setDateRange={setDateRange}
-                    district_list={district_list}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Trend */}
-          <div
-            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
-          >
-            <div className="flex items-center justify-between mb-0.5">
-              <h3
-                className={`text-sm font-semibold flex items-center gap-1.5 ${headerText}`}
+              <div
+                className="flex items-center rounded-full overflow-hidden"
+                style={{
+                  border: "1px solid rgba(255,255,255,0.3)",
+                  backgroundColor: "rgba(0,0,0,0.45)",
+                  backdropFilter: "blur(8px)",
+                }}
               >
-                <TrendingUp className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                Weather Trend
-              </h3>
-              <div className="flex gap-1">
-                {(["temp", "rain", "humidity", "wind"] as const).map((m) => (
+                {(["nowcast", "forecast"] as const).map((tab) => (
                   <button
-                    key={m}
-                    onClick={() => setChartMetric(m)}
-                    className={`text-xs px-1.5 py-0.5 rounded transition-all ${
-                      chartMetric === m ? "font-semibold text-white" : textMuted
-                    }`}
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className="px-3 py-1 text-[11px] font-semibold transition-all whitespace-nowrap"
                     style={{
-                      backgroundColor:
-                        chartMetric === m ? FAO_BLUE : "transparent",
+                      backgroundColor: activeTab === tab ? FAO_BLUE : "transparent",
+                      color: activeTab === tab ? "#fff" : "rgba(255,255,255,0.75)",
                     }}
                   >
-                    {m === "temp" ? "°C" : m === "rain" ? "mm" : m === "wind" ? "km/h" : "%"}
+                    {tab === "nowcast" ? "Hourly" : "7-Day"}
                   </button>
                 ))}
               </div>
             </div>
-            <p className={`text-[10px] ${textMuted} mb-2`}>
-              {activeTab === "nowcast" ? "Hourly" : "7-Day"} · {statsLabel} · {selectedParameter.charAt(0).toUpperCase() + selectedParameter.slice(1)}
-            </p>
-            <div className="h-36">
-              <WeatherTrendChart
-                hourlyForecast={hourlyForecast}
-                isDarkMode={isDarkMode}
-                gradientId="tempFillMobile"
-                height="100%"
-                margin={{ top: 4, right: 4, left: -28, bottom: 0 }}
-                fontSize={8}
-                chartData={chartData}
-                metric={chartMetric}
-              />
+
+            {/* Horizontal scrollable stat pills */}
+            <div
+              className="relative px-3 pb-3 pointer-events-auto"
+            >
+              <div
+                className="flex gap-2 overflow-x-auto"
+                style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+              >
+                {statCards.map((card, i) => {
+                  const Icon = card.icon;
+                  return (
+                    <div
+                      key={i}
+                      className="flex-shrink-0 rounded-2xl px-3 py-2.5 flex items-center gap-2.5"
+                      style={{
+                        minWidth: 126,
+                        backgroundColor: "rgba(10, 18, 36, 0.72)",
+                        backdropFilter: "blur(14px)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                      }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${card.color}28` }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color: card.color }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-white/55 leading-none mb-0.5">
+                          {card.label.replace(" (Hourly)", "")}
+                        </p>
+                        <p className="text-sm font-bold text-white leading-none">
+                          {card.value}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
+
+          {/* Time slider — bottom center */}
+          <div className="absolute bottom-[4.5rem] left-0 right-0 z-10 flex justify-center px-4 pointer-events-auto">
+            <FloodHourSlider
+              floating
+              isDarkMode={isDarkMode}
+              borderColor={borderColor}
+              textMuted={textMuted}
+              maxForecastTime={maxForecastTime}
+            />
+          </div>
+
+          {/* FAB — Trends & Filters */}
+          <button
+            onClick={() => setShowMobileFilters(true)}
+            className="absolute bottom-4 right-4 z-10 flex items-center gap-2 px-4 py-3 rounded-full shadow-xl text-white text-[13px] font-semibold pointer-events-auto"
+            style={{
+              backgroundColor: FAO_BLUE,
+              boxShadow: `0 4px 20px ${FAO_BLUE}88`,
+            }}
+          >
+            <Filter className="w-4 h-4" />
+            Trends &amp; Filters
+          </button>
+
+          {/* Bottom Sheet */}
+          {showMobileFilters && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 z-20"
+                style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+                onClick={() => setShowMobileFilters(false)}
+              />
+
+              {/* Sheet panel */}
+              <div
+                className="absolute bottom-0 left-0 right-0 z-30 flex flex-col rounded-t-3xl"
+                style={{
+                  maxHeight: "80%",
+                  backgroundColor: isDarkMode ? "#0f172a" : "#ffffff",
+                  boxShadow: "0 -8px 40px rgba(0,0,0,0.45)",
+                  animation: "slideUp 0.28s cubic-bezier(0.32,0.72,0,1) forwards",
+                }}
+              >
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                  <div
+                    className="w-10 h-1 rounded-full"
+                    style={{
+                      backgroundColor: isDarkMode
+                        ? "rgba(255,255,255,0.18)"
+                        : "rgba(0,0,0,0.12)",
+                    }}
+                  />
+                </div>
+
+                {/* Sheet header */}
+                <div
+                  className={`flex items-center justify-between px-4 pb-2 flex-shrink-0`}
+                >
+                  <h3
+                    className={`text-sm font-bold ${isDarkMode ? "text-white" : "text-slate-900"}`}
+                  >
+                    Forecast &amp; Filters
+                  </h3>
+                  <button
+                    onClick={() => setShowMobileFilters(false)}
+                    className={`p-1.5 rounded-full ${isDarkMode ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Tab bar */}
+                <div className="px-4 pb-2 flex-shrink-0">
+                  <TabBar
+                    mobile={true}
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    borderColor={borderColor}
+                    isDarkMode={isDarkMode}
+                    FAO_BLUE={FAO_BLUE}
+                  />
+                </div>
+
+                {/* Scrollable content */}
+                <div className="overflow-y-auto flex-1 px-4 pb-8 space-y-4">
+                  {/* Forecast cards */}
+                  <div>
+                    <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>
+                      {activeTab === "nowcast" ? "Hourly Forecast" : "7-Day Forecast"}
+                    </h4>
+                    {activeTab === "nowcast" ? (
+                      <HourlyCards
+                        hourlyForecast={hourlyForecast}
+                        isDarkMode={isDarkMode}
+                        textMuted={textMuted}
+                        headerText={headerText}
+                        FAO_BLUE={FAO_BLUE}
+                        selectedIndex={selectedCardIndex}
+                        onSelectCard={setSelectedCardIndex}
+                      />
+                    ) : (
+                      <DailyCards
+                        dailyForecast={dailyForecast}
+                        isDarkMode={isDarkMode}
+                        textMuted={textMuted}
+                        headerText={headerText}
+                        FAO_BLUE={FAO_BLUE}
+                        mobile
+                        selectedIndex={selectedCardIndex}
+                        onSelectCard={setSelectedCardIndex}
+                      />
+                    )}
+                  </div>
+
+                  {/* Weather Trend chart */}
+                  <div className={`pt-3 border-t ${borderColor}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3
+                        className={`text-sm font-semibold flex items-center gap-1.5 ${headerText}`}
+                      >
+                        <TrendingUp className="w-4 h-4" style={{ color: FAO_BLUE }} />
+                        Weather Trend
+                      </h3>
+                      <div className="flex gap-1">
+                        {(["temp", "rain", "humidity", "wind"] as const).map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => setChartMetric(m)}
+                            className={`text-xs px-1.5 py-0.5 rounded transition-all ${
+                              chartMetric === m ? "font-semibold text-white" : textMuted
+                            }`}
+                            style={{
+                              backgroundColor: chartMetric === m ? FAO_BLUE : "transparent",
+                            }}
+                          >
+                            {m === "temp" ? "°C" : m === "rain" ? "mm" : m === "wind" ? "km/h" : "%"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className={`text-[10px] ${textMuted} mb-2`}>
+                      {activeTab === "nowcast" ? "Hourly" : "7-Day"} · {statsLabel}
+                    </p>
+                    <div className="h-36">
+                      <WeatherTrendChart
+                        hourlyForecast={hourlyForecast}
+                        isDarkMode={isDarkMode}
+                        gradientId="tempFillMobileSheet"
+                        height="100%"
+                        margin={{ top: 4, right: 4, left: -28, bottom: 0 }}
+                        fontSize={8}
+                        chartData={chartData}
+                        metric={chartMetric}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Filters */}
+                  <div className={`pt-3 border-t ${borderColor}`}>
+                    <h4 className={`text-xs font-semibold mb-3 ${headerText}`}>
+                      Filters
+                    </h4>
+                    <FilterContent
+                      selectedRegion={selectedRegion}
+                      setSelectedRegion={setSelectedRegion}
+                      selectedParameter={selectedParameter}
+                      setSelectedParameter={setSelectedParameter}
+                      isDarkMode={isDarkMode}
+                      textMuted={textMuted}
+                      textSecondary={textSecondary}
+                      borderColor={borderColor}
+                      weatherData={weatherData}
+                      dateRange={dateRange}
+                      setDateRange={setDateRange}
+                      district_list={district_list}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Footer */}
-        <footer className={`mt-6 pt-4 border-t ${borderColor}`}>
+        {/* Footer — desktop only */}
+        <footer className={`hidden lg:block mt-6 pt-4 border-t ${borderColor}`}>
           <div
             className={`flex flex-col md:flex-row items-center justify-between text-xs ${textMuted} gap-1`}
           >
@@ -1407,6 +1482,7 @@ export default function WeatherForecastPage({
       <style>{`
         @keyframes drift    { from { transform: translateX(-100%); } to { transform: translateX(100vw); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp  { from { transform: translateY(100%); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
         .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
       `}</style>
     </div>
