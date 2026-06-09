@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Cloud,
- 
   CloudRain,
-
   Wind,
   Droplets,
   Thermometer,
@@ -60,7 +58,9 @@ const _shownModals = new Set<string>();
 
 // ── District centroid from geoData ────────────────────────────────────────────
 
-function getDistrictCentroid(districtName: string): { lat: number; lng: number } | null {
+function getDistrictCentroid(
+  districtName: string,
+): { lat: number; lng: number } | null {
   if (!geoData || !(geoData as any).features) return null;
   const name = districtName.trim().toLowerCase();
   const feature = (geoData as any).features.find(
@@ -95,7 +95,10 @@ interface OmDailyPoint {
   humidity: number;
 }
 
-async function fetchOmDailyForecast(lat: number, lng: number): Promise<OmDailyPoint[]> {
+async function fetchOmDailyForecast(
+  lat: number,
+  lng: number,
+): Promise<OmDailyPoint[]> {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lng));
@@ -110,8 +113,21 @@ async function fetchOmDailyForecast(lat: number, lng: number): Promise<OmDailyPo
   if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
   const json = await res.json();
 
-  const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const MONTHS_SHORT = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const dates: string[] = json.daily?.time ?? [];
   const temps: number[] = json.daily?.temperature_2m_max ?? [];
   const rains: number[] = json.daily?.precipitation_sum ?? [];
@@ -140,7 +156,10 @@ interface OmHourlyPoint {
   humidity: number;
 }
 
-async function fetchOmHourlyForecast(lat: number, lng: number): Promise<OmHourlyPoint[]> {
+async function fetchOmHourlyForecast(
+  lat: number,
+  lng: number,
+): Promise<OmHourlyPoint[]> {
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lng));
@@ -227,7 +246,12 @@ const WeatherTrendChart = ({
   chartData?: any[];
   metric?: "temp" | "rain" | "wind" | "humidity";
 }) => {
-  const dataToDisplay = (chartData && chartData.length >= 2) ? chartData : (hourlyForecast?.length >= 2 ? hourlyForecast : null);
+  const dataToDisplay =
+    chartData && chartData.length >= 2
+      ? chartData
+      : hourlyForecast?.length >= 2
+        ? hourlyForecast
+        : null;
   if (!dataToDisplay || dataToDisplay.length < 2) {
     return (
       <EmptyState
@@ -243,7 +267,12 @@ const WeatherTrendChart = ({
     temp: { label: "Temperature", unit: "°C", color: FAO_BLUE, key: "temp" },
     rain: { label: "Rainfall", unit: "mm", color: "#3b82f6", key: "rain" },
     wind: { label: "Wind Speed", unit: "km/h", color: "#f97316", key: "wind" },
-    humidity: { label: "Humidity", unit: "%", color: "#22c55e", key: "humidity" },
+    humidity: {
+      label: "Humidity",
+      unit: "%",
+      color: "#22c55e",
+      key: "humidity",
+    },
   };
 
   const config = metricConfig[metric] ?? metricConfig.temp;
@@ -251,7 +280,7 @@ const WeatherTrendChart = ({
   // Detect whether we're showing hourly (time labels like "10:00 AM") or
   // daily (date labels like "Tue Jun 3"). Hourly labels need thinning + rotation
   // to prevent the "crumpled" look; daily labels keep the two-line renderer.
-  const firstLabel: string = (dataToDisplay[0]?.label ?? "");
+  const firstLabel: string = dataToDisplay[0]?.label ?? "";
   const isHourly = /AM|PM/i.test(firstLabel);
 
   // For hourly data show every 3rd tick so labels have breathing room.
@@ -299,12 +328,14 @@ const WeatherTrendChart = ({
 
             // Two-line renderer for daily labels e.g. "Tue Jun 3"
             const parts = label.split(" ");
-            const day  = parts[0] ?? "";
+            const day = parts[0] ?? "";
             const date = parts.slice(1).join(" ");
             return (
               <g transform={`translate(${x},${y})`}>
                 <text
-                  x={0} y={0} dy={10}
+                  x={0}
+                  y={0}
+                  dy={10}
                   textAnchor="middle"
                   fill={isDarkMode ? "#94a3b8" : "#64748b"}
                   fontSize={fontSize + 1}
@@ -313,7 +344,9 @@ const WeatherTrendChart = ({
                   {day}
                 </text>
                 <text
-                  x={0} y={0} dy={22}
+                  x={0}
+                  y={0}
+                  dy={22}
                   textAnchor="middle"
                   fill={isDarkMode ? "#64748b" : "#94a3b8"}
                   fontSize={fontSize - 1}
@@ -374,7 +407,10 @@ const ForecastModelModal = ({
 
   const cardStyle: React.CSSProperties = isDarkMode
     ? { backgroundColor: isIcon ? "#0d1f3c" : "#0d2218" }
-    : { backgroundColor: "#ffffff", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" };
+    : {
+        backgroundColor: "#ffffff",
+        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+      };
 
   const textColor = isDarkMode ? "#ffffff" : "#0f172a";
   const subtitleColor = isDarkMode ? "#94a3b8" : "#64748b";
@@ -641,8 +677,8 @@ export default function WeatherForecastPage({
   const { data: district_list = [] } = useQuery<district[]>({
     queryKey: ["districts"],
     queryFn: DistrictsAPI.getAll,
-    staleTime: 10 * 60 * 1000,  // districts don't change — cache for 10 min
-    gcTime: 30 * 60 * 1000,     // keep in memory for 30 min
+    staleTime: 10 * 60 * 1000, // districts don't change — cache for 10 min
+    gcTime: 30 * 60 * 1000, // keep in memory for 30 min
   });
 
   const {
@@ -656,10 +692,14 @@ export default function WeatherForecastPage({
     setSliderhourIndexValue,
   } = useAppStore((state) => state);
 
-  const [activeTab, setActiveTabState] = useState<"nowcast" | "forecast">("nowcast");
+  const [activeTab, setActiveTabState] = useState<"nowcast" | "forecast">(
+    "nowcast",
+  );
   const [selectedRegion, setSelectedRegion] = useState("All Regions");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [modelInfoModal, setModelInfoModal] = useState<null | "icon" | "gfs">(null);
+  const [modelInfoModal, setModelInfoModal] = useState<null | "icon" | "gfs">(
+    null,
+  );
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [forecastData, setForecastData] = useState<ForecastPerHour | null>(
     null,
@@ -669,9 +709,9 @@ export default function WeatherForecastPage({
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(
     null,
   );
-  const [chartMetric, setChartMetric] = useState<"temp" | "rain" | "wind" | "humidity">(
-    "temp",
-  );
+  const [chartMetric, setChartMetric] = useState<
+    "temp" | "rain" | "wind" | "humidity"
+  >("temp");
   const [omDailyForecast, setOmDailyForecast] = useState<OmDailyPoint[]>([]);
   const [omHourlyForecast, setOmHourlyForecast] = useState<OmHourlyPoint[]>([]);
 
@@ -692,7 +732,7 @@ export default function WeatherForecastPage({
       _shownModals.add("icon");
       setModelInfoModal("icon");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Live map hover state — district name + sampled value from Open-Meteo ─────
@@ -747,13 +787,15 @@ export default function WeatherForecastPage({
 
   // Sync chart metric when the parameter filter changes (one-way: filter → chart)
   useEffect(() => {
-    const paramToMetric: Record<string, "temp" | "rain" | "wind" | "humidity"> = {
-      temperature: "temp",
-      rainfall: "rain",
-      wind: "wind",
-      humidity: "humidity",
-    };
-    const mapped = paramToMetric[selectedParameter?.toLowerCase() ?? "temperature"];
+    const paramToMetric: Record<string, "temp" | "rain" | "wind" | "humidity"> =
+      {
+        temperature: "temp",
+        rainfall: "rain",
+        wind: "wind",
+        humidity: "humidity",
+      };
+    const mapped =
+      paramToMetric[selectedParameter?.toLowerCase() ?? "temperature"];
     if (mapped) setChartMetric(mapped);
   }, [selectedParameter]);
 
@@ -775,10 +817,8 @@ export default function WeatherForecastPage({
   useEffect(() => {
     let cancelled = false;
     const districtName = selectedDistrictId?.name ?? kampala?.name ?? "";
-    const centroid =
-      getDistrictCentroid(districtName) ??
-      getDistrictCentroid("Kampala") ??
-      { lat: 1.3733, lng: 32.2903 };
+    const centroid = getDistrictCentroid(districtName) ??
+      getDistrictCentroid("Kampala") ?? { lat: 1.3733, lng: 32.2903 };
     fetchOmDailyForecast(centroid.lat, centroid.lng)
       .then((data) => {
         if (!cancelled) setOmDailyForecast(data);
@@ -796,10 +836,8 @@ export default function WeatherForecastPage({
     if (activeTab !== "nowcast") return;
     let cancelled = false;
     const districtName = selectedDistrictId?.name ?? kampala?.name ?? "";
-    const centroid =
-      getDistrictCentroid(districtName) ??
-      getDistrictCentroid("Kampala") ??
-      { lat: 1.3733, lng: 32.2903 };
+    const centroid = getDistrictCentroid(districtName) ??
+      getDistrictCentroid("Kampala") ?? { lat: 1.3733, lng: 32.2903 };
     fetchOmHourlyForecast(centroid.lat, centroid.lng)
       .then((data) => {
         if (!cancelled) setOmHourlyForecast(data);
@@ -826,7 +864,9 @@ export default function WeatherForecastPage({
         ]);
         setWeatherData((dashboard ?? null) as WeatherData | null);
         setForecastData((hourlyForecast ?? null) as ForecastPerHour | null);
-        setDailyForecast((dailyForecast ?? null) as DailyForecastResponse | null);
+        setDailyForecast(
+          (dailyForecast ?? null) as DailyForecastResponse | null,
+        );
       } catch (err) {
         console.error("Failed to fetch weather data:", err);
       }
@@ -851,9 +891,6 @@ export default function WeatherForecastPage({
   const dailyForecast = dailyForecasts?.daily?.length
     ? normaliseDaily(dailyForecasts.daily).slice(0, 20)
     : [];
-
- 
-
 
   // Get chart data based on active tab, selected card, metric, and date filters
   const getChartData = () => {
@@ -892,9 +929,7 @@ export default function WeatherForecastPage({
             })
           : h.time;
         // Match this hour to an OM hourly entry by ISO time prefix (YYYY-MM-DDTHH)
-        const rawTimePrefix = h.rawTime
-          ? h.rawTime.slice(0, 13)
-          : null;
+        const rawTimePrefix = h.rawTime ? h.rawTime.slice(0, 13) : null;
         const omMatch = rawTimePrefix
           ? omHourlyForecast.find((o) => o.time.slice(0, 13) === rawTimePrefix)
           : null;
@@ -932,7 +967,8 @@ export default function WeatherForecastPage({
 
   const rawChartData = getChartData();
   // Pass undefined (not []) when empty so the chart component can fall back gracefully
-  const chartData = rawChartData && rawChartData.length >= 2 ? rawChartData : undefined;
+  const chartData =
+    rawChartData && rawChartData.length >= 2 ? rawChartData : undefined;
 
   // Trigger chart update when filters or parameter changes
   useEffect(() => {
@@ -944,7 +980,9 @@ export default function WeatherForecastPage({
   // We fetch from the dashboard API whenever statsId changes (district switch).
   // This is kept separate from the existing weatherData state so we can show
   // a loading skeleton on the cards without blanking the rest of the page.
-  const [dashboardData, setDashboardData] = useState<WeatherData | null>(weatherData);
+  const [dashboardData, setDashboardData] = useState<WeatherData | null>(
+    weatherData,
+  );
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const dashboardFetchId = useRef(0); // cancel stale requests
@@ -999,7 +1037,9 @@ export default function WeatherForecastPage({
 
   // Live value override from map hover — shown in place of the API value
   // when the user hovers a district on the map with the matching parameter active.
-  const liveHoverOverride = (statParam: keyof typeof STAT_COLOR): string | null => {
+  const liveHoverOverride = (
+    statParam: keyof typeof STAT_COLOR,
+  ): string | null => {
     if (!mapHoverDistrict || mapHoverValue == null) return null;
     if (paramToStatKey[activeParam] !== statParam) return null;
     return `${mapHoverValue}${mapHoverUnit}`;
@@ -1008,23 +1048,23 @@ export default function WeatherForecastPage({
   // ── API field mapping ─────────────────────────────────────────────────────────
   // dashboardData mirrors the WeatherData interface which maps exactly to the
   // fields returned by /api/v1/weather/dashboard/?district_id=N
-  const apiTemp        = dashboardData?.temperature        ?? 0;
-  const apiTempDelta   = dashboardData?.temperature_delta  ?? 0;
-  const apiRain        = dashboardData?.rainfall_24h       ?? 0;
-  const apiRainDelta   = dashboardData?.rainfall_24h_delta ?? 0;
-  const apiHumidity    = dashboardData?.humidity           ?? 0;
-  const apiHumDelta    = dashboardData?.humidity_delta     ?? 0;
-  const apiWind        = dashboardData?.wind_speed         ?? 0;
-  const apiWindDelta   = dashboardData?.wind_speed_delta   ?? 0;
-  const apiFeelsLike   = dashboardData?.feels_like         ?? 0;
-  const apiDewPoint    = dashboardData?.dew_point          ?? 0;
-  const apiWindDir     = dashboardData?.wind_direction_label ?? "—";
+  const apiTemp = dashboardData?.temperature ?? 0;
+  const apiTempDelta = dashboardData?.temperature_delta ?? 0;
+  const apiRain = dashboardData?.rainfall_24h ?? 0;
+  const apiRainDelta = dashboardData?.rainfall_24h_delta ?? 0;
+  const apiHumidity = dashboardData?.humidity ?? 0;
+  const apiHumDelta = dashboardData?.humidity_delta ?? 0;
+  const apiWind = dashboardData?.wind_speed ?? 0;
+  const apiWindDelta = dashboardData?.wind_speed_delta ?? 0;
+  const apiFeelsLike = dashboardData?.feels_like ?? 0;
+  const apiDewPoint = dashboardData?.dew_point ?? 0;
+  const apiWindDir = dashboardData?.wind_direction_label ?? "—";
   const apiWeatherDesc = dashboardData?.weather_description ?? "—";
-  const apiFetchedAt   = dashboardData?.fetched_at ?? "";
-  const apiAvgTemp     = dashboardData?.avg_temp   ?? 0;
-  const apiMaxTemp     = dashboardData?.max_temp   ?? 0;
-  const apiMinTemp     = dashboardData?.min_temp   ?? 0;
-  const apiTotalRain   = dashboardData?.total_rain ?? 0;
+  const apiFetchedAt = dashboardData?.fetched_at ?? "";
+  const apiAvgTemp = dashboardData?.avg_temp ?? 0;
+  const apiMaxTemp = dashboardData?.max_temp ?? 0;
+  const apiMinTemp = dashboardData?.min_temp ?? 0;
+  const apiTotalRain = dashboardData?.total_rain ?? 0;
 
   // Helper: format a delta with sign
   const fmt = (v: number | null, suffix: string) =>
@@ -1063,10 +1103,10 @@ export default function WeatherForecastPage({
       change: fmt(apiRainDelta, " mm"),
       trend: apiRainDelta > 0 ? "up" : apiRainDelta < 0 ? "down" : "neutral",
       thresholds: [
-        { value: 5,   color: "#e0f2fe", label: "Dry"      },
-        { value: 25,  color: "#38bdf8", label: "Light"    },
-        { value: 50,  color: "#0284c7", label: "Moderate" },
-        { value: 100, color: "#1e3a8a", label: "Heavy"    },
+        { value: 5, color: "#e0f2fe", label: "Dry" },
+        { value: 25, color: "#38bdf8", label: "Light" },
+        { value: 50, color: "#0284c7", label: "Moderate" },
+        { value: 100, color: "#1e3a8a", label: "Heavy" },
       ],
     },
     {
@@ -1082,10 +1122,10 @@ export default function WeatherForecastPage({
       change: fmt(apiHumDelta, "%"),
       trend: apiHumDelta > 0 ? "up" : apiHumDelta < 0 ? "down" : "neutral",
       thresholds: [
-        { value: 30, color: "#dc2626", label: "Dry"    },
-        { value: 50, color: "#fbbf24", label: "Low"    },
+        { value: 30, color: "#dc2626", label: "Dry" },
+        { value: 50, color: "#fbbf24", label: "Low" },
         { value: 70, color: "#22c55e", label: "Normal" },
-        { value: 85, color: "#3b82f6", label: "High"   },
+        { value: 85, color: "#3b82f6", label: "High" },
       ],
     },
     {
@@ -1101,9 +1141,9 @@ export default function WeatherForecastPage({
       change: fmt(apiWindDelta, " km/h"),
       trend: apiWindDelta > 0 ? "up" : apiWindDelta < 0 ? "down" : "neutral",
       thresholds: [
-        { value: 10, color: "#22c55e", label: "Calm"   },
+        { value: 10, color: "#22c55e", label: "Calm" },
         { value: 25, color: "#3b82f6", label: "Breezy" },
-        { value: 40, color: "#f97316", label: "Windy"  },
+        { value: 40, color: "#f97316", label: "Windy" },
         { value: 60, color: "#dc2626", label: "Strong" },
       ],
     },
@@ -1192,7 +1232,11 @@ export default function WeatherForecastPage({
           <div className="flex items-center gap-2">
             {apiFetchedAt && !dashboardLoading && (
               <span className={`text-[10px] ${textMuted} hidden sm:block`}>
-                Updated {new Date(apiFetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                Updated{" "}
+                {new Date(apiFetchedAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
             )}
             <button
@@ -1231,7 +1275,11 @@ export default function WeatherForecastPage({
                 {dashboardLoading && (
                   <div
                     className="absolute inset-0 z-10 rounded-lg md:rounded-xl overflow-hidden"
-                    style={{ backgroundColor: isDarkMode ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.6)" }}
+                    style={{
+                      backgroundColor: isDarkMode
+                        ? "rgba(15,23,42,0.55)"
+                        : "rgba(255,255,255,0.6)",
+                    }}
                   >
                     <div
                       className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite]"
@@ -1244,7 +1292,9 @@ export default function WeatherForecastPage({
 
                 <div className="flex items-start justify-between mb-1">
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[10px] md:text-xs ${textMuted} mb-0.5 flex items-center gap-1`}>
+                    <p
+                      className={`text-[10px] md:text-xs ${textMuted} mb-0.5 flex items-center gap-1`}
+                    >
                       {card.label}
                       {liveVal && mapHoverDistrict && (
                         <span
@@ -1285,7 +1335,8 @@ export default function WeatherForecastPage({
                   {getTrendIcon(card.trend)}
                   <span style={{ color: card.color }}>{card.change}</span>
                   {card.apiNote && (
-                    <span className={`ml-auto text-[9px] truncate max-w-[80px] ${textMuted}`}
+                    <span
+                      className={`ml-auto text-[9px] truncate max-w-[80px] ${textMuted}`}
                       title={card.apiNote}
                     >
                       {card.apiNote}
@@ -1374,7 +1425,14 @@ export default function WeatherForecastPage({
                         style={{ color: FAO_BLUE }}
                       />
                       <h3 className={`text-sm font-semibold ${headerText}`}>
-                        {selectedParameter === "rainfall" ? "Precipitation" : selectedParameter === "wind" ? "Wind Speed" : selectedParameter === "humidity" ? "Humidity" : "Temperature"} Forecast
+                        {selectedParameter === "rainfall"
+                          ? "Precipitation"
+                          : selectedParameter === "wind"
+                            ? "Wind Speed"
+                            : selectedParameter === "humidity"
+                              ? "Humidity"
+                              : "Temperature"}{" "}
+                        Forecast
                       </h3>
                     </div>
 
@@ -1391,8 +1449,14 @@ export default function WeatherForecastPage({
                           onClick={() => setActiveTab(tab)}
                           className="px-2.5 py-0.5 text-[10px] font-semibold transition-all whitespace-nowrap"
                           style={{
-                            backgroundColor: activeTab === tab ? FAO_BLUE : "transparent",
-                            color: activeTab === tab ? "#fff" : isDarkMode ? "#94a3b8" : "#64748b",
+                            backgroundColor:
+                              activeTab === tab ? FAO_BLUE : "transparent",
+                            color:
+                              activeTab === tab
+                                ? "#fff"
+                                : isDarkMode
+                                  ? "#94a3b8"
+                                  : "#64748b",
                           }}
                         >
                           {tab === "nowcast" ? "Hourly" : "7-Day"}
@@ -1503,33 +1567,38 @@ export default function WeatherForecastPage({
                       Weather Trend
                     </h3>
                     <div className="flex gap-1">
-                      {(["temp", "rain", "humidity", "wind"] as const).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => handleSetChartMetric(m)}
-                          className={`text-xs px-2 py-0.5 rounded transition-all ${
-                            chartMetric === m
-                              ? "font-semibold text-white"
-                              : textMuted
-                          }`}
-                          style={{
-                            backgroundColor:
-                              chartMetric === m ? FAO_BLUE : "transparent",
-                          }}
-                        >
-                          {m === "temp"
-                            ? "Temp"
-                            : m === "rain"
-                              ? "Rain"
-                              : m === "wind"
-                                ? "Wind"
-                                : "Humid"}
-                        </button>
-                      ))}
+                      {(["temp", "rain", "humidity", "wind"] as const).map(
+                        (m) => (
+                          <button
+                            key={m}
+                            onClick={() => handleSetChartMetric(m)}
+                            className={`text-xs px-2 py-0.5 rounded transition-all ${
+                              chartMetric === m
+                                ? "font-semibold text-white"
+                                : textMuted
+                            }`}
+                            style={{
+                              backgroundColor:
+                                chartMetric === m ? FAO_BLUE : "transparent",
+                            }}
+                          >
+                            {m === "temp"
+                              ? "Temp"
+                              : m === "rain"
+                                ? "Rain"
+                                : m === "wind"
+                                  ? "Wind"
+                                  : "Humid"}
+                          </button>
+                        ),
+                      )}
                     </div>
                   </div>
                   <p className={`text-[10px] ${textMuted} mb-1 flex-shrink-0`}>
-                    {activeTab === "nowcast" ? "Hourly" : "7-Day"} · {statsLabel} · {selectedParameter.charAt(0).toUpperCase() + selectedParameter.slice(1)}
+                    {activeTab === "nowcast" ? "Hourly" : "7-Day"} ·{" "}
+                    {statsLabel} ·{" "}
+                    {selectedParameter.charAt(0).toUpperCase() +
+                      selectedParameter.slice(1)}
                   </p>
                   <div className="flex-1 min-h-0">
                     <WeatherTrendChart
@@ -1632,8 +1701,14 @@ export default function WeatherForecastPage({
                       onClick={() => setActiveTab(tab)}
                       className="px-2.5 py-0.5 text-[10px] font-semibold transition-all whitespace-nowrap"
                       style={{
-                        backgroundColor: activeTab === tab ? FAO_BLUE : "transparent",
-                        color: activeTab === tab ? "#fff" : isDarkMode ? "#94a3b8" : "#64748b",
+                        backgroundColor:
+                          activeTab === tab ? FAO_BLUE : "transparent",
+                        color:
+                          activeTab === tab
+                            ? "#fff"
+                            : isDarkMode
+                              ? "#94a3b8"
+                              : "#64748b",
                       }}
                     >
                       {tab === "nowcast" ? "Hourly" : "7-Day"}
@@ -1743,13 +1818,21 @@ export default function WeatherForecastPage({
                         chartMetric === m ? FAO_BLUE : "transparent",
                     }}
                   >
-                    {m === "temp" ? "°C" : m === "rain" ? "mm" : m === "wind" ? "km/h" : "%"}
+                    {m === "temp"
+                      ? "°C"
+                      : m === "rain"
+                        ? "mm"
+                        : m === "wind"
+                          ? "km/h"
+                          : "%"}
                   </button>
                 ))}
               </div>
             </div>
             <p className={`text-[10px] ${textMuted} mb-2`}>
-              {activeTab === "nowcast" ? "Hourly" : "7-Day"} · {statsLabel} · {selectedParameter.charAt(0).toUpperCase() + selectedParameter.slice(1)}
+              {activeTab === "nowcast" ? "Hourly" : "7-Day"} · {statsLabel} ·{" "}
+              {selectedParameter.charAt(0).toUpperCase() +
+                selectedParameter.slice(1)}
             </p>
             <div className="h-36">
               <WeatherTrendChart

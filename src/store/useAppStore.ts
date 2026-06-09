@@ -93,8 +93,22 @@ export interface AppStoreState {
   setForecastStep: (value: number | ((prev: number) => number)) => void;
 
   // Flood critical alerts — populated by FloodMonitoringPage, consumed by the bell
-  floodAlerts: Array<{ id: string; basinName: string; status: string; discharge: number; population: number }>;
-  setFloodAlerts: (alerts: Array<{ id: string; basinName: string; status: string; discharge: number; population: number }>) => void;
+  floodAlerts: Array<{
+    id: string;
+    basinName: string;
+    status: string;
+    discharge: number;
+    population: number;
+  }>;
+  setFloodAlerts: (
+    alerts: Array<{
+      id: string;
+      basinName: string;
+      status: string;
+      discharge: number;
+      population: number;
+    }>,
+  ) => void;
 
   // Chart metric from map interaction
   mapInteractionMetric: "temp" | "rain" | "wind" | null;
@@ -116,11 +130,7 @@ export const useAppStore = create<AppStoreState>()(
       setCurrentPage: (page) => set({ currentPage: page }),
 
       // Filters
-      selectedDistrictId: {
-    "id": 5,
-    "name": "Abim",
-    "region": "Northern"
-},
+      selectedDistrictId: undefined,
       setSelectedDistrictId: (id) => set({ selectedDistrictId: id }),
       selectedRegionId: undefined,
       setSelectedRegionId: (id) => set({ selectedRegionId: id }),

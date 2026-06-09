@@ -33,6 +33,8 @@ import {
   omProtocol,
 } from "@openmeteo/weather-map-layer";
 import type { district, UgandaBoundaryMapProps } from "@/types/data_types";
+import { useQuery } from "@tanstack/react-query";
+import { DistrictsAPI } from "@/services/api";
 
 const FAO_BLUE = "#318DDE";
 
@@ -71,7 +73,10 @@ function prefetchMetadata(domain: string): Promise<any> {
       _metadataCacheTime.set(domain, Date.now());
       return data;
     })
-    .catch((err) => { _metadataPromise.delete(domain); throw err; });
+    .catch((err) => {
+      _metadataPromise.delete(domain);
+      throw err;
+    });
   _metadataPromise.set(domain, p);
   return p;
 }
@@ -81,8 +86,14 @@ function prefetchUgandaGeoJson(): Promise<any> {
   if (_ugandaGeoJsonPromise) return _ugandaGeoJsonPromise;
   _ugandaGeoJsonPromise = fetch(UGANDA_GEOJSON_URL)
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-    .then((data) => { _ugandaGeoJsonCache = data; return data; })
-    .catch((err) => { _ugandaGeoJsonPromise = null; throw err; });
+    .then((data) => {
+      _ugandaGeoJsonCache = data;
+      return data;
+    })
+    .catch((err) => {
+      _ugandaGeoJsonPromise = null;
+      throw err;
+    });
   return _ugandaGeoJsonPromise;
 }
 
@@ -146,8 +157,7 @@ function pointInRing(lat: number, lng: number, ring: number[][]) {
     const [x1, y1] = ring[index];
     const [x2, y2] = ring[previous];
     const intersects =
-      y1 > lat !== y2 > lat &&
-      lng < ((x2 - x1) * (lat - y1)) / (y2 - y1) + x1;
+      y1 > lat !== y2 > lat && lng < ((x2 - x1) * (lat - y1)) / (y2 - y1) + x1;
     if (intersects) inside = !inside;
   }
   return inside;
@@ -333,7 +343,7 @@ export default function WeatherForcastMap({
   getTheBounds,
   zoom = 6.8,
   minZoom = 6.8,
-  district_list,
+  // district_list,
   onHoverChange,
   onModelClick,
 }: UgandaBoundaryMapProps) {
@@ -343,8 +353,15 @@ export default function WeatherForcastMap({
     sliderhourIndexValue,
     setSelectedDistrictId,
     layerMode,
-    setMapInteractionMetric,
+    // setMapInteractionMetric,
   } = useAppStore((state) => state);
+
+  const { data: district_list = [] } = useQuery<district[]>({
+    queryKey: ["districtss"],
+    queryFn: DistrictsAPI.getAll,
+    staleTime: 10 * 60 * 1000, // districts don't change — cache for 10 min
+    gcTime: 30 * 60 * 1000, // keep in memory for 30 min
+  });
 
   // Derived Open-Meteo selection
   const domain = layerMode === "forecast" ? DOMAIN_FORECAST : DOMAIN_NOWCAST;
@@ -384,6 +401,16 @@ export default function WeatherForcastMap({
 
   // Keep the latest variable available inside long-lived map event handlers
   variableRef.current = variable;
+
+  // Keep latest district list + setter available in stale Leaflet closures
+  const uniqueRef = useRef(unique);
+  const setSelectedDistrictIdRef = useRef(setSelectedDistrictId);
+  useEffect(() => {
+    uniqueRef.current = unique;
+  }, [unique]);
+  useEffect(() => {
+    setSelectedDistrictIdRef.current = setSelectedDistrictId;
+  }, [setSelectedDistrictId]);
 
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [isRasterLoading, setRasterIsLoading] = useState(true);
@@ -527,41 +554,46 @@ export default function WeatherForcastMap({
     updateLabelVisibility();
 
     // ── Click → highlight clicked district (ray-casting) ──────────────────
-    weatherforcastMapRef.current.on("click", (ev: L.LeafletMouseEvent) => {
-      const paramMap: Record<string, "temp" | "rain" | "wind"> = {
-        temperature: "temp",
-        rainfall: "rain",
-        precipitation: "rain",
-        wind: "wind",
-      };
-      const param = selectedParameter?.toLowerCase() || "temperature";
-      setMapInteractionMetric(paramMap[param] || "temp");
 
-      let clickedFeature: any = null;
-      weatherforcastdistrictLayerRef.current?.eachLayer((layer: any) => {
-        if (clickedFeature) return;
-        if (isPointInPolygon(ev.latlng, layer.getLatLngs())) {
-          clickedFeature = layer.feature;
-        }
-      });
-      if (!clickedFeature) return;
+    weatherforcastMapRef.current.on(
+      "click",
+      function (ev: L.LeafletMouseEvent) {
+        // ── Ray-cast against district polygons (same technique as the commented
+        //    handler above, but reads district list from a ref so it's never stale)
+        let clickedFeature: any = null;
+        weatherforcastdistrictLayerRef.current?.eachLayer((layer: any) => {
+          if (clickedFeature) return;
+          if (isPointInPolygon(ev.latlng, layer.getLatLngs())) {
+            clickedFeature = layer.feature;
+          }
+        });
 
-      if (setSelectedDistrictId) {
+        if (!clickedFeature) return;
+
+        // Update the global store with the matched district object
         const clickedName: string =
-          clickedFeature.properties.name?.trim().toLowerCase() ?? "";
-        const filtered = unique.find(
-          (item) => item?.name?.trim().toLowerCase() === clickedName,
-        );
-        setSelectedDistrictId(filtered);
-      }
+          clickedFeature.properties?.name?.trim().toLowerCase() ?? "";
+        const matched: any =
+          uniqueRef.current.find(
+            (d) => d.name.trim().toLowerCase() === clickedName,
+          ) ?? null;
+        setSelectedDistrictIdRef.current(matched);
+        console.log("Selected district:", matched);
 
-      clearLayer(weatherforcastMapRef.current!, weatherforcastboundaryLayerRef);
-      weatherforcastboundaryLayerRef.current = L.geoJSON(clickedFeature, {
-        style: { color: "#308DE0", weight: 4, fill: false },
-      })
-        .addTo(weatherforcastMapRef.current!)
-        .bringToFront();
-    });
+        // Draw the blue boundary highlight
+        if (weatherforcastboundaryLayerRef.current) {
+          weatherforcastMapRef.current!.removeLayer(
+            weatherforcastboundaryLayerRef.current,
+          );
+          weatherforcastboundaryLayerRef.current = null;
+        }
+        weatherforcastboundaryLayerRef.current = L.geoJSON(clickedFeature, {
+          style: { color: "#308DE0", weight: 4, fill: false },
+        })
+          .addTo(weatherforcastMapRef.current!)
+          .bringToFront();
+      },
+    );
 
     // ── Water / lake overlay ──────────────────────────────────────────────
     clearLayer(weatherforcastMapRef.current, weatherforcastriverLayerRef);
@@ -588,54 +620,51 @@ export default function WeatherForcastMap({
     }
 
     // ── Hover: district detection + value sampling ────────────────────────
-    weatherforcastMapRef.current.on(
-      "mousemove",
-      (ev: L.LeafletMouseEvent) => {
-        setMousePos({ x: ev.containerPoint.x, y: ev.containerPoint.y });
-        let found: string | null = null;
-        weatherforcastdistrictLayerRef.current?.eachLayer((layer: any) => {
-          if (found) return;
-          if (isPointInPolygon(ev.latlng, layer.getLatLngs()))
-            found = layer.feature?.properties?.name ?? null;
-        });
-        setHoveredDistrictName(found);
+    weatherforcastMapRef.current.on("mousemove", (ev: L.LeafletMouseEvent) => {
+      setMousePos({ x: ev.containerPoint.x, y: ev.containerPoint.y });
+      let found: string | null = null;
+      weatherforcastdistrictLayerRef.current?.eachLayer((layer: any) => {
+        if (found) return;
+        if (isPointInPolygon(ev.latlng, layer.getLatLngs()))
+          found = layer.feature?.properties?.name ?? null;
+      });
+      setHoveredDistrictName(found);
 
-        const omUrl = currentOmUrlRef.current;
-        if (!found || !omUrl) {
+      const omUrl = currentOmUrlRef.current;
+      if (!found || !omUrl) {
+        setHoverValue(null);
+        setHoverDirection(null);
+        setHoverLoading(false);
+        return;
+      }
+
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+      const requestId = hoverReqRef.current + 1;
+      hoverReqRef.current = requestId;
+      setHoverLoading(true);
+      const { lat, lng } = ev.latlng;
+      hoverTimerRef.current = setTimeout(async () => {
+        try {
+          const result = await getValueFromLatLong(lat, lng, omUrl);
+          if (hoverReqRef.current !== requestId) return;
+          setHoverValue(
+            Number.isFinite(result?.value) ? Number(result.value) : null,
+          );
+          const isWind = variableRef.current.startsWith("wind_");
+          setHoverDirection(
+            isWind && Number.isFinite(result?.direction)
+              ? Number(result.direction)
+              : null,
+          );
+          setHoverLoading(false);
+        } catch {
+          if (hoverReqRef.current !== requestId) return;
           setHoverValue(null);
           setHoverDirection(null);
           setHoverLoading(false);
-          return;
         }
-
-        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-        const requestId = hoverReqRef.current + 1;
-        hoverReqRef.current = requestId;
-        setHoverLoading(true);
-        const { lat, lng } = ev.latlng;
-        hoverTimerRef.current = setTimeout(async () => {
-          try {
-            const result = await getValueFromLatLong(lat, lng, omUrl);
-            if (hoverReqRef.current !== requestId) return;
-            setHoverValue(
-              Number.isFinite(result?.value) ? Number(result.value) : null,
-            );
-            const isWind = variableRef.current.startsWith("wind_");
-            setHoverDirection(
-              isWind && Number.isFinite(result?.direction)
-                ? Number(result.direction)
-                : null,
-            );
-            setHoverLoading(false);
-          } catch {
-            if (hoverReqRef.current !== requestId) return;
-            setHoverValue(null);
-            setHoverDirection(null);
-            setHoverLoading(false);
-          }
-        }, 120);
-      },
-    );
+      }, 120);
+    });
     weatherforcastMapRef.current.on("mouseout", () => {
       setHoveredDistrictName(null);
       setHoverValue(null);
@@ -727,9 +756,15 @@ export default function WeatherForcastMap({
     }
     setRasterIsLoading(true);
     prefetchMetadata(domain)
-      .then((data) => { if (!cancelled) setMetadata(data); })
-      .catch(() => { if (!cancelled) setMetadata(null); });
-    return () => { cancelled = true; };
+      .then((data) => {
+        if (!cancelled) setMetadata(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMetadata(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [domain]);
 
   // ── Load / remove the Uganda clip outline ────────────────────────────────────
@@ -776,9 +811,13 @@ export default function WeatherForcastMap({
 
     prefetchUgandaGeoJson()
       .then(applyGeoJson)
-      .catch(() => { if (!cancelled) setClipRevision((c) => c + 1); });
+      .catch(() => {
+        if (!cancelled) setClipRevision((c) => c + 1);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [clipUganda, mapReady]);
 
   // ── Build & swap the Open-Meteo raster layer ─────────────────────────────────

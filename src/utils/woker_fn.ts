@@ -1,4 +1,4 @@
-import type { DailyEntry, HourlyForecast } from "@/types/data_types";
+import type { DailyEntry, district, HourlyForecast } from "@/types/data_types";
 import L from "leaflet";
 
 // Map weather_code → icon type
@@ -129,10 +129,7 @@ export interface LayerNameOptions {
  * parameter + date combination, or null if the combination is not available.
  */
 export function mapLayerName(opts: LayerNameOptions): string | null {
-  const {
-    parameter,
-    mode = "daily",
-  } = opts;
+  const { parameter, mode = "daily" } = opts;
 
   const param = parameter?.toLowerCase().trim();
 
@@ -582,12 +579,20 @@ export const isValidGeoJSON = (data: any): boolean =>
   Array.isArray(data.features) &&
   data.features.length > 0;
 
-
-  export const getMonthAndYear = (dateString: string) => {
+export const getMonthAndYear = (dateString: string) => {
   const date = new Date(dateString);
 
   const month = date.toLocaleString("default", { month: "long" });
   const year = date.getFullYear();
-  
+
   return { month, year };
+};
+
+export const getDistrictIdByName = (districts: district[], name: string) => {
+  console.log("district name ", districts);
+  return (
+    districts.find(
+      (district: any) => district.name.toLowerCase() === name.toLowerCase(),
+    ) ?? null
+  );
 };
