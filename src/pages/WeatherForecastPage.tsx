@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Cloud,
-  Sun,
+ 
   CloudRain,
-  CloudLightning,
+
   Wind,
   Droplets,
   Thermometer,
@@ -165,7 +165,7 @@ async function fetchOmHourlyForecast(lat: number, lng: number): Promise<OmHourly
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-import { getWeatherIcon, EmptyState } from "@/components/shared/weatherHelpers";
+import { EmptyState } from "@/components/shared/weatherHelpers";
 
 // ── Custom Tooltip for Metrics ────────────────────────────────────────────────
 
