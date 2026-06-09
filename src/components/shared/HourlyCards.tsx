@@ -1,4 +1,4 @@
-import { EmptyState, getWeatherIcon } from "@/pages/WeatherForecastPage";
+import { EmptyState, getWeatherIcon } from "@/components/shared/weatherHelpers";
 import { Cloud, Wind, Droplets } from "lucide-react";
 
 function HourlyCards({

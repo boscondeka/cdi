@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Cloud,
   Sun,
@@ -165,45 +165,7 @@ async function fetchOmHourlyForecast(lat: number, lng: number): Promise<OmHourly
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-export const getWeatherIcon = (type?: string, className = "w-8 h-8") => {
-  switch (type) {
-    case "sun":
-      return <Sun className={`${className} text-yellow-400`} />;
-    case "rain":
-      return <CloudRain className={`${className} text-blue-400`} />;
-    case "cloud":
-      return <Cloud className={`${className} text-slate-400`} />;
-    case "storm":
-      return <CloudLightning className={`${className} text-purple-400`} />;
-    default:
-      return <Sun className={`${className} text-yellow-400`} />;
-  }
-};
-
-export const EmptyState = ({
-  icon: Icon,
-  message,
-  isDarkMode,
-  className = "",
-}: {
-  icon: React.ElementType;
-  message: string;
-  isDarkMode: boolean;
-  className?: string;
-}) => (
-  <div
-    className={`flex flex-col items-center justify-center rounded-lg py-6 ${isDarkMode ? "bg-slate-700/20" : "bg-slate-100"} ${className}`}
-  >
-    <Icon
-      className={`w-6 h-6 mb-1 ${isDarkMode ? "text-slate-600" : "text-slate-300"}`}
-    />
-    <p
-      className={`text-[10px] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
-    >
-      {message}
-    </p>
-  </div>
-);
+import { getWeatherIcon, EmptyState } from "@/components/shared/weatherHelpers";
 
 // ── Custom Tooltip for Metrics ────────────────────────────────────────────────
 
@@ -286,6 +248,16 @@ const WeatherTrendChart = ({
 
   const config = metricConfig[metric] ?? metricConfig.temp;
 
+  // Detect whether we're showing hourly (time labels like "10:00 AM") or
+  // daily (date labels like "Tue Jun 3"). Hourly labels need thinning + rotation
+  // to prevent the "crumpled" look; daily labels keep the two-line renderer.
+  const firstLabel: string = (dataToDisplay[0]?.label ?? "");
+  const isHourly = /AM|PM/i.test(firstLabel);
+
+  // For hourly data show every 3rd tick so labels have breathing room.
+  // For daily data keep interval=0 (7 items always fit).
+  const tickInterval = isHourly ? 2 : 0;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={dataToDisplay} margin={margin}>
@@ -304,9 +276,30 @@ const WeatherTrendChart = ({
           dataKey="label"
           tick={(props: any) => {
             const { x, y, payload } = props;
-            // label is e.g. "Tue Jun 3" — split on first space to get day vs rest
-            const parts = (payload.value ?? "").split(" ");
-            const day = parts[0] ?? "";
+            const label: string = payload.value ?? "";
+
+            if (isHourly) {
+              // Single-line rotated tick for hourly labels e.g. "10:00 AM"
+              return (
+                <g transform={`translate(${x},${y})`}>
+                  <text
+                    x={0}
+                    y={0}
+                    dy={10}
+                    textAnchor="end"
+                    fill={isDarkMode ? "#94a3b8" : "#64748b"}
+                    fontSize={fontSize}
+                    transform="rotate(-40)"
+                  >
+                    {label}
+                  </text>
+                </g>
+              );
+            }
+
+            // Two-line renderer for daily labels e.g. "Tue Jun 3"
+            const parts = label.split(" ");
+            const day  = parts[0] ?? "";
             const date = parts.slice(1).join(" ");
             return (
               <g transform={`translate(${x},${y})`}>
@@ -332,8 +325,8 @@ const WeatherTrendChart = ({
           }}
           tickLine={false}
           axisLine={false}
-          interval={0}
-          height={36}
+          interval={tickInterval}
+          height={isHourly ? 44 : 36}
         />
         <YAxis
           domain={["auto", "auto"]}
@@ -947,6 +940,45 @@ export default function WeatherForecastPage({
     // The dependency array includes all filter-related variables
   }, [activeTab, selectedCardIndex, dateRange, selectedParameter, statsId]);
 
+  // ── Dashboard live-fetch per district ────────────────────────────────────────
+  // We fetch from the dashboard API whenever statsId changes (district switch).
+  // This is kept separate from the existing weatherData state so we can show
+  // a loading skeleton on the cards without blanking the rest of the page.
+  const [dashboardData, setDashboardData] = useState<WeatherData | null>(weatherData);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const dashboardFetchId = useRef(0); // cancel stale requests
+
+  const fetchDashboard = useCallback(async (districtId?: number) => {
+    const fetchId = ++dashboardFetchId.current;
+    setDashboardLoading(true);
+    setDashboardError(null);
+    try {
+      const data = await weatherAPI.getDashboard(districtId);
+      if (fetchId !== dashboardFetchId.current) return; // stale — discard
+      setDashboardData((data ?? null) as WeatherData | null);
+      // Keep parent weatherData in sync so FilterContent Quick Stats still works
+      setWeatherData((data ?? null) as WeatherData | null);
+    } catch (err) {
+      if (fetchId !== dashboardFetchId.current) return;
+      setDashboardError("Failed to load weather data");
+    } finally {
+      if (fetchId === dashboardFetchId.current) setDashboardLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch whenever the selected district changes
+  useEffect(() => {
+    if (statsId === undefined) return;
+    fetchDashboard(statsId);
+  }, [statsId, fetchDashboard]);
+
+  // Sync dashboardData → weatherData on mount (so cards show data immediately
+  // if weatherData was already populated by the existing fetch logic)
+  useEffect(() => {
+    if (weatherData && !dashboardData) setDashboardData(weatherData);
+  }, [weatherData]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Stat colours match Open-Meteo weather map color scale mid-range stops
   const STAT_COLOR = {
     temperature: "#f97316", // warm orange (35° stop)
@@ -973,22 +1005,44 @@ export default function WeatherForecastPage({
     return `${mapHoverValue}${mapHoverUnit}`;
   };
 
+  // ── API field mapping ─────────────────────────────────────────────────────────
+  // dashboardData mirrors the WeatherData interface which maps exactly to the
+  // fields returned by /api/v1/weather/dashboard/?district_id=N
+  const apiTemp        = dashboardData?.temperature        ?? 0;
+  const apiTempDelta   = dashboardData?.temperature_delta  ?? 0;
+  const apiRain        = dashboardData?.rainfall_24h       ?? 0;
+  const apiRainDelta   = dashboardData?.rainfall_24h_delta ?? 0;
+  const apiHumidity    = dashboardData?.humidity           ?? 0;
+  const apiHumDelta    = dashboardData?.humidity_delta     ?? 0;
+  const apiWind        = dashboardData?.wind_speed         ?? 0;
+  const apiWindDelta   = dashboardData?.wind_speed_delta   ?? 0;
+  const apiFeelsLike   = dashboardData?.feels_like         ?? 0;
+  const apiDewPoint    = dashboardData?.dew_point          ?? 0;
+  const apiWindDir     = dashboardData?.wind_direction_label ?? "—";
+  const apiWeatherDesc = dashboardData?.weather_description ?? "—";
+  const apiFetchedAt   = dashboardData?.fetched_at ?? "";
+  const apiAvgTemp     = dashboardData?.avg_temp   ?? 0;
+  const apiMaxTemp     = dashboardData?.max_temp   ?? 0;
+  const apiMinTemp     = dashboardData?.min_temp   ?? 0;
+  const apiTotalRain   = dashboardData?.total_rain ?? 0;
+
+  // Helper: format a delta with sign
+  const fmt = (v: number | null, suffix: string) =>
+    `${(v ?? 0) > 0 ? "+" : ""}${v ?? 0}${suffix}`;
+
   const statCards = [
     {
       label: "Temperature",
+      sublabel: `Feels like ${apiFeelsLike}°C`,
+      apiNote: `Avg ${apiAvgTemp}° · Max ${apiMaxTemp}° · Min ${apiMinTemp}°`,
       statKey: "temperature" as keyof typeof STAT_COLOR,
       icon: Thermometer,
       color: STAT_COLOR.temperature,
       min: 15,
       max: 40,
-      value: `${weatherData?.temperature ?? 0}°C`,
-      change: `${(weatherData?.temperature_delta ?? 0) > 0 ? "+" : ""}${weatherData?.temperature_delta ?? 0}°C`,
-      trend:
-        (weatherData?.temperature_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.temperature_delta ?? 0) < 0
-            ? "down"
-            : "neutral",
+      value: `${apiTemp}°C`,
+      change: fmt(apiTempDelta, "°C"),
+      trend: apiTempDelta > 0 ? "up" : apiTempDelta < 0 ? "down" : "neutral",
       thresholds: [
         { value: 20, color: "#3b82f6", label: "Cool" },
         { value: 28, color: "#22c55e", label: "Mild" },
@@ -997,68 +1051,59 @@ export default function WeatherForecastPage({
       ],
     },
     {
-      label: "Rainfall (Hourly)",
+      label: "Rainfall",
+      sublabel: `24 h · ${apiTotalRain} mm total`,
+      apiNote: `${apiWeatherDesc}`,
       statKey: "rainfall" as keyof typeof STAT_COLOR,
       icon: CloudRain,
       color: STAT_COLOR.rainfall,
       min: 0,
       max: 100,
-      value: `${weatherData?.rainfall_24h ?? 0} mm`,
-      change: `${(weatherData?.rainfall_24h_delta ?? 0) > 0 ? "+" : ""}${weatherData?.rainfall_24h_delta ?? 0} mm`,
-      trend:
-        (weatherData?.rainfall_24h_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.rainfall_24h_delta ?? 0) < 0
-            ? "down"
-            : "neutral",
+      value: `${apiRain} mm`,
+      change: fmt(apiRainDelta, " mm"),
+      trend: apiRainDelta > 0 ? "up" : apiRainDelta < 0 ? "down" : "neutral",
       thresholds: [
-        { value: 5, color: "#e0f2fe", label: "Dry" },
-        { value: 25, color: "#38bdf8", label: "Light" },
-        { value: 50, color: "#0284c7", label: "Moderate" },
-        { value: 100, color: "#1e3a8a", label: "Heavy" },
+        { value: 5,   color: "#e0f2fe", label: "Dry"      },
+        { value: 25,  color: "#38bdf8", label: "Light"    },
+        { value: 50,  color: "#0284c7", label: "Moderate" },
+        { value: 100, color: "#1e3a8a", label: "Heavy"    },
       ],
     },
     {
       label: "Humidity",
+      sublabel: `Dew point ${apiDewPoint}°C`,
+      apiNote: ``,
       statKey: "humidity" as keyof typeof STAT_COLOR,
       icon: Droplets,
       color: STAT_COLOR.humidity,
       min: 0,
       max: 100,
-      value: `${weatherData?.humidity ?? 0}%`,
-      change: `${(weatherData?.humidity_delta ?? 0) > 0 ? "+" : ""}${weatherData?.humidity_delta ?? 0}%`,
-      trend:
-        (weatherData?.humidity_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.humidity_delta ?? 0) < 0
-            ? "down"
-            : "neutral",
+      value: `${apiHumidity}%`,
+      change: fmt(apiHumDelta, "%"),
+      trend: apiHumDelta > 0 ? "up" : apiHumDelta < 0 ? "down" : "neutral",
       thresholds: [
-        { value: 30, color: "#dc2626", label: "Dry" },
-        { value: 50, color: "#fbbf24", label: "Low" },
+        { value: 30, color: "#dc2626", label: "Dry"    },
+        { value: 50, color: "#fbbf24", label: "Low"    },
         { value: 70, color: "#22c55e", label: "Normal" },
-        { value: 85, color: "#3b82f6", label: "High" },
+        { value: 85, color: "#3b82f6", label: "High"   },
       ],
     },
     {
       label: "Wind Speed",
+      sublabel: `Direction: ${apiWindDir}`,
+      apiNote: ``,
       statKey: "wind" as keyof typeof STAT_COLOR,
       icon: Wind,
       color: STAT_COLOR.wind,
       min: 0,
       max: 60,
-      value: `${weatherData?.wind_speed ?? 0} km/h`,
-      change: `${(weatherData?.wind_speed_delta ?? 0) > 0 ? "+" : ""}${weatherData?.wind_speed_delta ?? 0} km/h`,
-      trend:
-        (weatherData?.wind_speed_delta ?? 0) > 0
-          ? "up"
-          : (weatherData?.wind_speed_delta ?? 0) < 0
-            ? "down"
-            : "neutral",
+      value: `${apiWind} km/h`,
+      change: fmt(apiWindDelta, " km/h"),
+      trend: apiWindDelta > 0 ? "up" : apiWindDelta < 0 ? "down" : "neutral",
       thresholds: [
-        { value: 10, color: "#22c55e", label: "Calm" },
+        { value: 10, color: "#22c55e", label: "Calm"   },
         { value: 25, color: "#3b82f6", label: "Breezy" },
-        { value: 40, color: "#f97316", label: "Windy" },
+        { value: 40, color: "#f97316", label: "Windy"  },
         { value: 60, color: "#dc2626", label: "Strong" },
       ],
     },
@@ -1121,22 +1166,47 @@ export default function WeatherForecastPage({
         </div>
 
         {/* Stat cards */}
-        <div className="flex items-center gap-2 mb-3">
-          <MapPin className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
-          <span
-            className={`text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
-          >
-            {statsLabel}, Uganda
-          </span>
-          <span
-            className="text-[10px] px-1.5 py-0.5 rounded-full"
-            style={{
-              backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-              color: FAO_BLUE,
-            }}
-          >
-            Live
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
+            <span
+              className={`text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
+            >
+              {statsLabel}, Uganda
+            </span>
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded-full"
+              style={{
+                backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
+                color: FAO_BLUE,
+              }}
+            >
+              {dashboardLoading ? "Fetching…" : "Live"}
+            </span>
+            {dashboardError && (
+              <span className="text-[10px] text-red-400 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> {dashboardError}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {apiFetchedAt && !dashboardLoading && (
+              <span className={`text-[10px] ${textMuted} hidden sm:block`}>
+                Updated {new Date(apiFetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            <button
+              onClick={() => fetchDashboard(statsId)}
+              disabled={dashboardLoading}
+              title="Refresh weather data"
+              className={`p-1 rounded-md transition-all ${isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"} ${dashboardLoading ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
+              <RefreshCw
+                className={`w-3 h-3 ${dashboardLoading ? "animate-spin" : ""}`}
+                style={{ color: FAO_BLUE }}
+              />
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
           {statCards.map((card, index) => {
@@ -1150,20 +1220,35 @@ export default function WeatherForecastPage({
               <div
                 key={index}
                 onClick={() => setSelectedParameter(card.statKey)}
-                className={`${cardBg} backdrop-blur-sm border rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up transition-all hover:shadow-md cursor-pointer`}
+                className={`${cardBg} backdrop-blur-sm border rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up transition-all hover:shadow-md cursor-pointer relative overflow-hidden`}
                 style={{
                   animationDelay: `${index * 0.1}s`,
                   borderColor: isActiveParam ? card.color : undefined,
                   borderWidth: isActiveParam ? 2 : undefined,
                 }}
               >
-                <div className="flex items-start justify-between mb-1.5">
-                  <div>
-                    <p className={`text-[10px] md:text-xs ${textMuted} mb-0.5`}>
+                {/* Loading shimmer overlay */}
+                {dashboardLoading && (
+                  <div
+                    className="absolute inset-0 z-10 rounded-lg md:rounded-xl overflow-hidden"
+                    style={{ backgroundColor: isDarkMode ? "rgba(15,23,42,0.55)" : "rgba(255,255,255,0.6)" }}
+                  >
+                    <div
+                      className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite]"
+                      style={{
+                        background: `linear-gradient(90deg, transparent, ${card.color}22, transparent)`,
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-[10px] md:text-xs ${textMuted} mb-0.5 flex items-center gap-1`}>
                       {card.label}
                       {liveVal && mapHoverDistrict && (
                         <span
-                          className="ml-1 font-semibold"
+                          className="font-semibold"
                           style={{ color: card.color }}
                         >
                           · {mapHoverDistrict}
@@ -1176,9 +1261,16 @@ export default function WeatherForecastPage({
                     >
                       {displayValue}
                     </p>
+                    {/* Sublabel: extra API fields per card */}
+                    <p
+                      className="text-[10px] truncate mt-0.5"
+                      style={{ color: card.color, opacity: 0.75 }}
+                    >
+                      {card.sublabel}
+                    </p>
                   </div>
                   <div
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ml-2"
                     style={{ backgroundColor: `${card.color}22` }}
                   >
                     <Icon
@@ -1192,6 +1284,13 @@ export default function WeatherForecastPage({
                 >
                   {getTrendIcon(card.trend)}
                   <span style={{ color: card.color }}>{card.change}</span>
+                  {card.apiNote && (
+                    <span className={`ml-auto text-[9px] truncate max-w-[80px] ${textMuted}`}
+                      title={card.apiNote}
+                    >
+                      {card.apiNote}
+                    </span>
+                  )}
                 </div>
                 <ThresholdScale
                   value={numericValue}
@@ -1437,7 +1536,7 @@ export default function WeatherForecastPage({
                       isDarkMode={isDarkMode}
                       gradientId="tempFillDesktop"
                       height="100%"
-                      margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
+                      margin={{ top: 4, right: 4, left: -24, bottom: 10 }}
                       fontSize={9}
                       chartData={chartData}
                       metric={chartMetric}
@@ -1656,7 +1755,7 @@ export default function WeatherForecastPage({
                 isDarkMode={isDarkMode}
                 gradientId="tempFillMobile"
                 height="100%"
-                margin={{ top: 4, right: 4, left: -28, bottom: 0 }}
+                margin={{ top: 4, right: 4, left: -28, bottom: 10 }}
                 fontSize={8}
                 chartData={chartData}
                 metric={chartMetric}
@@ -1685,6 +1784,7 @@ export default function WeatherForecastPage({
       <style>{`
         @keyframes drift    { from { transform: translateX(-100%); } to { transform: translateX(100vw); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer  { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
         .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
       `}</style>
 

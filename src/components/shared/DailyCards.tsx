@@ -1,5 +1,5 @@
 import { Cloud, CloudRain, Wind, Droplets } from "lucide-react";
-import { EmptyState, getWeatherIcon } from "@/pages/WeatherForecastPage";
+import { EmptyState, getWeatherIcon } from "@/components/shared/weatherHelpers";
 interface DailyEntry {
   day?: string;
   date?: string;
