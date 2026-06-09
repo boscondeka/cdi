@@ -166,6 +166,21 @@ export const weatherAPI = {
       districts: Array<{ id: number; name: string; region: string | null }>;
     }>(endpoint);
   },
+
+  /**
+   * Get the district with the highest value for each weather metric.
+   * Used by the overview dashboard weather card.
+   */
+  getExtremes: async () => {
+    return fetchData<{
+      highest_rainfall: { value: number | null; district: string | null; unit: string };
+      highest_temperature: { value: number | null; district: string | null; unit: string };
+      highest_wind: { value: number | null; district: string | null; unit: string };
+      highest_humidity: { value: number | null; district: string | null; unit: string };
+      forecast_date: string;
+      model: string;
+    }>("weather/extremes/");
+  },
 };
 
 /**

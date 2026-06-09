@@ -426,6 +426,7 @@ export default function OverviewPage({
           forecastsResult,
           stationsResult,
           networkResult,
+          extremesResult,
         ] = await Promise.allSettled([
           overviewAPI.getModuleStats() as Promise<any>,
           overviewAPI.getQuickStats() as Promise<any>,
@@ -435,6 +436,7 @@ export default function OverviewPage({
           floodAPI.getForecasts(),
           stationsAPI.getAll(),
           stationsAPI.getNetworkSummary(),
+          weatherAPI.getExtremes() as Promise<any>,
         ]);
 
         const ms = msResult.status === "fulfilled" ? msResult.value : null;
@@ -457,6 +459,10 @@ export default function OverviewPage({
         const net =
           networkResult.status === "fulfilled"
             ? (networkResult.value as any)
+            : null;
+        const extremes =
+          extremesResult.status === "fulfilled"
+            ? (extremesResult.value as any)
             : null;
 
         // ── Quick stats (header) ─────────────────────────────────
@@ -488,20 +494,28 @@ export default function OverviewPage({
         // ── Weather Forecast stats ────────────────────────────────
         const weatherStats: StatPatch[] = [
           {
-            value: wd?.rainfall_24h != null ? `${wd.rainfall_24h} mm` : "--",
-            sub: wd?.district ?? undefined,
+            value: extremes?.highest_rainfall?.value != null
+              ? `${extremes.highest_rainfall.value} mm`
+              : wd?.rainfall_24h != null ? `${wd.rainfall_24h} mm` : "--",
+            sub: extremes?.highest_rainfall?.district ?? wd?.district ?? undefined,
           },
           {
-            value: wd?.temperature != null ? `${wd.temperature}°C` : "--",
-            sub: wd?.district ?? undefined,
+            value: extremes?.highest_temperature?.value != null
+              ? `${extremes.highest_temperature.value}°C`
+              : wd?.temperature != null ? `${wd.temperature}°C` : "--",
+            sub: extremes?.highest_temperature?.district ?? wd?.district ?? undefined,
           },
           {
-            value: wd?.wind_speed != null ? `${wd.wind_speed} km/h` : "--",
-            sub: wd?.district ?? undefined,
+            value: extremes?.highest_wind?.value != null
+              ? `${extremes.highest_wind.value} km/h`
+              : wd?.wind_speed != null ? `${wd.wind_speed} km/h` : "--",
+            sub: extremes?.highest_wind?.district ?? wd?.district ?? undefined,
           },
           {
-            value: wd?.humidity != null ? `${wd.humidity}%` : "--",
-            sub: wd?.district ?? undefined,
+            value: extremes?.highest_humidity?.value != null
+              ? `${extremes.highest_humidity.value}%`
+              : wd?.humidity != null ? `${wd.humidity}%` : "--",
+            sub: extremes?.highest_humidity?.district ?? wd?.district ?? undefined,
           },
         ];
 

@@ -102,6 +102,7 @@ async function fetchOmDailyForecast(
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lng));
+  url.searchParams.set("models", "icon_seamless");
   url.searchParams.set(
     "daily",
     "temperature_2m_max,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean",
@@ -163,6 +164,7 @@ async function fetchOmHourlyForecast(
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lng));
+  url.searchParams.set("models", "icon_seamless");
   url.searchParams.set("hourly", "wind_speed_10m,relative_humidity_2m");
   url.searchParams.set("timezone", "Africa/Kampala");
   url.searchParams.set("forecast_days", "2");
