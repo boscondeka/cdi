@@ -1,25 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useAppStore } from "@/store/useAppStore";
-import { getMonthAndYear } from "@/utils/woker_fn";
+// import { useAppStore } from "@/store/useAppStore";
+// import { getMonthAndYear } from "@/utils/woker_fn";
 
 export const useAssessmentCounts = () => {
   const [assessment, setAssessment] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
 
-  const { dateRange } = useAppStore((state:any) => state);
+  // const { dateRange } = useAppStore((state: any) => state);
 
-  const{ month, year:timerange } = getMonthAndYear(dateRange)
+  // const { month, year: timerange } = getMonthAndYear(dateRange);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get(
-          `https://droughtbackend.rosewillbome.co.ke/data/district/assessment/count`
+          `https://droughtbackend.rosewillbome.co.ke/data/district/assessment/count`,
         );
 
         setAssessment(response?.data?.data || []);
-
+        setFiltered(response?.data?.data[response?.data?.data?.length - 1]);
       } catch (error) {
         console.error("Assessment fetch error:", error);
       }
@@ -28,35 +28,38 @@ export const useAssessmentCounts = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (!assessment?.length) return;
+  // useEffect(() => {
+  //   if (!assessment?.length) return;
 
-    let filters: any[] = [];
+  //   let filters: any[] = [];
 
-    if (timerange?.toString()?.trim() && month?.trim()) {
-      const result = assessment.filter(
-        (item) =>
-          item[0]?.trim()?.toLowerCase() ===
-            month.trim().toLowerCase() &&
-          item[1]?.trim() === timerange?.toString()?.trim()
-      );
+  //   if (timerange?.toString()?.trim() && month?.trim()) {
+  //     const result = assessment.filter(
+  //       (item) =>
+  //         item[0]?.trim()?.toLowerCase() ===
+  //           month.trim().toLowerCase() &&
+  //         item[1]?.trim() === timerange?.toString()?.trim()
+  //     );
 
-      filters = result[0] || [];
-    }
+  //     filters = result[0] || [];
+  //   }
 
-    setFiltered(filters);
-  }, [assessment, timerange, month]);
+  //   setFiltered(filters);
+  // }, [assessment, timerange, month]);
 
   const counts = useMemo(
     () => ({
       extremeCount: filtered?.length ? filtered[3] : 0,
       trendingCount: filtered?.length ? filtered[6] : 0,
       improvingCount: filtered?.length ? filtered[12] : 0,
+      month: filtered?.length ? filtered[0]?.trim() : "--",
+      year: filtered?.length ? filtered[1]?.trim() : "--",
     }),
-    [filtered]
+    [filtered],
   );
 
-  
+  // console.log("counts ", countss);
+
   return {
     assessment,
     filtered,

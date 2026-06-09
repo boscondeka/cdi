@@ -278,100 +278,109 @@ type ModuleStat = {
   Icon?: StatIcon;
 };
 
-/* ── Module definitions ─────────────────────────────────────────── */
-const MODULES: {
-  id: string;
-  title: string;
-  color: string;
-  desc: string;
-  ctaLabel: string;
-  Icon: StatIcon;
-  stats: ModuleStat[];
-}[] = [
-  {
-    id: "weather",
-    title: "Weather Forecast",
-    color: FAO_BLUE,
-    desc: "24-hour nowcasting & 7-day forecasts with high accuracy predictions.",
-    Icon: Cloud,
-    ctaLabel: "Open Forecast Center",
-    stats: [
-      {
-        label: "Highest Rainfall",
-        value: "--",
-        sub: undefined,
-        Icon: CloudRain,
-      },
-      { label: "Highest Temp", value: "--", sub: undefined, Icon: Thermometer },
-      { label: "Highest Wind", value: "--", sub: undefined, Icon: Wind },
-      {
-        label: "Highest Humidity",
-        value: "--",
-        sub: undefined,
-        Icon: Droplets,
-      },
-    ],
-  },
-  {
-    id: "drought",
-    title: "Drought Monitor",
-    color: "#f97316",
-    desc: "Combined Drought Index with TDI, PDI, VDI components for risk assessment.",
-    Icon: Sun,
-    ctaLabel: "Open Drought Center",
-    stats: [
-      { label: "Extreme Severity", value: "--", Icon: AlertCircle },
-      { label: "Trending", value: "--", Icon: TrendingUp },
-      { label: "Improving", value: "--", Icon: TrendingDown },
-      { label: "Districts at Risk", value: "--", Icon: BarChart2 },
-    ],
-  },
-  {
-    id: "flood",
-    title: "Flood Monitor",
-    color: "#06b6d4",
-    desc: "Real-time river discharge monitoring and early warning systems.",
-    Icon: Droplets,
-    ctaLabel: "Open Flood Center",
-    stats: [
-      { label: "People at Risk", value: "--", sub: undefined, Icon: Users },
-      {
-        label: "Highest Discharge",
-        value: "--",
-        sub: undefined,
-        Icon: Activity,
-      },
-      { label: "Rising Levels", value: "--", sub: undefined, Icon: TrendingUp },
-      { label: "Active Alerts", value: "--", Icon: AlertCircle },
-    ],
-  },
-  {
-    id: "stations",
-    title: "Weather Stations",
-    color: "#22c55e",
-    desc: "Automatic Weather Station network monitoring across Uganda.",
-    Icon: Radio,
-    ctaLabel: "Open Station Network",
-    stats: [
-      { label: "Stations Online", value: "--", Icon: Signal },
-      { label: "Data Frequency", value: "15 min", Icon: Timer },
-      { label: "Missing Reports", value: "0", Icon: AlertCircle },
-      { label: "Last Transmission", value: "--", Icon: Clock },
-    ],
-  },
-];
-
 /* ── Page ────────────────────────────────────────────────────────── */
 export default function OverviewPage({
   onNavigate,
   isDarkMode = true,
 }: OverviewPageProps) {
   const { selectedDistrictId } = useAppStore((s) => s);
-  const {
-  extremeCount,
-  trendingCount,
-  improvingCount,
-  } = useAssessmentCounts();
+  const { extremeCount, trendingCount, improvingCount, month, year } =
+    useAssessmentCounts();
+
+  /* ── Module definitions ─────────────────────────────────────────── */
+  const MODULES: {
+    id: string;
+    title: string;
+    color: string;
+    desc: string;
+    ctaLabel: string;
+    Icon: StatIcon;
+    stats: ModuleStat[];
+  }[] = [
+    {
+      id: "weather",
+      title: "Weather Forecast",
+      color: FAO_BLUE,
+      desc: "24-hour nowcasting & 7-day forecasts with high accuracy predictions.",
+      Icon: Cloud,
+      ctaLabel: "Open Forecast Center",
+      stats: [
+        {
+          label: "Highest Rainfall",
+          value: "--",
+          sub: undefined,
+          Icon: CloudRain,
+        },
+        {
+          label: "Highest Temp",
+          value: "--",
+          sub: undefined,
+          Icon: Thermometer,
+        },
+        { label: "Highest Wind", value: "--", sub: undefined, Icon: Wind },
+        {
+          label: "Highest Humidity",
+          value: "--",
+          sub: undefined,
+          Icon: Droplets,
+        },
+      ],
+    },
+    {
+      id: "drought",
+      title: `Drought Monitor ${month},${year}`,
+      color: "#f97316",
+      desc: "Combined Drought Index with TDI, PDI, VDI components for risk assessment.",
+      Icon: Sun,
+      ctaLabel: "Open Drought Center",
+      stats: [
+        { label: "Extreme Severity", value: "--", Icon: AlertCircle },
+        { label: "Trending", value: "--", Icon: TrendingUp },
+        { label: "Improving", value: "--", Icon: TrendingDown },
+        { label: "Districts at Risk", value: "--", Icon: BarChart2 },
+      ],
+    },
+    {
+      id: "flood",
+      title: "Flood Monitor",
+      color: "#06b6d4",
+      desc: "Real-time river discharge monitoring and early warning systems.",
+      Icon: Droplets,
+      ctaLabel: "Open Flood Center",
+      stats: [
+        { label: "People at Risk", value: "--", sub: undefined, Icon: Users },
+        {
+          label: "Highest Discharge",
+          value: "--",
+          sub: undefined,
+          Icon: Activity,
+        },
+        {
+          label: "Rising Levels",
+          value: "--",
+          sub: undefined,
+          Icon: TrendingUp,
+        },
+        { label: "Active Alerts", value: "--", Icon: AlertCircle },
+      ],
+    },
+    {
+      id: "stations",
+      title: "Weather Stations",
+      color: "#22c55e",
+      desc: "Automatic Weather Station network monitoring across Uganda.",
+      Icon: Radio,
+      ctaLabel: "Open Station Network",
+      stats: [
+        { label: "Stations Online", value: "--", Icon: Signal },
+        { label: "Data Frequency", value: "15 min", Icon: Timer },
+        { label: "Missing Reports", value: "0", Icon: AlertCircle },
+        { label: "Last Transmission", value: "--", Icon: Clock },
+      ],
+    },
+  ];
+
+  console.log("MODULES ", MODULES);
 
   const [showIntro, setShowIntro] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -384,6 +393,18 @@ export default function OverviewPage({
     total: 0,
   });
   const [modules, setModules] = useState(MODULES);
+
+  // Keep the drought module title in sync whenever month/year resolve from the API
+  useEffect(() => {
+    if (month === "--" && year === "--") return;
+    setModules((prev) =>
+      prev.map((m) =>
+        m.id === "drought"
+          ? { ...m, title: `Drought Monitor ${month}, ${year}` }
+          : m,
+      ),
+    );
+  }, [month, year]);
   const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -488,22 +509,13 @@ export default function OverviewPage({
         // droughtAPI.getData() schema varies; fall back to ms if no data
         const droughtStats: StatPatch[] = [
           {
-            value:
-              extremeCount != null
-                ? extremeCount?.toString()
-                : "--",
+            value: extremeCount != null ? extremeCount?.toString() : "--",
           },
           {
-            value:
-              trendingCount != null
-                ? trendingCount?.toString()
-                : "--",
+            value: trendingCount != null ? trendingCount?.toString() : "--",
           },
           {
-            value:
-              improvingCount != null
-                ? improvingCount?.toString()
-                : "--",
+            value: improvingCount != null ? improvingCount?.toString() : "--",
           },
           {
             value:
@@ -611,7 +623,6 @@ export default function OverviewPage({
           stationStats,
         ];
 
-        
         setModules((prev) =>
           prev.map((m, i) => ({
             ...m,
@@ -638,7 +649,7 @@ export default function OverviewPage({
     load();
     const iv = setInterval(load, 5 * 60 * 1000);
     return () => clearInterval(iv);
-  }, [selectedDistrictId,extremeCount,trendingCount,improvingCount]);
+  }, [selectedDistrictId, extremeCount, trendingCount, improvingCount]);
 
   const temp = weather?.temperature ?? 0;
   const humid = weather?.humidity ?? 0;
@@ -941,7 +952,16 @@ export default function OverviewPage({
                       className="text-sm font-bold leading-tight"
                       style={{ color: hd }}
                     >
-                      {mod.title}
+                      {mod.id === "drought" ? (
+                        <>
+                          {mod.title.replace(/\s+\S+,\S+$/, "")}{" "}
+                          <span style={{ color: "#f97316" }}>
+                            {mod.title.match(/\S+,\S+$/)?.[0]}
+                          </span>
+                        </>
+                      ) : (
+                        mod.title
+                      )}
                     </h3>
                     <p
                       className="text-[11px] mt-1 leading-relaxed"
