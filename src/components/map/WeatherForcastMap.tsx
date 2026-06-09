@@ -335,6 +335,7 @@ export default function WeatherForcastMap({
   minZoom = 6.8,
   district_list,
   onHoverChange,
+  onModelClick,
 }: UgandaBoundaryMapProps) {
   const {
     selectedParameter,
@@ -1333,11 +1334,12 @@ export default function WeatherForcastMap({
           return (
             <button
               key={model.id}
-              onClick={() =>
+              onClick={() => {
                 useAppStore
                   .getState()
-                  .setLayerMode(model.id === "gfs" ? "forecast" : "nowcast")
-              }
+                  .setLayerMode(model.id === "gfs" ? "forecast" : "nowcast");
+                onModelClick?.(model.id);
+              }}
               className="px-3 py-1 text-[10px] font-bold tracking-wide transition-all whitespace-nowrap"
               style={{
                 backgroundColor: isSelected ? FAO_BLUE : "transparent",

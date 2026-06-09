@@ -1420,6 +1420,7 @@ export default function WeatherForecastPage({
                       getTheBounds={selectedDistrictId?.name ?? ""}
                       district_list={district_list}
                       onHoverChange={handleMapHoverChange}
+                      onModelClick={(model) => setModelInfoModal(model)}
                     />
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[500]">
                       <FloodHourSlider
@@ -1660,6 +1661,7 @@ export default function WeatherForecastPage({
                   getTheBounds={selectedDistrictId?.name ?? ""}
                   district_list={district_list}
                   onHoverChange={handleMapHoverChange}
+                  onModelClick={(model) => setModelInfoModal(model)}
                 />
                 <button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}

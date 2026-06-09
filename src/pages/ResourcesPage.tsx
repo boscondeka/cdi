@@ -16,16 +16,6 @@ const FAO_BLUE = '#318DDE';
 
 const resourceCategories = [
   {
-    title: 'Policy Documents',
-    icon: BookOpen,
-    description: 'National guidelines, frameworks, and strategic planning documents.',
-    items: [
-      { title: 'National Disaster Preparedness Plan 2025', size: '2.4 MB', date: 'Jan 15, 2025' },
-      { title: 'Climate Change Adaptation Framework', size: '1.8 MB', date: 'Nov 20, 2024' },
-      { title: 'Water Resource Management Act', size: '3.1 MB', date: 'Aug 05, 2023' },
-    ]
-  },
-  {
     title: 'Early Warning Reports',
     icon: AlertCircle,
     description: 'Monthly and quarterly multi-hazard situational reports.',
@@ -33,6 +23,16 @@ const resourceCategories = [
       { title: 'Q1 2026 Multi-Hazard Bulletin', size: '4.5 MB', date: 'Mar 01, 2026' },
       { title: 'February 2026 Drought Assessment', size: '1.2 MB', date: 'Feb 28, 2026' },
       { title: 'El Niño Impact Summary Report', size: '3.7 MB', date: 'Dec 10, 2025' },
+    ]
+  },
+  {
+    title: 'Policy Documents',
+    icon: BookOpen,
+    description: 'National guidelines, frameworks, and strategic planning documents.',
+    items: [
+      { title: 'National Disaster Preparedness Plan 2025', size: '2.4 MB', date: 'Jan 15, 2025' },
+      { title: 'Climate Change Adaptation Framework', size: '1.8 MB', date: 'Nov 20, 2024' },
+      { title: 'Water Resource Management Act', size: '3.1 MB', date: 'Aug 05, 2023' },
     ]
   },
   {

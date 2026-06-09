@@ -159,6 +159,8 @@ export interface UgandaBoundaryMapProps {
   /** Fires when the user hovers a district — passes the district name and
    *  the live Open-Meteo sampled value (null when leaving the map). */
   onHoverChange?: (district: string | null, value: number | null, unit: string) => void;
+  /** Fires when the user clicks the ICON or GFS model button in the map */
+  onModelClick?: (model: "icon" | "gfs") => void;
 }
 
 export interface LayerDef {
