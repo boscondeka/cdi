@@ -580,7 +580,7 @@ export default function WeatherForcastMap({
         setSelectedDistrictIdRef.current(matched);
         console.log("Selected district:", matched);
 
-        // Draw the blue boundary highlight
+        // Draw the blue boundary highlights
         if (weatherforcastboundaryLayerRef.current) {
           weatherforcastMapRef.current!.removeLayer(
             weatherforcastboundaryLayerRef.current,
