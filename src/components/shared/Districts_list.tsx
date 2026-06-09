@@ -2,7 +2,7 @@ import { useAppStore } from "@/store/useAppStore";
 import type { district } from "@/types/data_types";
 
 function Districts_list({ district_list, isDarkMode, textMuted }: any) {
-  console.log("district_list ",district_list)
+  // console.log("district_list ",district_list)
   const { selectedDistrictId, setSelectedDistrictId } = useAppStore(
     (state) => state,
   );
