@@ -1075,7 +1075,7 @@ export default function WeatherForecastPage({
   const statCards = [
     {
       label: "Temperature",
-      sublabel: `Feels like ${apiFeelsLike}°C`,
+      // sublabel: `Feels like ${apiFeelsLike}°C`,
       apiNote: `Avg ${apiAvgTemp}° · Max ${apiMaxTemp}° · Min ${apiMinTemp}°`,
       statKey: "temperature" as keyof typeof STAT_COLOR,
       icon: Thermometer,
@@ -1132,7 +1132,7 @@ export default function WeatherForecastPage({
     },
     {
       label: "Wind Speed",
-      sublabel: `Direction: ${apiWindDir}`,
+      // sublabel: `Direction: ${apiWindDir}`,
       apiNote: ``,
       statKey: "wind" as keyof typeof STAT_COLOR,
       icon: Wind,
