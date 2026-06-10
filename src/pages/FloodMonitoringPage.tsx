@@ -529,7 +529,7 @@ const FilterContent = ({
         isDarkMode={isDarkMode}
       />
       <p className={`text-[9px] mt-1 ${textMuted}`}>
-        Coloured dot = alert level for that horizon
+        
       </p>
     </div>
 
