@@ -41,36 +41,135 @@ interface FloodMonitoringPageProps {
 
 const FAO_BLUE = "#318DDE";
 
-// ── Shared risk-level helpers ─────────────────────────────────────────────────
-// Single source of truth for the vocabulary returned by the API:
-//   extreme → red | high / severe → orange | moderate → yellow | low → green
-type RiskLevel = string | null | undefined;
+// Persists across component remounts (SPA navigation) — modals show once per browser session
+const _shownModals = new Set<string>();
 
-function riskColor(level: RiskLevel): string {
-  switch (level?.toLowerCase()) {
-    case "extreme":               return "#ef4444";
-    case "high":   case "severe": return "#f97316";
-    case "moderate":              return "#eab308";
-    default:                      return "#22c55e";
+// ── District centroid from geoData ────────────────────────────────────────────
+
+function getDistrictCentroid(
+  districtName: string,
+): { lat: number; lng: number } | null {
+  if (!geoData || !(geoData as any).features) return null;
+  const name = districtName.trim().toLowerCase();
+  const feature = (geoData as any).features.find(
+    (f: any) => f?.properties?.name?.trim().toLowerCase() === name,
+  );
+  if (!feature?.geometry) return null;
+
+  // Collect all coordinate pairs from Polygon or MultiPolygon
+  const coords: number[][] = [];
+  const addRing = (ring: number[][]) => ring.forEach((c) => coords.push(c));
+  if (feature.geometry.type === "Polygon") {
+    feature.geometry.coordinates.forEach(addRing);
+  } else if (feature.geometry.type === "MultiPolygon") {
+    feature.geometry.coordinates.forEach((poly: number[][][]) =>
+      poly.forEach(addRing),
+    );
   }
+  if (!coords.length) return null;
+
+  const sumLng = coords.reduce((s, c) => s + c[0], 0);
+  const sumLat = coords.reduce((s, c) => s + c[1], 0);
+  return { lat: sumLat / coords.length, lng: sumLng / coords.length };
 }
 
-function riskLabel(level: RiskLevel): string {
-  switch (level?.toLowerCase()) {
-    case "extreme":               return "EXTREME";
-    case "high":   case "severe": return "HIGH";
-    case "moderate":              return "MODERATE";
-    default:                      return "NORMAL";
-  }
+// ── Open-Meteo 7-day forecast fetch ──────────────────────────────────────────
+
+interface OmDailyPoint {
+  label: string;
+  temp: number;
+  rain: number;
+  wind: number;
+  humidity: number;
 }
 
-function isElevated(level: RiskLevel): boolean {
-  const l = level?.toLowerCase();
-  return l === "extreme" || l === "high" || l === "severe";
+async function fetchOmDailyForecast(
+  lat: number,
+  lng: number,
+): Promise<OmDailyPoint[]> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(lat));
+  url.searchParams.set("longitude", String(lng));
+  url.searchParams.set("models", "icon_global");
+  url.searchParams.set(
+    "daily",
+    "temperature_2m_max,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean",
+  );
+  url.searchParams.set("timezone", "Africa/Kampala");
+  url.searchParams.set("forecast_days", "6");
+
+  const res = await fetch(url.href);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const json = await res.json();
+
+  const MONTHS_SHORT = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dates: string[] = json.daily?.time ?? [];
+  const temps: number[] = json.daily?.temperature_2m_max ?? [];
+  const rains: number[] = json.daily?.precipitation_sum ?? [];
+  const winds: number[] = json.daily?.wind_speed_10m_max ?? [];
+  const humidities: number[] = json.daily?.relative_humidity_2m_mean ?? [];
+
+  return dates.map((dateStr, i) => {
+    // Parse as local date (dateStr is "YYYY-MM-DD" with no time component)
+    const parts = dateStr.split("-").map(Number);
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    return {
+      label: `${DAYS_SHORT[d.getDay()]} ${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`,
+      temp: Math.round((temps[i] ?? 0) * 10) / 10,
+      rain: Math.round((rains[i] ?? 0) * 100) / 100,
+      wind: Math.round((winds[i] ?? 0) * 10) / 10,
+      humidity: Math.round((humidities[i] ?? 0) * 10) / 10,
+    };
+  });
 }
 
-function isCritical(level: RiskLevel): boolean {
-  return level?.toLowerCase() === "extreme";
+// ── Open-Meteo 48-hour hourly forecast (nowcast wind + humidity) ──────────────
+
+interface OmHourlyPoint {
+  time: string; // ISO datetime string
+  wind: number;
+  humidity: number;
+}
+
+async function fetchOmHourlyForecast(
+  lat: number,
+  lng: number,
+): Promise<OmHourlyPoint[]> {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(lat));
+  url.searchParams.set("longitude", String(lng));
+  url.searchParams.set("models", "icon_global");
+  url.searchParams.set("hourly", "wind_speed_10m,relative_humidity_2m");
+  url.searchParams.set("timezone", "Africa/Kampala");
+  url.searchParams.set("forecast_days", "2");
+
+  const res = await fetch(url.href);
+  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+  const json = await res.json();
+
+  const times: string[] = json.hourly?.time ?? [];
+  const winds: number[] = json.hourly?.wind_speed_10m ?? [];
+  const humidities: number[] = json.hourly?.relative_humidity_2m ?? [];
+
+  return times.map((t, i) => ({
+    time: t,
+    wind: Math.round((winds[i] ?? 0) * 10) / 10,
+    humidity: Math.round((humidities[i] ?? 0) * 10) / 10,
+  }));
 }
 
 // ── ArcGauge ─────────────────────────────────────────────────────────────────
