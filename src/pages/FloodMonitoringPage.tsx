@@ -41,6 +41,38 @@ interface FloodMonitoringPageProps {
 
 const FAO_BLUE = "#318DDE";
 
+// ── Shared risk-level helpers ─────────────────────────────────────────────────
+// Single source of truth for the vocabulary returned by the API:
+//   extreme → red | high / severe → orange | moderate → yellow | low → green
+type RiskLevel = string | null | undefined;
+
+function riskColor(level: RiskLevel): string {
+  switch (level?.toLowerCase()) {
+    case "extreme":               return "#ef4444";
+    case "high":   case "severe": return "#f97316";
+    case "moderate":              return "#eab308";
+    default:                      return "#22c55e";
+  }
+}
+
+function riskLabel(level: RiskLevel): string {
+  switch (level?.toLowerCase()) {
+    case "extreme":               return "EXTREME";
+    case "high":   case "severe": return "HIGH";
+    case "moderate":              return "MODERATE";
+    default:                      return "NORMAL";
+  }
+}
+
+function isElevated(level: RiskLevel): boolean {
+  const l = level?.toLowerCase();
+  return l === "extreme" || l === "high" || l === "severe";
+}
+
+function isCritical(level: RiskLevel): boolean {
+  return level?.toLowerCase() === "extreme";
+}
+
 // ── ArcGauge ─────────────────────────────────────────────────────────────────
 function ArcGauge({
   value,
@@ -205,15 +237,7 @@ function LeadtimeTabs({
       {available.map((h) => {
         const fc = forecasts.find((f) => f.leadtime_hours === h);
         const isActive = selected === h;
-        const alertColor = !fc
-          ? ""
-          : fc.alert_level === "extreme" || fc.alert_level === "high"
-            ? "#ef4444"
-            : fc.alert_level === "medium"
-              ? "#f97316"
-              : fc.alert_level === "low"
-                ? "#eab308"
-                : "#22c55e";
+        const alertColor = !fc ? "" : riskColor(fc.alert_level);
         return (
           <button
             key={h}
@@ -263,22 +287,8 @@ function BasinImpactCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const discharge = impact.max_discharge ?? 0;
-  const alertColor =
-    discharge > 3000
-      ? "#ef4444"
-      : discharge > 1000
-        ? "#f97316"
-        : discharge > 300
-          ? "#eab308"
-          : "#22c55e";
-  const alertLabel =
-    discharge > 3000
-      ? "CRITICAL"
-      : discharge > 1000
-        ? "HIGH"
-        : discharge > 300
-          ? "MODERATE"
-          : "NORMAL";
+  const alertColor = riskColor(impact.flood_risk_level);
+  const alertLabel = riskLabel(impact.flood_risk_level);
 
   const name = impact.river_basin_name ?? impact.district_name ?? "Unknown";
   const pop = impact.affected_population ?? 0;
@@ -458,6 +468,8 @@ function BasinImpactCard({
 const FilterContent = ({
   selectedBasin,
   setSelectedBasin,
+  alertLevelFilter,
+  setAlertLevelFilter,
   selectedLeadtime,
   onLeadtimeChange,
   availableBasinNames,
@@ -475,6 +487,8 @@ const FilterContent = ({
   setTimeRange: (val: string) => void;
   selectedBasin: string;
   setSelectedBasin: (val: string) => void;
+  alertLevelFilter: string;
+  setAlertLevelFilter: (val: string) => void;
   selectedLeadtime: number;
   onLeadtimeChange: (val: number) => void;
   selectedDate: string;
@@ -547,9 +561,11 @@ const FilterContent = ({
               className="flex items-center gap-2 text-sm cursor-pointer"
             >
               <input
-                type="checkbox"
-                className={`rounded ${isDarkMode ? "bg-slate-700 border-slate-600" : "bg-white border-slate-300"}`}
-                defaultChecked={level === "All Levels"}
+                type="radio"
+                name="alertLevelFilter"
+                checked={alertLevelFilter === level}
+                onChange={() => setAlertLevelFilter(level)}
+                className={`accent-blue-500 ${isDarkMode ? "bg-slate-700 border-slate-600" : "bg-white border-slate-300"}`}
               />
               <span className={textSecondary}>{level}</span>
             </label>
@@ -602,6 +618,7 @@ export default function FloodMonitoringPage({
   } = useAppStore((state) => state);
   const [timeRange, setTimeRange] = useState("Last 24 Hours");
   const [selectedBasin, setSelectedBasin] = useState("All Basins");
+  const [alertLevelFilter, setAlertLevelFilter] = useState("All Levels");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedFloodLayer, setSelectedFloodLayer] =
     useState<FloodRasterLayer | null>(null);
@@ -778,16 +795,25 @@ export default function FloodMonitoringPage({
   const districtImpacts = allImpacts.filter((i) => i.district_name !== null);
   const basinImpacts = allImpacts.filter((i) => i.river_basin_name !== null);
 
-  const topDistrictImpacts = [...districtImpacts]
+  // Apply the alert level filter to districts
+  const filteredDistrictImpacts = districtImpacts.filter((i) => {
+    if (alertLevelFilter === "All Levels")   return true;
+    if (alertLevelFilter === "Critical Only") return isCritical(i.flood_risk_level);
+    if (alertLevelFilter === "Warning Only")  return isElevated(i.flood_risk_level) && !isCritical(i.flood_risk_level);
+    if (alertLevelFilter === "Normal")        return !isElevated(i.flood_risk_level);
+    return true;
+  });
+
+  const topDistrictImpacts = [...filteredDistrictImpacts]
     .sort((a, b) => b.affected_population - a.affected_population)
     .slice(0, 4);
 
   // KPIs
-  const totalAffectedPopulation = districtImpacts.reduce(
+  const totalAffectedPopulation = filteredDistrictImpacts.reduce(
     (s, i) => s + (i.affected_population ?? 0),
     0,
   );
-  const totalFloodExtentKm2 = districtImpacts.reduce(
+  const totalFloodExtentKm2 = filteredDistrictImpacts.reduce(
     (s, i) => s + (i.flood_extent_km2 ?? 0),
     0,
   );
@@ -795,15 +821,15 @@ export default function FloodMonitoringPage({
     totalFloodExtentKm2 > 0
       ? Math.round(totalAffectedPopulation / totalFloodExtentKm2)
       : 0;
-  const totalRoadsKm = districtImpacts.reduce(
+  const totalRoadsKm = filteredDistrictImpacts.reduce(
     (s, i) => s + (i.affected_roads_km ?? 0),
     0,
   );
-  const totalBuildings = districtImpacts.reduce(
+  const totalBuildings = filteredDistrictImpacts.reduce(
     (s, i) => s + (i.affected_buildings_count ?? 0),
     0,
   );
-  const totalPois = districtImpacts.reduce(
+  const totalPois = filteredDistrictImpacts.reduce(
     (s, i) => s + (i.affected_pois_count ?? 0),
     0,
   );
@@ -840,7 +866,7 @@ export default function FloodMonitoringPage({
   ).sort();
 
   // Fixed discharge threshold for alert colouring (no basins API needed)
-  const getBasinThreshold = (_basinName: string): number => 3000;
+  // — removed: flood_risk_level from the API is authoritative per basin/district
 
   const riverBasins = basinStatus.map((basin) => {
     const isSelectedBasin =
@@ -888,9 +914,7 @@ export default function FloodMonitoringPage({
             .toLowerCase()
             .includes(selectedBasin.toLowerCase().replace(" basin", "").trim()),
         );
-  const criticalBasins = scopedBasins.filter(
-    (b) => b.status === "severe" || b.status === "extreme",
-  ).length;
+  const criticalBasins = scopedBasins.filter((b) => isElevated(b.status)).length;
   const severeCount = scopedBasins.filter((b) => b.status === "severe").length;
   const moderateCount = scopedBasins.filter(
     (b) => b.status === "moderate",
@@ -902,6 +926,8 @@ export default function FloodMonitoringPage({
       ? timeSeriesData[timeSeriesData.length - 1].level
       : 0);
 
+  // Build named critical basins directly from flood_risk_level — no discharge
+  // arithmetic against a hardcoded threshold needed.
   const namedCriticalBasins: Array<{
     name: string;
     discharge: number;
@@ -909,22 +935,22 @@ export default function FloodMonitoringPage({
     population: number;
   }> = [];
   basinImpacts.forEach((i) => {
-    const threshold = getBasinThreshold(i.river_basin_name ?? "");
     if (
-      (i.max_discharge ?? 0) > threshold &&
+      isElevated(i.flood_risk_level) &&
       i.river_basin_name &&
       !namedCriticalBasins.find((n) => n.name === i.river_basin_name)
     ) {
       namedCriticalBasins.push({
         name: i.river_basin_name,
         discharge: Math.round(i.max_discharge ?? 0),
-        status: "extreme",
+        status: i.flood_risk_level ?? "high",
         population: i.affected_population ?? 0,
       });
     }
   });
+  // Merge in any elevated basins from basinStatus not already represented
   scopedBasins
-    .filter((b) => b.status === "severe" || b.status === "extreme")
+    .filter((b) => isElevated(b.status))
     .forEach((b) => {
       if (!namedCriticalBasins.find((n) => n.name === b.name))
         namedCriticalBasins.push({
@@ -937,26 +963,19 @@ export default function FloodMonitoringPage({
 
   const criticalBasinCount = namedCriticalBasins.length;
   const thresholdMode =
-    criticalBasinCount > 0
+    namedCriticalBasins.some((b) => isCritical(b.status))
       ? "EXCEEDED"
-      : severeCount > 0
+      : criticalBasinCount > 0
         ? "WARNING"
         : "NORMAL";
 
-  const liveDistrictsAtRisk = topDistrictImpacts.map((i) => {
-    const threshold = getBasinThreshold(i.river_basin_name ?? "");
-    return {
-      id: 0,
-      name: i.district_name!,
-      population_affected: i.affected_population,
-      flood_risk_level:
-        (i.max_discharge ?? 0) > threshold
-          ? ("critical" as const)
-          : (i.max_discharge ?? 0) > threshold * 0.33
-            ? ("high" as const)
-            : ("medium" as const),
-    };
-  });
+  // Districts at risk — use flood_risk_level directly from the impact row
+  const liveDistrictsAtRisk = topDistrictImpacts.map((i) => ({
+    id: 0,
+    name: i.district_name!,
+    population_affected: i.affected_population,
+    flood_risk_level: i.flood_risk_level ?? "low",
+  }));
 
   const displayPopulation = totalAffectedPopulation;
   const displayDensity = populationDensityAvg;
@@ -1192,6 +1211,8 @@ export default function FloodMonitoringPage({
                   setTimeRange={setTimeRange}
                   selectedBasin={selectedBasin}
                   setSelectedBasin={setSelectedBasin}
+                  alertLevelFilter={alertLevelFilter}
+                  setAlertLevelFilter={setAlertLevelFilter}
                   selectedLeadtime={selectedLeadtime}
                   onLeadtimeChange={(h) => {
                     setSelectedLeadtime(h);
@@ -1234,14 +1255,7 @@ export default function FloodMonitoringPage({
                   ) : (
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
                       {actualEvents.slice(0, 6).map((ev) => {
-                        const severityColor =
-                          ev.alert_level === "extreme"
-                            ? "#ef4444"
-                            : ev.alert_level === "high"
-                              ? "#f97316"
-                              : ev.alert_level === "moderate"
-                                ? "#eab308"
-                                : "#22c55e";
+                        const severityColor = riskColor(ev.alert_level);
                         const dateStr = ev.start_date
                           ? new Date(ev.start_date).toLocaleDateString([], {
                               month: "short",
@@ -1409,12 +1423,7 @@ export default function FloodMonitoringPage({
                         ),
                         1,
                       );
-                      const riskColor =
-                        d.flood_risk_level === "critical"
-                          ? "#ef4444"
-                          : d.flood_risk_level === "high"
-                            ? "#f97316"
-                            : "#eab308";
+                      const riskColor_ = riskColor(d.flood_risk_level);
                       return (
                         <div
                           key={`${d.name}-${index}`}
@@ -1435,13 +1444,13 @@ export default function FloodMonitoringPage({
                               className="h-full rounded-full transition-all duration-500"
                               style={{
                                 width: `${(pop / maxPop) * 100}%`,
-                                backgroundColor: riskColor,
+                                backgroundColor: riskColor_,
                               }}
                             />
                           </div>
                           <span
                             className="text-[9px] w-10 text-right font-semibold flex-shrink-0"
-                            style={{ color: riskColor }}
+                            style={{ color: riskColor_ }}
                           >
                             {pop >= 1000 ? `${Math.round(pop / 1000)}K` : pop}
                           </span>
@@ -1805,6 +1814,8 @@ export default function FloodMonitoringPage({
                     setTimeRange={setTimeRange}
                     selectedBasin={selectedBasin}
                     setSelectedBasin={setSelectedBasin}
+                    alertLevelFilter={alertLevelFilter}
+                    setAlertLevelFilter={setAlertLevelFilter}
                     selectedLeadtime={selectedLeadtime}
                     onLeadtimeChange={(h) => {
                       setSelectedLeadtime(h);
