@@ -1,1183 +1,1070 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Cloud,
-  CloudRain,
-  Wind,
+  Waves,
+  MapPin,
+  Download,
+  TrendingUp,
+  AlertTriangle,
+  Info,
   Droplets,
-  Thermometer,
-  Calendar,
-  Clock,
   Filter,
   X,
-  MapPin,
-  Map as MapIcon,
-  TrendingUp,
-  Globe,
-  BarChart2,
   RefreshCw,
-  AlertTriangle,
+  Users,
+  Building2,
+  Shield,
+  Navigation,
+  Activity,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  BarChart3,
 } from "lucide-react";
-import WeatherForcastMap from "../components/map/WeatherForcastMap";
-import { getTrendIcon, getTrendColor } from "../utils/chartHelpers";
-import { ThresholdScale } from "../components/shared/ThresholdScale";
-import { weatherAPI, DistrictsAPI } from "../services/api";
-import type {
-  DailyForecastResponse,
-  district,
-  ForecastPerHour,
-  WeatherData,
-} from "@/types/data_types";
-import ExportData from "@/components/shared/ExportData";
-import { normaliseDaily, normaliseHourly } from "@/utils/woker_fn";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import TabBar from "@/components/shared/TabBar";
-import HourlyCards from "@/components/shared/HourlyCards";
-import { DailyCards } from "@/components/shared/DailyCards";
-import { useAppStore } from "@/store/useAppStore";
-import { useQuery } from "@tanstack/react-query";
+import FloodMonitorMap from "../components/map/FloodMonitorMap";
+import { useFloodData } from "../hooks/useFloodData";
 import FloodHourSlider from "@/components/shared/FloodHourSlider";
-import Districts_list from "@/components/shared/Districts_list";
-import { geoData } from "@/utils/geodata";
+import { useAppStore } from "@/store/useAppStore";
+import type {
+  FloodRasterLayer,
+  FloodForecastFull,
+  FloodImpact,
+  FloodActualEvent,
+  FloodSeason,
+  FloodPipelineStatus,
+} from "@/services/api";
+import { floodAPI } from "@/services/api";
 
-interface WeatherForecastPageProps {
+interface FloodMonitoringPageProps {
   isDarkMode?: boolean;
 }
 
 const FAO_BLUE = "#318DDE";
 
-// Persists across component remounts (SPA navigation) — modals show once per browser session
-const _shownModals = new Set<string>();
+// ── Shared risk-level helpers ─────────────────────────────────────────────────
+// Single source of truth for the vocabulary returned by the API:
+//   extreme → red | high / severe → orange | moderate → yellow | low → green
+type RiskLevel = string | null | undefined;
 
-// ── District centroid from geoData ────────────────────────────────────────────
-
-function getDistrictCentroid(
-  districtName: string,
-): { lat: number; lng: number } | null {
-  if (!geoData || !(geoData as any).features) return null;
-  const name = districtName.trim().toLowerCase();
-  const feature = (geoData as any).features.find(
-    (f: any) => f?.properties?.name?.trim().toLowerCase() === name,
-  );
-  if (!feature?.geometry) return null;
-
-  // Collect all coordinate pairs from Polygon or MultiPolygon
-  const coords: number[][] = [];
-  const addRing = (ring: number[][]) => ring.forEach((c) => coords.push(c));
-  if (feature.geometry.type === "Polygon") {
-    feature.geometry.coordinates.forEach(addRing);
-  } else if (feature.geometry.type === "MultiPolygon") {
-    feature.geometry.coordinates.forEach((poly: number[][][]) =>
-      poly.forEach(addRing),
-    );
+function riskColor(level: RiskLevel): string {
+  switch (level?.toLowerCase()) {
+    case "extreme":               return "#ef4444";
+    case "high":   case "severe": return "#f97316";
+    case "moderate":              return "#eab308";
+    default:                      return "#22c55e";
   }
-  if (!coords.length) return null;
-
-  const sumLng = coords.reduce((s, c) => s + c[0], 0);
-  const sumLat = coords.reduce((s, c) => s + c[1], 0);
-  return { lat: sumLat / coords.length, lng: sumLng / coords.length };
 }
 
-// ── Open-Meteo 7-day forecast fetch ──────────────────────────────────────────
-
-interface OmDailyPoint {
-  label: string;
-  temp: number;
-  rain: number;
-  wind: number;
-  humidity: number;
+function riskLabel(level: RiskLevel): string {
+  switch (level?.toLowerCase()) {
+    case "extreme":               return "EXTREME";
+    case "high":   case "severe": return "HIGH";
+    case "moderate":              return "MODERATE";
+    default:                      return "NORMAL";
+  }
 }
 
-async function fetchOmDailyForecast(
-  lat: number,
-  lng: number,
-): Promise<OmDailyPoint[]> {
-  const url = new URL("https://api.open-meteo.com/v1/forecast");
-  url.searchParams.set("latitude", String(lat));
-  url.searchParams.set("longitude", String(lng));
-  url.searchParams.set("models", "icon_seamless");
-  url.searchParams.set(
-    "daily",
-    "temperature_2m_max,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean",
-  );
-  url.searchParams.set("timezone", "Africa/Kampala");
-  url.searchParams.set("forecast_days", "7");
-
-  const res = await fetch(url.href);
-  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
-  const json = await res.json();
-
-  const MONTHS_SHORT = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const dates: string[] = json.daily?.time ?? [];
-  const temps: number[] = json.daily?.temperature_2m_max ?? [];
-  const rains: number[] = json.daily?.precipitation_sum ?? [];
-  const winds: number[] = json.daily?.wind_speed_10m_max ?? [];
-  const humidities: number[] = json.daily?.relative_humidity_2m_mean ?? [];
-
-  return dates.map((dateStr, i) => {
-    // Parse as local date (dateStr is "YYYY-MM-DD" with no time component)
-    const parts = dateStr.split("-").map(Number);
-    const d = new Date(parts[0], parts[1] - 1, parts[2]);
-    return {
-      label: `${DAYS_SHORT[d.getDay()]} ${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`,
-      temp: Math.round((temps[i] ?? 0) * 10) / 10,
-      rain: Math.round((rains[i] ?? 0) * 100) / 100,
-      wind: Math.round((winds[i] ?? 0) * 10) / 10,
-      humidity: Math.round((humidities[i] ?? 0) * 10) / 10,
-    };
-  });
+function isElevated(level: RiskLevel): boolean {
+  const l = level?.toLowerCase();
+  return l === "extreme" || l === "high" || l === "severe";
 }
 
-// ── Open-Meteo 48-hour hourly forecast (nowcast wind + humidity) ──────────────
-
-interface OmHourlyPoint {
-  time: string; // ISO datetime string
-  wind: number;
-  humidity: number;
+function isCritical(level: RiskLevel): boolean {
+  return level?.toLowerCase() === "extreme";
 }
 
-async function fetchOmHourlyForecast(
-  lat: number,
-  lng: number,
-): Promise<OmHourlyPoint[]> {
-  const url = new URL("https://api.open-meteo.com/v1/forecast");
-  url.searchParams.set("latitude", String(lat));
-  url.searchParams.set("longitude", String(lng));
-  url.searchParams.set("models", "icon_seamless");
-  url.searchParams.set("hourly", "wind_speed_10m,relative_humidity_2m");
-  url.searchParams.set("timezone", "Africa/Kampala");
-  url.searchParams.set("forecast_days", "2");
-
-  const res = await fetch(url.href);
-  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
-  const json = await res.json();
-
-  const times: string[] = json.hourly?.time ?? [];
-  const winds: number[] = json.hourly?.wind_speed_10m ?? [];
-  const humidities: number[] = json.hourly?.relative_humidity_2m ?? [];
-
-  return times.map((t, i) => ({
-    time: t,
-    wind: Math.round((winds[i] ?? 0) * 10) / 10,
-    humidity: Math.round((humidities[i] ?? 0) * 10) / 10,
-  }));
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-import { EmptyState } from "@/components/shared/weatherHelpers";
-
-// ── Custom Tooltip for Metrics ────────────────────────────────────────────────
-
-const CustomMetricTooltip = ({
-  active,
-  payload,
+// ── ArcGauge ─────────────────────────────────────────────────────────────────
+function ArcGauge({
+  value,
+  max,
   label,
-  isDarkMode,
-  metric,
   unit,
+  color,
+  isDarkMode,
 }: {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-  isDarkMode: boolean;
-  metric: "temp" | "rain" | "wind" | "humidity";
+  value: number;
+  max: number;
+  label: string;
   unit: string;
-}) => {
-  if (!active || !payload?.length) return null;
-
-  const metricLabels: Record<"temp" | "rain" | "wind" | "humidity", string> = {
-    temp: "Temperature",
-    rain: "Rainfall",
-    wind: "Wind Speed",
-    humidity: "Humidity",
-  };
-
+  color: string;
+  isDarkMode: boolean;
+}) {
+  const pct = Math.min(Math.max(value / (max || 1), 0), 1);
+  const cx = 40,
+    cy = 40,
+    r = 28;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const pt = (angle: number) => ({
+    x: (cx + r * Math.cos(toRad(angle))).toFixed(2),
+    y: (cy + r * Math.sin(toRad(angle))).toFixed(2),
+  });
+  const s = pt(135);
+  const e = pt(405);
+  const fe = pt(135 + pct * 270);
+  const bgArc = `M ${s.x},${s.y} A ${r} ${r} 0 1 1 ${e.x},${e.y}`;
+  const fillArc =
+    pct < 0.01
+      ? ""
+      : `M ${s.x},${s.y} A ${r} ${r} 0 ${pct * 270 > 180 ? 1 : 0} 1 ${fe.x},${fe.y}`;
+  const display =
+    value >= 1000
+      ? `${(value / 1000).toFixed(1)}k`
+      : Math.round(value).toString();
   return (
-    <div
-      className={`px-2.5 py-1.5 rounded-lg shadow-lg border text-xs ${isDarkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-800"}`}
-    >
-      <p className="font-semibold mb-0.5">{label ?? ""}</p>
-      <p style={{ color: FAO_BLUE }}>
-        {metricLabels[metric]}: {payload[0]?.value ?? 0}
-        {unit}
+    <div className="flex flex-col items-center">
+      <svg width="80" height="65" viewBox="0 0 80 65">
+        <path
+          d={bgArc}
+          fill="none"
+          strokeWidth="6"
+          strokeLinecap="round"
+          stroke={isDarkMode ? "#1e293b" : "#e2e8f0"}
+        />
+        {fillArc && (
+          <path
+            d={fillArc}
+            fill="none"
+            strokeWidth="6"
+            strokeLinecap="round"
+            stroke={color}
+          />
+        )}
+        <text
+          x="40"
+          y="43"
+          textAnchor="middle"
+          fontSize="12"
+          fontWeight="800"
+          fill={isDarkMode ? "#f1f5f9" : "#0f172a"}
+        >
+          {display}
+        </text>
+        <text
+          x="40"
+          y="54"
+          textAnchor="middle"
+          fontSize="7.5"
+          fill={isDarkMode ? "#64748b" : "#94a3b8"}
+        >
+          {unit}
+        </text>
+      </svg>
+      <p
+        className="text-[9px] font-medium text-center leading-tight"
+        style={{ color: isDarkMode ? "#64748b" : "#94a3b8", marginTop: "-4px" }}
+      >
+        {label}
       </p>
     </div>
   );
-};
+}
 
-// ── Weather Trend Chart (supports multiple metrics) ────────────────────────────
-
-const WeatherTrendChart = ({
-  hourlyForecast,
+// ── FloodMap wrapper ──────────────────────────────────────────────────────────
+const FloodMap = ({
   isDarkMode,
-  gradientId,
-  height,
-  margin,
-  fontSize,
-  chartData,
-  metric = "temp",
+  className = "",
+  badgeText = "Forecast",
+  onLayerResolved,
+  onBasinSelect,
 }: {
-  hourlyForecast: any[];
   isDarkMode: boolean;
-  gradientId: string;
-  height: string | number;
-  margin: object;
-  fontSize: number;
-  chartData?: any[];
-  metric?: "temp" | "rain" | "wind" | "humidity";
-}) => {
-  const dataToDisplay =
-    chartData && chartData.length >= 2
-      ? chartData
-      : hourlyForecast?.length >= 2
-        ? hourlyForecast
-        : null;
-  if (!dataToDisplay || dataToDisplay.length < 2) {
+  className?: string;
+  badgeText?: string;
+  onLayerResolved?: (layer: FloodRasterLayer | null) => void;
+  onBasinSelect?: (basinName: string) => void;
+}) => (
+  <FloodMonitorMap
+    isDarkMode={isDarkMode}
+    className={`rounded-lg md:rounded-xl ${className}`}
+    badgeText={badgeText}
+    legendTitle="Discharge (m³/s)"
+    legendItems={[
+      { label: "> 3000", color: "#800026" },
+      { label: "1500 – 3000", color: "#bd0026" },
+      { label: "700 – 1500", color: "#f03b20" },
+      { label: "300 – 700", color: "#253494" },
+      { label: "100 – 300", color: "#225ea8" },
+      { label: "50 – 100", color: "#1d91c0" },
+      { label: "20 – 50", color: "#41b6c4" },
+      { label: "5 – 20", color: "#7fcdbb" },
+      { label: "1 – 5", color: "#c7e9b4" },
+      { label: "< 1", color: "#ffffcc" },
+    ]}
+    onLayerResolved={onLayerResolved}
+    onBasinSelect={onBasinSelect}
+  />
+);
+
+// ── Leadtime tabs ─────────────────────────────────────────────────────────────
+function LeadtimeTabs({
+  selected,
+  onChange,
+  forecasts,
+  isDarkMode,
+}: {
+  selected: number;
+  onChange: (h: number) => void;
+  forecasts: FloodForecastFull[];
+  isDarkMode: boolean;
+}) {
+  // Derive available leadtimes strictly from what the API returned — no hardcoded fallbacks.
+  // If the API only has 24h, only show 24h. If it has 24/48/72, show all three.
+  const available = Array.from(
+    new Set(forecasts.map((f) => f.leadtime_hours)),
+  ).sort((a, b) => a - b);
+
+  if (available.length === 0) {
     return (
-      <EmptyState
-        icon={TrendingUp}
-        message="No data available"
-        isDarkMode={isDarkMode}
-        className="h-full"
-      />
+      <div className="flex gap-1.5">
+        {[24, 48, 72].map((h) => (
+          <div
+            key={h}
+            className="flex-1 py-1.5 px-2 text-xs rounded-lg font-semibold text-center animate-pulse"
+            style={{
+              backgroundColor: isDarkMode ? "#1e293b" : "#f1f5f9",
+              color: isDarkMode ? "#334155" : "#e2e8f0",
+            }}
+          >
+            +{h}h
+          </div>
+        ))}
+      </div>
     );
   }
 
-  const metricConfig = {
-    temp: { label: "Temperature", unit: "°C", color: FAO_BLUE, key: "temp" },
-    rain: { label: "Rainfall", unit: "mm", color: "#3b82f6", key: "rain" },
-    wind: { label: "Wind Speed", unit: "km/h", color: "#f97316", key: "wind" },
-    humidity: {
-      label: "Humidity",
-      unit: "%",
-      color: "#22c55e",
-      key: "humidity",
-    },
-  };
-
-  const config = metricConfig[metric] ?? metricConfig.temp;
-
-  // Detect whether we're showing hourly (time labels like "10:00 AM") or
-  // daily (date labels like "Tue Jun 3"). Hourly labels need thinning + rotation
-  // to prevent the "crumpled" look; daily labels keep the two-line renderer.
-  const firstLabel: string = dataToDisplay[0]?.label ?? "";
-  const isHourly = /AM|PM/i.test(firstLabel);
-
-  // For hourly data show every 3rd tick so labels have breathing room.
-  // For daily data keep interval=0 (7 items always fit).
-  const tickInterval = isHourly ? 2 : 0;
-
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={dataToDisplay} margin={margin}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={config.color} stopOpacity={0.25} />
-            <stop offset="95%" stopColor={config.color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke={isDarkMode ? "#334155" : "#e2e8f0"}
-          vertical={false}
-        />
-        <XAxis
-          dataKey="label"
-          tick={(props: any) => {
-            const { x, y, payload } = props;
-            const label: string = payload.value ?? "";
-
-            if (isHourly) {
-              // Single-line rotated tick for hourly labels e.g. "10:00 AM"
-              return (
-                <g transform={`translate(${x},${y})`}>
-                  <text
-                    x={0}
-                    y={0}
-                    dy={10}
-                    textAnchor="end"
-                    fill={isDarkMode ? "#94a3b8" : "#64748b"}
-                    fontSize={fontSize}
-                    transform="rotate(-40)"
-                  >
-                    {label}
-                  </text>
-                </g>
-              );
-            }
-
-            // Two-line renderer for daily labels e.g. "Tue Jun 3"
-            const parts = label.split(" ");
-            const day = parts[0] ?? "";
-            const date = parts.slice(1).join(" ");
-            return (
-              <g transform={`translate(${x},${y})`}>
-                <text
-                  x={0}
-                  y={0}
-                  dy={10}
-                  textAnchor="middle"
-                  fill={isDarkMode ? "#94a3b8" : "#64748b"}
-                  fontSize={fontSize + 1}
-                  fontWeight={600}
-                >
-                  {day}
-                </text>
-                <text
-                  x={0}
-                  y={0}
-                  dy={22}
-                  textAnchor="middle"
-                  fill={isDarkMode ? "#64748b" : "#94a3b8"}
-                  fontSize={fontSize - 1}
-                >
-                  {date}
-                </text>
-              </g>
-            );
-          }}
-          tickLine={false}
-          axisLine={false}
-          interval={tickInterval}
-          height={isHourly ? 44 : 36}
-        />
-        <YAxis
-          domain={["auto", "auto"]}
-          tick={{ fontSize, fill: isDarkMode ? "#64748b" : "#94a3b8" }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => `${v}${config.unit}`}
-        />
-        <Tooltip
-          content={
-            <CustomMetricTooltip
-              isDarkMode={isDarkMode}
-              metric={metric}
-              unit={config.unit}
-            />
-          }
-        />
-        <Area
-          type="monotone"
-          dataKey={config.key}
-          stroke={config.color}
-          strokeWidth={1.5}
-          fill={`url(#${gradientId})`}
-          dot={false}
-          activeDot={{ r: 3, fill: config.color, strokeWidth: 0 }}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="flex gap-1.5">
+      {available.map((h) => {
+        const fc = forecasts.find((f) => f.leadtime_hours === h);
+        const isActive = selected === h;
+        const alertColor = !fc ? "" : riskColor(fc.alert_level);
+        return (
+          <button
+            key={h}
+            onClick={() => onChange(h)}
+            className="flex-1 py-1.5 px-2 text-xs rounded-lg font-semibold transition-all relative"
+            style={{
+              backgroundColor: isActive
+                ? FAO_BLUE
+                : isDarkMode
+                  ? "#1e293b"
+                  : "#f1f5f9",
+              color: isActive ? "#fff" : isDarkMode ? "#94a3b8" : "#64748b",
+              border: `1.5px solid ${isActive ? FAO_BLUE : isDarkMode ? "#334155" : "#e2e8f0"}`,
+            }}
+          >
+            +{h}h
+            {alertColor && (
+              <span
+                className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
+                style={{
+                  backgroundColor: alertColor,
+                  border: `1px solid ${isDarkMode ? "#0f172a" : "#fff"}`,
+                }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
-};
+}
 
-// ── Forecast Model Info Modal ─────────────────────────────────────────────────
-
-const ForecastModelModal = ({
-  model,
+// ── Basin impact detail card ──────────────────────────────────────────────────
+function BasinImpactCard({
+  impact,
   isDarkMode,
-  onClose,
+  borderColor,
+  rowBg,
+  headerText,
 }: {
-  model: "icon" | "gfs";
+  impact: FloodImpact;
   isDarkMode: boolean;
-  onClose: () => void;
-}) => {
-  const isIcon = model === "icon";
-  const accentColor = isIcon ? "#3b82f6" : "#22c55e";
+  borderColor: string;
+  rowBg: string;
+  textMuted: string;
+  headerText: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const discharge = impact.max_discharge ?? 0;
+  const alertColor = riskColor(impact.flood_risk_level);
+  const alertLabel = riskLabel(impact.flood_risk_level);
 
-  const cardStyle: React.CSSProperties = isDarkMode
-    ? { backgroundColor: isIcon ? "#0d1f3c" : "#0d2218" }
-    : {
-        backgroundColor: "#ffffff",
-        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-      };
-
-  const textColor = isDarkMode ? "#ffffff" : "#0f172a";
-  const subtitleColor = isDarkMode ? "#94a3b8" : "#64748b";
-  const rowTextColor = isDarkMode ? "#e2e8f0" : "#334155";
-  const noteBoxBg = isDarkMode ? "rgba(255,255,255,0.07)" : "#fefce8";
-  const noteBoxBorder = isDarkMode ? "rgba(255,255,255,0.1)" : "#fde68a";
-
-  const content = isIcon
-    ? {
-        title: "ICON Forecast Model",
-        subtitle: "Forecast model run by Germany's weather service DWD.",
-        rows: [
-          {
-            icon: Globe,
-            text: (
-              <span>
-                Max resolution:{" "}
-                <strong style={{ color: accentColor }}>13 km (8 miles)</strong>
-              </span>
-            ),
-          },
-          {
-            icon: Clock,
-            text: (
-              <span>
-                Forecast range:{" "}
-                <strong style={{ color: accentColor }}>1 hr to 7.5 days</strong>
-              </span>
-            ),
-          },
-          {
-            icon: BarChart2,
-            text: (
-              <span>
-                Hourly data for: Rainfall, Temperature, Humidity and Wind
-              </span>
-            ),
-          },
-          {
-            icon: RefreshCw,
-            text: (
-              <span>
-                Updates:{" "}
-                <strong style={{ color: accentColor }}>2 times a day</strong>
-              </span>
-            ),
-          },
-        ],
-        note: "ICON accounts for topography and coastlines, delivering high accuracy even in complex terrain and near bodies of water.",
-      }
-    : {
-        title: "GFS Forecast Model",
-        subtitle:
-          "GFS is a global weather forecasting model by the U.S. National Centers for Environmental Prediction (NCEP/NOAA).",
-        rows: [
-          {
-            icon: Globe,
-            text: <span>Global weather coverage</span>,
-          },
-          {
-            icon: MapPin,
-            text: (
-              <span>
-                Resolution:{" "}
-                <strong style={{ color: accentColor }}>27 km (17 miles)</strong>
-              </span>
-            ),
-          },
-          {
-            icon: Clock,
-            text: (
-              <span>
-                Forecast step:{" "}
-                <strong style={{ color: accentColor }}>1 hour</strong>
-              </span>
-            ),
-          },
-          {
-            icon: RefreshCw,
-            text: (
-              <span>
-                Updated{" "}
-                <strong style={{ color: accentColor }}>4 times daily</strong>{" "}
-                (every 6 hours)
-              </span>
-            ),
-          },
-        ],
-        note: "GFS does not resolve topography or coastlines in detail, so accuracy may be lower near coasts and complex terrain.",
-      };
+  const name = impact.river_basin_name ?? impact.district_name ?? "Unknown";
+  const pop = impact.affected_population ?? 0;
+  const extent = impact.flood_extent_km2 ?? 0;
+  const roads = impact.affected_roads_km ?? 0;
+  const buildings = impact.affected_buildings_count ?? 0;
+  const pois = impact.affected_pois_count ?? 0;
+  const avgDischarge = impact.avg_discharge ?? 0;
+  const landuse = impact.affected_landuse_area_km2 ?? 0;
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
-      onClick={onClose}
+      className={`rounded-lg border ${borderColor} overflow-hidden transition-all`}
+      style={{
+        backgroundColor: isDarkMode
+          ? "rgba(15,23,42,0.6)"
+          : "rgba(248,250,252,0.9)",
+      }}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl p-6"
-        style={cardStyle}
-        onClick={(e) => e.stopPropagation()}
+      {/* Header row — always visible */}
+      <button
+        className="w-full flex items-center gap-2 p-2.5 text-left"
+        onClick={() => setExpanded(!expanded)}
       >
-        <h2
-          className="text-xl font-bold text-center mb-2"
-          style={{ color: textColor }}
-        >
-          {content.title}
-        </h2>
-        <p
-          className="text-sm text-center mb-5"
-          style={{ color: subtitleColor }}
-        >
-          {content.subtitle}
-        </p>
-
-        <div className="space-y-4 mb-5">
-          {content.rows.map(({ icon: Icon, text }, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Icon
-                className="w-5 h-5 flex-shrink-0"
-                style={{ color: accentColor }}
-              />
-              <span className="text-sm" style={{ color: rowTextColor }}>
-                {text}
-              </span>
-            </div>
-          ))}
-        </div>
-
         <div
-          className="flex items-start gap-3 rounded-xl p-3 mb-5"
-          style={{
-            backgroundColor: noteBoxBg,
-            border: `1px solid ${noteBoxBorder}`,
-          }}
-        >
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-yellow-400" />
-          <p className="text-sm" style={{ color: subtitleColor }}>
-            <span className="font-semibold" style={{ color: "#facc15" }}>
-              Note:
-            </span>{" "}
-            {content.note}
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: alertColor }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-semibold truncate ${headerText}`}>
+            {name}
+          </p>
+          <p className="text-[9px]" style={{ color: alertColor }}>
+            {alertLabel} ·{" "}
+            {discharge >= 1000
+              ? `${(discharge / 1000).toFixed(1)}k`
+              : Math.round(discharge)}{" "}
+            m³/s
           </p>
         </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <span
+            className="text-[9px]"
+            style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
+          >
+            {pop >= 1_000_000
+              ? `${(pop / 1_000_000).toFixed(1)}M`
+              : pop >= 1000
+                ? `${Math.round(pop / 1000)}K`
+                : pop}{" "}
+            ppl
+          </span>
+          {expanded ? (
+            <ChevronDown
+              className="w-3 h-3"
+              style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
+            />
+          ) : (
+            <ChevronRight
+              className="w-3 h-3"
+              style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
+            />
+          )}
+        </div>
+      </button>
 
-        <button
-          onClick={onClose}
-          className="w-full py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 active:opacity-80"
-          style={{ backgroundColor: "#3b82f6" }}
-        >
-          OK
-        </button>
-      </div>
+      {/* Expanded detail */}
+      {expanded && (
+        <div className={`px-2.5 pb-2.5 pt-0 border-t ${borderColor}`}>
+          {/* Discharge bar */}
+          <div className="mt-2 mb-2">
+            <div className="flex justify-between text-[9px] mb-0.5">
+              <span style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}>
+                Discharge range
+              </span>
+              <span style={{ color: alertColor }}>
+                {Math.round(avgDischarge)}–{Math.round(discharge)} m³/s
+              </span>
+            </div>
+            <div
+              className="h-1.5 rounded-full overflow-hidden"
+              style={{ background: isDarkMode ? "#1e293b" : "#e2e8f0" }}
+            >
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.min((discharge / 5000) * 100, 100)}%`,
+                  backgroundColor: alertColor,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            {[
+              {
+                label: "Flood Extent",
+                value: `${extent.toFixed(1)} km²`,
+                color: FAO_BLUE,
+              },
+              {
+                label: "Roads at Risk",
+                value: `${roads.toFixed(1)} km`,
+                color: "#60a5fa",
+              },
+              {
+                label: "Buildings",
+                value:
+                  buildings >= 1000
+                    ? `${(buildings / 1000).toFixed(1)}K`
+                    : String(buildings),
+                color: "#a78bfa",
+              },
+              { label: "POIs", value: String(pois), color: "#fb923c" },
+              {
+                label: "Land Use",
+                value: `${landuse.toFixed(1)} km²`,
+                color: "#34d399",
+              },
+              {
+                label: "Avg Discharge",
+                value: `${Math.round(avgDischarge)} m³/s`,
+                color: isDarkMode ? "#94a3b8" : "#64748b",
+              },
+            ].map((s) => (
+              <div key={s.label} className={`${rowBg} rounded-md p-1.5`}>
+                <p
+                  className="text-[8px]"
+                  style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
+                >
+                  {s.label}
+                </p>
+                <p
+                  className="text-[10px] font-bold mt-0.5"
+                  style={{ color: s.color }}
+                >
+                  {s.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Population bar */}
+          <div className="flex items-center gap-1.5">
+            <Users
+              className="w-2.5 h-2.5 flex-shrink-0"
+              style={{ color: "#fb923c" }}
+            />
+            <div
+              className="flex-1 h-1.5 rounded-full overflow-hidden"
+              style={{ background: isDarkMode ? "#1e293b" : "#e2e8f0" }}
+            >
+              <div
+                className="h-full rounded-full bg-orange-400"
+                style={{ width: `${Math.min((pop / 500000) * 100, 100)}%` }}
+              />
+            </div>
+            <span
+              className="text-[9px] font-semibold flex-shrink-0"
+              style={{ color: "#fb923c" }}
+            >
+              {pop >= 1_000_000
+                ? `${(pop / 1_000_000).toFixed(1)}M`
+                : pop >= 1000
+                  ? `${Math.round(pop / 1000)}K`
+                  : pop}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
-// ── Filter Sidebar ────────────────────────────────────────────────────────────
-
+// ── FilterContent ─────────────────────────────────────────────────────────────
 const FilterContent = ({
-  selectedParameter,
-  setSelectedParameter,
+  selectedBasin,
+  setSelectedBasin,
+  alertLevelFilter,
+  setAlertLevelFilter,
+  selectedLeadtime,
+  onLeadtimeChange,
+  availableBasinNames,
+  forecastsFull,
   isDarkMode,
   textMuted,
   textSecondary,
   borderColor,
-  weatherData,
-  // dateRange,
-  // setDateRange,
-  district_list,
+  headerText,
+  totalPopulation,
+  criticalCount,
+  activeAlerts,
 }: {
-  selectedRegion: string;
-  setSelectedRegion: (v: string) => void;
-  selectedParameter: string;
-  setSelectedParameter: (v: string) => void;
+  timeRange: string;
+  setTimeRange: (val: string) => void;
+  selectedBasin: string;
+  setSelectedBasin: (val: string) => void;
+  alertLevelFilter: string;
+  setAlertLevelFilter: (val: string) => void;
+  selectedLeadtime: number;
+  onLeadtimeChange: (val: number) => void;
+  selectedDate: string;
+  setSelectedDate: (val: string) => void;
+  availableDates: string[];
+  availableBasinNames: string[];
+  dateRange: string;
+  setDateRange: (val: string) => void;
+  forecastsFull: FloodForecastFull[];
   isDarkMode: boolean;
   textMuted: string;
   textSecondary: string;
   borderColor: string;
-  weatherData: WeatherData | null;
-  dateRange: string;
-  setDateRange: (dateRange: string) => void;
-  district_list: district[] | undefined;
+  headerText: string;
+  riverBasins: Array<{
+    name: string;
+    level: number;
+    trend: string;
+    population: number;
+    rainfall: number;
+    discharge: number;
+    status: string;
+  }>;
+  totalPopulation: number;
+  criticalCount: number;
+  activeAlerts: number;
 }) => (
   <div className="space-y-3">
-    <Districts_list
-      district_list={district_list}
-      isDarkMode={isDarkMode}
-      textMuted={textMuted}
-    />
+    {/* Leadtime selector */}
     <div>
-      <label className={`text-xs ${textMuted} mb-1 block`}>Parameter</label>
+      <label className={`text-xs font-semibold ${headerText} mb-1.5 block`}>
+        Forecast Lead Time
+      </label>
+      <LeadtimeTabs
+        selected={selectedLeadtime}
+        onChange={onLeadtimeChange}
+        forecasts={forecastsFull}
+        isDarkMode={isDarkMode}
+      />
+      <p className={`text-[9px] mt-1 ${textMuted}`}>
+        Coloured dot = alert level for that horizon
+      </p>
+    </div>
+
+    {/* River Basin */}
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>River Basin</label>
       <select
-        value={selectedParameter}
-        onChange={(e) => setSelectedParameter(e.target.value)}
+        value={selectedBasin}
+        onChange={(e) => setSelectedBasin(e.target.value)}
         className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-900"}`}
       >
-        {[
-          ["temperature", "Temperature"],
-          ["humidity", "Humidity"],
-          ["wind", "Wind Speed"],
-          ["rainfall", "Rainfall"],
-        ].map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
+        <option value="All Basins">All Basins</option>
+        {availableBasinNames.map((name) => (
+          <option key={name} value={name}>
+            {name}
           </option>
         ))}
       </select>
     </div>
-    {/* <div>
-      <label className={`text-xs ${textMuted} mb-1 block`}>Select Date</label>
-      <input
-        type="date"
-        value={dateRange}
-        onChange={(e) => setDateRange(e.target.value)}
-        className={`w-full p-2 rounded-lg text-sm outline-none border ${isDarkMode ? "bg-slate-700 border-slate-600 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-      />
-    </div> */}
+
+    {/* Alert Level */}
+    <div>
+      <label className={`text-xs ${textMuted} mb-1 block`}>Alert Level</label>
+      <div className="space-y-1.5">
+        {["All Levels", "Critical Only", "Warning Only", "Normal"].map(
+          (level) => (
+            <label
+              key={level}
+              className="flex items-center gap-2 text-sm cursor-pointer"
+            >
+              <input
+                type="radio"
+                name="alertLevelFilter"
+                checked={alertLevelFilter === level}
+                onChange={() => setAlertLevelFilter(level)}
+                className={`accent-blue-500 ${isDarkMode ? "bg-slate-700 border-slate-600" : "bg-white border-slate-300"}`}
+              />
+              <span className={textSecondary}>{level}</span>
+            </label>
+          ),
+        )}
+      </div>
+    </div>
+
+    {/* Quick Stats */}
     <div className={`pt-3 border-t ${borderColor}`}>
-      <h4 className={`text-xs font-semibold mb-2 ${textSecondary}`}>
+      <h4 className={`text-xs font-semibold mb-2 ${headerText}`}>
         Quick Stats
       </h4>
       <div className="space-y-1.5">
-        {[
-          {
-            label: "Avg Temp",
-            value: `${weatherData?.avg_temp ?? 0}°C`,
-            color: FAO_BLUE,
-          },
-          {
-            label: "Max Temp",
-            value: `${weatherData?.max_temp ?? 0}°C`,
-            color: "#ef4444",
-          },
-          {
-            label: "Min Temp",
-            value: `${weatherData?.min_temp ?? 0}°C`,
-            color: "#3b82f6",
-          },
-          {
-            label: "Total Rain",
-            value: `${weatherData?.total_rain ?? 0}mm`,
-            color: "#06b6d4",
-          },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="flex justify-between text-xs">
-            <span className={textMuted}>{label}</span>
-            <span className="font-medium" style={{ color }}>
-              {value}
-            </span>
-          </div>
-        ))}
+        <div className="flex justify-between text-xs">
+          <span className={textMuted}>Critical Basins</span>
+          <span className="text-red-500 font-medium">{criticalCount}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className={textMuted}>At Risk Population</span>
+          <span className="text-orange-500 font-medium">
+            {totalPopulation >= 1_000_000
+              ? `${(totalPopulation / 1_000_000).toFixed(1)}M`
+              : totalPopulation >= 1000
+                ? `${Math.round(totalPopulation / 1_000)}K`
+                : totalPopulation}
+          </span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className={textMuted}>Active Alerts</span>
+          <span className="text-red-500 font-medium">{activeAlerts}</span>
+        </div>
       </div>
     </div>
   </div>
 );
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
-export default function WeatherForecastPage({
+// ── Main page ─────────────────────────────────────────────────────────────────
+export default function FloodMonitoringPage({
   isDarkMode = true,
-}: WeatherForecastPageProps) {
-  // ── Data ────────────────────────────────────────────────────────────────────
-  const { data: district_list = [] } = useQuery<district[]>({
-    queryKey: ["districts"],
-    queryFn: DistrictsAPI.getAll,
-    staleTime: 10 * 60 * 1000, // districts don't change — cache for 10 min
-    gcTime: 30 * 60 * 1000, // keep in memory for 30 min
-  });
-
+}: FloodMonitoringPageProps) {
   const {
-    selectedParameter,
-    setSelectedParameter,
     dateRange,
     setDateRange,
-    selectedDistrictId,
     setLayerMode,
-    mapInteractionMetric,
-    setSliderhourIndexValue,
+    forecastStep,
+    setForecastStep,
+    setFloodAlerts,
+    setShowNotifications,
   } = useAppStore((state) => state);
-
-  const [activeTab, setActiveTabState] = useState<"nowcast" | "forecast">(
-    "nowcast",
-  );
-  const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const [timeRange, setTimeRange] = useState("Last 24 Hours");
+  const [selectedBasin, setSelectedBasin] = useState("All Basins");
+  const [alertLevelFilter, setAlertLevelFilter] = useState("All Levels");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [modelInfoModal, setModelInfoModal] = useState<null | "icon" | "gfs">(
-    null,
-  );
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [forecastData, setForecastData] = useState<ForecastPerHour | null>(
-    null,
-  );
-  const [dailyForecasts, setDailyForecast] =
-    useState<DailyForecastResponse | null>(null);
-  const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(
-    null,
-  );
-  const [chartMetric, setChartMetric] = useState<
-    "temp" | "rain" | "wind" | "humidity"
-  >("temp");
-  const [omDailyForecast, setOmDailyForecast] = useState<OmDailyPoint[]>([]);
-  const [omHourlyForecast, setOmHourlyForecast] = useState<OmHourlyPoint[]>([]);
+  const [selectedFloodLayer, setSelectedFloodLayer] =
+    useState<FloodRasterLayer | null>(null);
 
-  // Unified tab setter: keeps map layerMode in sync with the forecast tab
-  const setActiveTab = (tab: "nowcast" | "forecast") => {
-    setActiveTabState(tab);
-    setLayerMode(tab);
-    const model = tab === "nowcast" ? "icon" : "gfs";
-    if (!_shownModals.has(model)) {
-      _shownModals.add(model);
-      setModelInfoModal(model);
-    }
-  };
+  // Supplemental API state
+  const [actualEvents, setActualEvents] = useState<FloodActualEvent[]>([]);
+  const [currentSeason, setCurrentSeason] = useState<FloodSeason | null>(null);
+  const [pipeline, setPipeline] = useState<FloodPipelineStatus | null>(null);
 
-  // Show ICON info modal on first load (default tab is nowcast/ICON)
   useEffect(() => {
-    if (!_shownModals.has("icon")) {
-      _shownModals.add("icon");
-      setModelInfoModal("icon");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    floodAPI
+      .getActualEvents(8)
+      .then((res) => {
+        if (res?.results) setActualEvents(res.results);
+      })
+      .catch(() => {});
+    floodAPI
+      .getSeasons()
+      .then((res) => {
+        if (Array.isArray(res))
+          setCurrentSeason(res.find((s) => s.is_current) ?? null);
+      })
+      .catch(() => {});
+    floodAPI
+      .getForecastPipeline()
+      .then((res) => {
+        if (res) setPipeline(res);
+      })
+      .catch(() => {});
   }, []);
 
-  // ── Live map hover state — district name + sampled value from Open-Meteo ─────
-  const [mapHoverDistrict, setMapHoverDistrict] = useState<string | null>(null);
-  const [mapHoverValue, setMapHoverValue] = useState<number | null>(null);
-  const [mapHoverUnit, setMapHoverUnit] = useState<string>("");
-
-  const handleMapHoverChange = (
-    district: string | null,
-    value: number | null,
-    unit: string,
-  ) => {
-    setMapHoverDistrict(district);
-    setMapHoverValue(value);
-    setMapHoverUnit(unit);
-  };
-
-  // ── Sync activeTab ↔ layerMode ────────────────────────────────────────────────
-  // Tab → map: "nowcast" = ICON, "forecast" = GFS
-  useEffect(() => {
-    setLayerMode(activeTab === "forecast" ? "forecast" : "nowcast");
-  }, [activeTab, setLayerMode]);
-
-  // ── Sync selectedCardIndex → slider hour ──────────────────────────────────────
-  // When the user clicks an hourly forecast card, move the map to that hour.
-  // Since the nowcast now spans into the next day, hours > 23 wrap to the next day.
-  useEffect(() => {
-    if (activeTab !== "nowcast" || selectedCardIndex === null) return;
-    const nowHour = new Date().getHours();
-    const targetHour = (nowHour + selectedCardIndex) % 24;
-    setSliderhourIndexValue(targetHour);
-  }, [selectedCardIndex, activeTab, setSliderhourIndexValue]);
-
-  // Sync chart metric with map interaction (parameter click on map toolbar)
-  useEffect(() => {
-    if (mapInteractionMetric) {
-      handleSetChartMetric(mapInteractionMetric);
-    }
-  }, [mapInteractionMetric]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Two-way sync: changing chartMetric also updates the parameter dropdown, and vice versa.
-  const metricToParam: Record<string, string> = {
-    temp: "temperature",
-    rain: "rainfall",
-    wind: "wind",
-    humidity: "humidity",
-  };
-  const handleSetChartMetric = (m: "temp" | "rain" | "wind" | "humidity") => {
-    setChartMetric(m);
-    setSelectedParameter(metricToParam[m]);
-  };
-
-  // Sync chart metric when the parameter filter changes (one-way: filter → chart)
-  useEffect(() => {
-    const paramToMetric: Record<string, "temp" | "rain" | "wind" | "humidity"> =
-      {
-        temperature: "temp",
-        rainfall: "rain",
-        wind: "wind",
-        humidity: "humidity",
-      };
-    const mapped =
-      paramToMetric[selectedParameter?.toLowerCase() ?? "temperature"];
-    if (mapped) setChartMetric(mapped);
-  }, [selectedParameter]);
-
-  // When no district is selected, default stats to Kampala
-  const kampala = district_list.find((d: district) =>
-    d.name.toLowerCase().includes("kampala"),
-  );
-  const statsId = selectedDistrictId?.id ?? kampala?.id;
-  const statsLabel = selectedDistrictId?.name ?? kampala?.name ?? "Uganda";
-
-  // Ensure layerMode is set correctly on mount (activeTab default is "nowcast")
-  useEffect(() => {
-    setLayerMode("nowcast");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Fetch Open-Meteo 7-day forecast for wind + humidity — fetch always (not gated
-  // on forecast tab) so data is ready the moment the user switches to the 7-day view.
-  useEffect(() => {
-    let cancelled = false;
-    const districtName = selectedDistrictId?.name ?? kampala?.name ?? "";
-    const centroid = getDistrictCentroid(districtName) ??
-      getDistrictCentroid("Kampala") ?? { lat: 1.3733, lng: 32.2903 };
-    fetchOmDailyForecast(centroid.lat, centroid.lng)
-      .then((data) => {
-        if (!cancelled) setOmDailyForecast(data);
+  const refreshPipeline = () => {
+    floodAPI
+      .getForecastPipeline()
+      .then((res) => {
+        if (res) setPipeline(res);
       })
-      .catch(() => {
-        if (!cancelled) setOmDailyForecast([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDistrictId, statsLabel]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch Open-Meteo 48-hr hourly forecast for nowcast wind + humidity values
-  useEffect(() => {
-    if (activeTab !== "nowcast") return;
-    let cancelled = false;
-    const districtName = selectedDistrictId?.name ?? kampala?.name ?? "";
-    const centroid = getDistrictCentroid(districtName) ??
-      getDistrictCentroid("Kampala") ?? { lat: 1.3733, lng: 32.2903 };
-    fetchOmHourlyForecast(centroid.lat, centroid.lng)
-      .then((data) => {
-        if (!cancelled) setOmHourlyForecast(data);
-      })
-      .catch(() => {
-        if (!cancelled) setOmHourlyForecast([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, selectedDistrictId, statsLabel]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch dashboard + forecasts whenever the stats district changes.
-  // Guard against undefined statsId (districts query still loading) so we
-  // don't fire a no-district request that returns zeros before Kampala resolves.
-  useEffect(() => {
-    if (statsId === undefined) return;
-    (async () => {
-      try {
-        const [dashboard, hourlyForecast, dailyForecast] = await Promise.all([
-          weatherAPI.getDashboard(statsId),
-          weatherAPI.getForecastHourly(statsId),
-          weatherAPI.getForecastDaily(statsId),
-        ]);
-        setWeatherData((dashboard ?? null) as WeatherData | null);
-        setForecastData((hourlyForecast ?? null) as ForecastPerHour | null);
-        setDailyForecast(
-          (dailyForecast ?? null) as DailyForecastResponse | null,
-        );
-      } catch (err) {
-        console.error("Failed to fetch weather data:", err);
-      }
-    })();
-  }, [statsId]);
-
-  // Reset selected card when switching tabs
-  useEffect(() => {
-    setSelectedCardIndex(null);
-  }, [activeTab]);
-
-  // Safe normalisation — keep up to 48 hours so we always have data into the next day
-  const allHourlyForecast = forecastData?.hourly?.length
-    ? normaliseHourly(forecastData.hourly).slice(0, 48)
-    : [];
-
-  // Start from current hour and show the next 24 hours (spanning into tomorrow)
-  const now = new Date();
-  const currentHour = now.getHours();
-  const hourlyForecast = allHourlyForecast.slice(currentHour, currentHour + 24);
-
-  const dailyForecast = dailyForecasts?.daily?.length
-    ? normaliseDaily(dailyForecasts.daily).slice(0, 20)
-    : [];
-
-  // Get chart data based on active tab, selected card, metric, and date filters
-  const getChartData = () => {
-    if (activeTab === "nowcast") {
-      let filtered = hourlyForecast;
-
-      // Filter by date if dateRange is set
-      if (dateRange) {
-        const selectedDate = new Date(dateRange);
-        filtered = hourlyForecast.filter((h) => {
-          if (!h.rawDate) return false;
-          return (
-            h.rawDate.getFullYear() === selectedDate.getFullYear() &&
-            h.rawDate.getMonth() === selectedDate.getMonth() &&
-            h.rawDate.getDate() === selectedDate.getDate()
-          );
-        });
-      }
-
-      let sliced = filtered;
-      if (selectedCardIndex !== null && filtered[selectedCardIndex]) {
-        const startIdx = Math.max(0, selectedCardIndex - 2);
-        const endIdx = Math.min(filtered.length, selectedCardIndex + 3);
-        sliced = filtered.slice(startIdx, endIdx);
-      } else if (!dateRange) {
-        // When no card is selected, use all the data (already filtered by current hour)
-        sliced = filtered;
-      }
-
-      return sliced.map((h) => {
-        const displayTime = h.rawDate
-          ? h.rawDate.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })
-          : h.time;
-        // Match this hour to an OM hourly entry by ISO time prefix (YYYY-MM-DDTHH)
-        const rawTimePrefix = h.rawTime ? h.rawTime.slice(0, 13) : null;
-        const omMatch = rawTimePrefix
-          ? omHourlyForecast.find((o) => o.time.slice(0, 13) === rawTimePrefix)
-          : null;
-        return {
-          label: displayTime,
-          temp: h.temp,
-          rain: h.rain,
-          wind: omMatch?.wind ?? h.windSpeed ?? 0,
-          humidity: omMatch?.humidity ?? h.humidity ?? 0,
-        };
-      });
-    } else {
-      // 7-day chart uses Open-Meteo directly — all 4 metrics are reliable from OM.
-      // The backend daily API does not return wind or humidity reliably.
-      // omDailyForecast already has label, temp, rain, wind, humidity all populated.
-      if (omDailyForecast.length === 0) return [];
-
-      const source = omDailyForecast.map((d) => ({
-        label: d.label,
-        temp: d.temp,
-        rain: d.rain,
-        wind: d.wind,
-        humidity: d.humidity,
-      }));
-
-      if (selectedCardIndex !== null) {
-        const startIdx = Math.max(0, selectedCardIndex - 1);
-        const endIdx = Math.min(source.length, selectedCardIndex + 2);
-        return source.slice(startIdx, endIdx);
-      }
-
-      return source;
-    }
+      .catch(() => {});
   };
 
-  const rawChartData = getChartData();
-  // Pass undefined (not []) when empty so the chart component can fall back gracefully
-  const chartData =
-    rawChartData && rawChartData.length >= 2 ? rawChartData : undefined;
+  // Leadtime + date filter
+  const [selectedLeadtime, setSelectedLeadtime] = useState<number>(24);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
-  // Trigger chart update when filters or parameter changes
+  // Fetch ALL forecasts with no date/leadtime filter so we get all dates and all leadtimes at once.
+  // The API returns results like: [{forecast_date:'2026-06-07', leadtime_hours:24}, {forecast_date:'2026-06-07', leadtime_hours:48}, ...]
+  // We pick the LATEST forecast_date and filter by selectedLeadtime client-side.
+  const basinForTrend =
+    selectedBasin === "All Basins" ? undefined : selectedBasin;
+  const {
+    dashboard,
+    basinStatus,
+    basinTrend,
+    forecastsFull,
+    loading: dataLoading,
+    partialErrors = {},
+    refetch,
+  } = useFloodData(undefined, undefined, basinForTrend);
+  const [pageLoading, setPageLoading] = useState(true);
+
   useEffect(() => {
-    // This effect ensures the chart updates whenever filters change
-    // The dependency array includes all filter-related variables
-  }, [activeTab, selectedCardIndex, dateRange, selectedParameter, statsId]);
+    setLayerMode("forecast");
+  }, [setLayerMode]);
 
-  // ── Dashboard live-fetch per district ────────────────────────────────────────
-  // We fetch from the dashboard API whenever statsId changes (district switch).
-  // This is kept separate from the existing weatherData state so we can show
-  // a loading skeleton on the cards without blanking the rest of the page.
-  const [dashboardData, setDashboardData] = useState<WeatherData | null>(
-    weatherData,
-  );
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
-  const dashboardFetchId = useRef(0); // cancel stale requests
+  // Auto-select first available leadtime when forecasts load
+  useEffect(() => {
+    if (forecastsFull.length === 0) return;
+    // Only consider leadtimes from the latest forecast_date
+    const latestDate = forecastsFull
+      .map((f) => f.forecast_date)
+      .sort()
+      .reverse()[0];
+    const available = Array.from(
+      new Set(
+        forecastsFull
+          .filter((f) => f.forecast_date === latestDate)
+          .map((f) => f.leadtime_hours),
+      ),
+    ).sort((a, b) => a - b);
+    if (!available.includes(selectedLeadtime))
+      setSelectedLeadtime(available[0]);
+  }, [forecastsFull.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchDashboard = useCallback(async (districtId?: number) => {
-    const fetchId = ++dashboardFetchId.current;
-    setDashboardLoading(true);
-    setDashboardError(null);
-    try {
-      const data = await weatherAPI.getDashboard(districtId);
-      if (fetchId !== dashboardFetchId.current) return; // stale — discard
-      setDashboardData((data ?? null) as WeatherData | null);
-      // Keep parent weatherData in sync so FilterContent Quick Stats still works
-      setWeatherData((data ?? null) as WeatherData | null);
-    } catch (err) {
-      if (fetchId !== dashboardFetchId.current) return;
-      setDashboardError("Failed to load weather data");
-    } finally {
-      if (fetchId === dashboardFetchId.current) setDashboardLoading(false);
+  useEffect(() => {
+    const forecastDate = dashboard?.forecast_date;
+    if (forecastDate && !selectedFloodLayer) {
+      setDateRange(forecastDate);
+      if (!selectedDate) setSelectedDate(forecastDate);
+    }
+  }, [dashboard?.forecast_date, selectedFloodLayer]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep refs of current values so the useCallback has stable identity
+  // but can still read latest state without being in the dep array.
+  const selectedLeadtimeRef = useRef(selectedLeadtime);
+  selectedLeadtimeRef.current = selectedLeadtime;
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+
+  // useCallback with empty deps gives a stable function reference.
+  // The map effect has onLayerResolved in its dep array — if this function
+  // is recreated every render it triggers an infinite loop.
+  const handleLayerResolved = useCallback((layer: FloodRasterLayer | null) => {
+    setSelectedFloodLayer((current) => {
+      if (current?.layer_name === layer?.layer_name) return current;
+      return layer;
+    });
+    // Only update leadtime/date if they actually changed — prevents unnecessary re-renders
+    if (
+      layer?.leadtime_hours &&
+      layer.leadtime_hours !== selectedLeadtimeRef.current
+    ) {
+      setSelectedLeadtime(layer.leadtime_hours);
+      setForecastStep(layer.leadtime_hours);
+    }
+    if (
+      layer?.forecast_date &&
+      layer.forecast_date !== selectedDateRef.current
+    ) {
+      setSelectedDate(layer.forecast_date);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch whenever the selected district changes
+  // Only hide the initial full-page spinner once — never re-show it.
+  // dataLoading re-firing (on basin change) should not blank the screen.
+  const [hasEverLoaded, setHasEverLoaded] = useState(false);
   useEffect(() => {
-    if (statsId === undefined) return;
-    fetchDashboard(statsId);
-  }, [statsId, fetchDashboard]);
+    if (!dataLoading && !hasEverLoaded) {
+      const timer = setTimeout(() => {
+        setPageLoading(false);
+        setHasEverLoaded(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [dataLoading, hasEverLoaded]);
 
-  // Sync dashboardData → weatherData on mount (so cards show data immediately
-  // if weatherData was already populated by the existing fetch logic)
+  // ── Latest forecast_date across all results, then filter by selectedLeadtime ───────
+  // The API may return multiple forecast_dates (e.g. 2026-06-07, 2026-06-06).
+  // Always work from the latest date unless the map layer overrides it.
+  const latestForecastDate =
+    forecastsFull.length > 0
+      ? forecastsFull
+          .map((f) => f.forecast_date)
+          .sort()
+          .reverse()[0]
+      : "";
+  const activeForecastDate =
+    selectedFloodLayer?.forecast_date ?? (selectedDate || latestForecastDate);
+
+  // All forecasts belonging to the active date, keyed by leadtime
+  const forecastsByLeadtime = forecastsFull.filter(
+    (f) => f.forecast_date === activeForecastDate,
+  );
+
+  // Tabs only show leadtimes available for the active date
+
+  const activeForecast: FloodForecastFull | undefined =
+    forecastsByLeadtime.find((f) => f.leadtime_hours === selectedLeadtime) ??
+    forecastsByLeadtime[0] ??
+    forecastsFull[0];
+
+  // All impacts from the active forecast
+  const rawImpacts: FloodImpact[] = activeForecast?.impacts ?? [];
+  const allImpacts: FloodImpact[] =
+    selectedBasin === "All Basins"
+      ? rawImpacts
+      : rawImpacts.filter((i) => {
+          const kw = selectedBasin.toLowerCase().replace(" basin", "").trim();
+          return (
+            (i.district_name?.toLowerCase().includes(kw) ?? false) ||
+            (i.river_basin_name?.toLowerCase().includes(kw) ?? false)
+          );
+        });
+
+  const districtImpacts = allImpacts.filter((i) => i.district_name !== null);
+  const basinImpacts = allImpacts.filter((i) => i.river_basin_name !== null);
+
+  // Apply the alert level filter to districts
+  const filteredDistrictImpacts = districtImpacts.filter((i) => {
+    if (alertLevelFilter === "All Levels")   return true;
+    if (alertLevelFilter === "Critical Only") return isCritical(i.flood_risk_level);
+    if (alertLevelFilter === "Warning Only")  return isElevated(i.flood_risk_level) && !isCritical(i.flood_risk_level);
+    if (alertLevelFilter === "Normal")        return !isElevated(i.flood_risk_level);
+    return true;
+  });
+
+  const topDistrictImpacts = [...filteredDistrictImpacts]
+    .sort((a, b) => b.affected_population - a.affected_population)
+    .slice(0, 4);
+
+  // KPIs
+  const totalAffectedPopulation = filteredDistrictImpacts.reduce(
+    (s, i) => s + (i.affected_population ?? 0),
+    0,
+  );
+  const totalFloodExtentKm2 = filteredDistrictImpacts.reduce(
+    (s, i) => s + (i.flood_extent_km2 ?? 0),
+    0,
+  );
+  const populationDensityAvg =
+    totalFloodExtentKm2 > 0
+      ? Math.round(totalAffectedPopulation / totalFloodExtentKm2)
+      : 0;
+  const totalRoadsKm = filteredDistrictImpacts.reduce(
+    (s, i) => s + (i.affected_roads_km ?? 0),
+    0,
+  );
+  const totalBuildings = filteredDistrictImpacts.reduce(
+    (s, i) => s + (i.affected_buildings_count ?? 0),
+    0,
+  );
+  const totalPois = filteredDistrictImpacts.reduce(
+    (s, i) => s + (i.affected_pois_count ?? 0),
+    0,
+  );
+
+  const allMaxDischarges = allImpacts.map((i) => i.max_discharge ?? 0);
+  const allAvgDischarges = allImpacts
+    .map((i) => i.avg_discharge ?? 0)
+    .filter((v) => v > 0);
+  const maxDischargeApi =
+    allMaxDischarges.length > 0 ? Math.max(...allMaxDischarges) : 0;
+  const avgDischargeApi =
+    allAvgDischarges.length > 0
+      ? allAvgDischarges.reduce((s, v) => s + v, 0) / allAvgDischarges.length
+      : 0;
+
+  const availableDates = Array.from(
+    new Set(forecastsFull.map((f) => f.forecast_date)),
+  )
+    .sort()
+    .reverse();
+
+  // Basin names sourced exclusively from the latest forecast's impacts.
+  // river_basin_name is populated in the latest forecast; older ones may have null.
+  const availableBasinNames: string[] = Array.from(
+    new Set(
+      forecastsByLeadtime
+        .flatMap((f) => f.impacts)
+        .filter(
+          (i) =>
+            i.river_basin_name !== null && i.river_basin_name !== undefined,
+        )
+        .map((i) => i.river_basin_name!),
+    ),
+  ).sort();
+
+  // Fixed discharge threshold for alert colouring (no basins API needed)
+  // — removed: flood_risk_level from the API is authoritative per basin/district
+
+  const riverBasins = basinStatus.map((basin) => {
+    const isSelectedBasin =
+      selectedBasin === "All Basins" ||
+      basin.name
+        .toLowerCase()
+        .includes(selectedBasin.toLowerCase().replace(" basin", "").trim());
+    const trend: "up" | "stable" | "down" =
+      isSelectedBasin && basinTrend
+        ? basinTrend.trend === "rising"
+          ? "up"
+          : basinTrend.trend === "falling"
+            ? "down"
+            : "stable"
+        : "stable";
+    return {
+      name: basin.name,
+      level: basin.level,
+      trend,
+      population: basin.population_at_risk,
+      discharge: basin.discharge_rate,
+      rainfall: 0,
+      status: basin.status,
+    };
+  });
+
+  const timeSeriesData = basinTrend?.readings?.length
+    ? basinTrend.readings.map((r, idx) => ({
+        time: r.timestamp
+          ? new Date(r.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          : `${String(idx * 3).padStart(2, "0")}:00`,
+        level: r.level ?? 0,
+      }))
+    : [];
+
+  const scopedBasins =
+    selectedBasin === "All Basins"
+      ? riverBasins
+      : riverBasins.filter((b) =>
+          b.name
+            .toLowerCase()
+            .includes(selectedBasin.toLowerCase().replace(" basin", "").trim()),
+        );
+  const criticalBasins = scopedBasins.filter((b) => isElevated(b.status)).length;
+  const severeCount = scopedBasins.filter((b) => b.status === "severe").length;
+  const moderateCount = scopedBasins.filter(
+    (b) => b.status === "moderate",
+  ).length;
+
+  const currentLevel =
+    basinTrend?.current_level_m ??
+    (timeSeriesData.length > 0
+      ? timeSeriesData[timeSeriesData.length - 1].level
+      : 0);
+
+  // Build named critical basins directly from flood_risk_level — no discharge
+  // arithmetic against a hardcoded threshold needed.
+  const namedCriticalBasins: Array<{
+    name: string;
+    discharge: number;
+    status: string;
+    population: number;
+  }> = [];
+  basinImpacts.forEach((i) => {
+    if (
+      isElevated(i.flood_risk_level) &&
+      i.river_basin_name &&
+      !namedCriticalBasins.find((n) => n.name === i.river_basin_name)
+    ) {
+      namedCriticalBasins.push({
+        name: i.river_basin_name,
+        discharge: Math.round(i.max_discharge ?? 0),
+        status: i.flood_risk_level ?? "high",
+        population: i.affected_population ?? 0,
+      });
+    }
+  });
+  // Merge in any elevated basins from basinStatus not already represented
+  scopedBasins
+    .filter((b) => isElevated(b.status))
+    .forEach((b) => {
+      if (!namedCriticalBasins.find((n) => n.name === b.name))
+        namedCriticalBasins.push({
+          name: b.name,
+          discharge: Math.round(b.discharge),
+          status: b.status,
+          population: b.population,
+        });
+    });
+
+  const criticalBasinCount = namedCriticalBasins.length;
+  const thresholdMode =
+    namedCriticalBasins.some((b) => isCritical(b.status))
+      ? "EXCEEDED"
+      : criticalBasinCount > 0
+        ? "WARNING"
+        : "NORMAL";
+
+  // Districts at risk — use flood_risk_level directly from the impact row
+  const liveDistrictsAtRisk = topDistrictImpacts.map((i) => ({
+    id: 0,
+    name: i.district_name!,
+    population_affected: i.affected_population,
+    flood_risk_level: i.flood_risk_level ?? "low",
+  }));
+
+  const displayPopulation = totalAffectedPopulation;
+  const displayDensity = populationDensityAvg;
+  const affectedRoadsKm = Math.round(totalRoadsKm * 10) / 10;
+  const affectedBuildings = totalBuildings;
+  const affectedPois = totalPois;
+  const maxDischarge = maxDischargeApi;
+  const avgDischarge = Math.round(avgDischargeApi);
+
+  const infraTotal =
+    (affectedRoadsKm > 0 ? affectedRoadsKm : 1) + affectedBuildings / 100;
+  const roadsBarPct = Math.round((affectedRoadsKm / infraTotal) * 100);
+  const buildingsBarPct = 100 - roadsBarPct;
+
   useEffect(() => {
-    if (weatherData && !dashboardData) setDashboardData(weatherData);
-  }, [weatherData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Stat colours match Open-Meteo weather map color scale mid-range stops
-  const STAT_COLOR = {
-    temperature: "#f97316", // warm orange (35° stop)
-    rainfall: "#0284c7", // medium blue (50 mm stop)
-    humidity: "#22c55e", // green (70% stop — moderate)
-    wind: "#3b82f6", // blue (20 km/h stop — moderate)
-  };
-
-  // Determine if a given stat card is the currently active map parameter
-  const activeParam = selectedParameter?.toLowerCase() ?? "temperature";
-  const paramToStatKey: Record<string, keyof typeof STAT_COLOR> = {
-    temperature: "temperature",
-    rainfall: "rainfall",
-    precipitation: "rainfall",
-    humidity: "humidity",
-    wind: "wind",
-  };
-
-  // Live value override from map hover — shown in place of the API value
-  // when the user hovers a district on the map with the matching parameter active.
-  const liveHoverOverride = (
-    statParam: keyof typeof STAT_COLOR,
-  ): string | null => {
-    if (!mapHoverDistrict || mapHoverValue == null) return null;
-    if (paramToStatKey[activeParam] !== statParam) return null;
-    return `${mapHoverValue}${mapHoverUnit}`;
-  };
-
-  // ── API field mapping ─────────────────────────────────────────────────────────
-  // dashboardData mirrors the WeatherData interface which maps exactly to the
-  // fields returned by /api/v1/weather/dashboard/?district_id=N
-  const apiTemp = dashboardData?.temperature ?? 0;
-  const apiTempDelta = dashboardData?.temperature_delta ?? 0;
-  const apiRain = dashboardData?.rainfall_24h ?? 0;
-  const apiRainDelta = dashboardData?.rainfall_24h_delta ?? 0;
-  const apiHumidity = dashboardData?.humidity ?? 0;
-  const apiHumDelta = dashboardData?.humidity_delta ?? 0;
-  const apiWind = dashboardData?.wind_speed ?? 0;
-  const apiWindDelta = dashboardData?.wind_speed_delta ?? 0;
-  const apiFeelsLike = dashboardData?.feels_like ?? 0;
-  const apiDewPoint = dashboardData?.dew_point ?? 0;
-  const apiWindDir = dashboardData?.wind_direction_label ?? "—";
-  const apiWeatherDesc = dashboardData?.weather_description ?? "—";
-  const apiFetchedAt = dashboardData?.fetched_at ?? "";
-  const apiAvgTemp = dashboardData?.avg_temp ?? 0;
-  const apiMaxTemp = dashboardData?.max_temp ?? 0;
-  const apiMinTemp = dashboardData?.min_temp ?? 0;
-  const apiTotalRain = dashboardData?.total_rain ?? 0;
-
-  // Helper: format a delta with sign
-  const fmt = (v: number | null, suffix: string) =>
-    `${(v ?? 0) > 0 ? "+" : ""}${v ?? 0}${suffix}`;
-
-  const statCards = [
-    {
-      label: "Temperature",
-      sublabel: `Feels like ${apiFeelsLike}°C`,
-      apiNote: `Avg ${apiAvgTemp}° · Max ${apiMaxTemp}° · Min ${apiMinTemp}°`,
-      statKey: "temperature" as keyof typeof STAT_COLOR,
-      icon: Thermometer,
-      color: STAT_COLOR.temperature,
-      min: 15,
-      max: 40,
-      value: `${apiTemp}°C`,
-      change: fmt(apiTempDelta, "°C"),
-      trend: apiTempDelta > 0 ? "up" : apiTempDelta < 0 ? "down" : "neutral",
-      thresholds: [
-        { value: 20, color: "#3b82f6", label: "Cool" },
-        { value: 28, color: "#22c55e", label: "Mild" },
-        { value: 35, color: "#f97316", label: "Warm" },
-        { value: 40, color: "#ef4444", label: "Hot" },
-      ],
-    },
-    {
-      label: "Rainfall",
-      sublabel: `24 h · ${apiTotalRain} mm total`,
-      apiNote: `${apiWeatherDesc}`,
-      statKey: "rainfall" as keyof typeof STAT_COLOR,
-      icon: CloudRain,
-      color: STAT_COLOR.rainfall,
-      min: 0,
-      max: 100,
-      value: `${apiRain} mm`,
-      change: fmt(apiRainDelta, " mm"),
-      trend: apiRainDelta > 0 ? "up" : apiRainDelta < 0 ? "down" : "neutral",
-      thresholds: [
-        { value: 5, color: "#e0f2fe", label: "Dry" },
-        { value: 25, color: "#38bdf8", label: "Light" },
-        { value: 50, color: "#0284c7", label: "Moderate" },
-        { value: 100, color: "#1e3a8a", label: "Heavy" },
-      ],
-    },
-    {
-      label: "Humidity",
-      sublabel: `Dew point ${apiDewPoint}°C`,
-      apiNote: ``,
-      statKey: "humidity" as keyof typeof STAT_COLOR,
-      icon: Droplets,
-      color: STAT_COLOR.humidity,
-      min: 0,
-      max: 100,
-      value: `${apiHumidity}%`,
-      change: fmt(apiHumDelta, "%"),
-      trend: apiHumDelta > 0 ? "up" : apiHumDelta < 0 ? "down" : "neutral",
-      thresholds: [
-        { value: 30, color: "#dc2626", label: "Dry" },
-        { value: 50, color: "#fbbf24", label: "Low" },
-        { value: 70, color: "#22c55e", label: "Normal" },
-        { value: 85, color: "#3b82f6", label: "High" },
-      ],
-    },
-    {
-      label: "Wind Speed",
-      sublabel: `Direction: ${apiWindDir}`,
-      apiNote: ``,
-      statKey: "wind" as keyof typeof STAT_COLOR,
-      icon: Wind,
-      color: STAT_COLOR.wind,
-      min: 0,
-      max: 60,
-      value: `${apiWind} km/h`,
-      change: fmt(apiWindDelta, " km/h"),
-      trend: apiWindDelta > 0 ? "up" : apiWindDelta < 0 ? "down" : "neutral",
-      thresholds: [
-        { value: 10, color: "#22c55e", label: "Calm" },
-        { value: 25, color: "#3b82f6", label: "Breezy" },
-        { value: 40, color: "#f97316", label: "Windy" },
-        { value: 60, color: "#dc2626", label: "Strong" },
-      ],
-    },
-  ];
+    setFloodAlerts(
+      namedCriticalBasins.map((b) => ({
+        id: `flood-${b.name}`,
+        basinName: b.name,
+        status: b.status,
+        discharge: b.discharge,
+        population: b.population,
+      })),
+    );
+  }, [
+    namedCriticalBasins.length,
+    namedCriticalBasins.map((b) => b.name).join(","),
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cardBg = isDarkMode ? "bg-slate-800/85" : "bg-white/95";
   const textMuted = isDarkMode ? "text-slate-400" : "text-slate-500";
   const textSecondary = isDarkMode ? "text-slate-300" : "text-slate-600";
   const borderColor = isDarkMode ? "border-slate-700/30" : "border-slate-200";
   const headerText = isDarkMode ? "text-white" : "text-slate-900";
+  const rowBg = isDarkMode ? "bg-slate-700/30" : "bg-slate-100";
+
+  if (pageLoading) {
+    return (
+      <div
+        className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-slate-900" : "bg-slate-50"}`}
+      >
+        <div className="text-center">
+          <div
+            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
+            style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}
+          />
+          <p className={textMuted}>Loading Flood Monitoring...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-3 md:p-5 min-h-screen">
+    <div className="p-4 md:p-6 3xl:p-8 4xl:p-10 min-h-screen">
       {isDarkMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              className="absolute opacity-10"
+              className="absolute w-full h-20 opacity-10"
               style={{
-                left: `${-20 + i * 25}%`,
-                top: `${10 + (i % 3) * 20}%`,
-                animation: `drift ${20 + i * 5}s linear infinite`,
+                top: `${10 + i * 15}%`,
+                background: `linear-gradient(90deg, transparent, ${FAO_BLUE}, transparent)`,
+                animation: `wave ${4 + i * 0.5}s ease-in-out infinite`,
+                animationDelay: `${i * 0.3}s`,
               }}
-            >
-              <Cloud className="w-32 h-32 text-blue-300" />
-            </div>
+            />
           ))}
         </div>
       )}
 
       <div className="relative z-10 w-full">
+        {/* Error banner */}
+        {!dataLoading &&
+          (partialErrors.dashboard || partialErrors.forecasts) && (
+            <div
+              className="mb-3 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2"
+              style={{
+                backgroundColor: "rgba(239,68,68,0.12)",
+                color: "#ef4444",
+                border: "1px solid rgba(239,68,68,0.25)",
+              }}
+            >
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              Some flood data could not be loaded — check API connection or try
+              refreshing.
+            </div>
+          )}
+
         {/* Header */}
         <div
           className="relative overflow-hidden rounded-lg md:rounded-xl p-3 md:p-4 mb-3 animate-fade-in-up"
@@ -1185,434 +1072,573 @@ export default function WeatherForecastPage({
             background: `linear-gradient(135deg, ${FAO_BLUE}e6 0%, ${FAO_BLUE}99 100%)`,
           }}
         >
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-            <div>
-              <h1 className="text-lg md:text-xl font-bold text-white">
-                Weather Forecast
-              </h1>
-              <p className="text-slate-200 text-xs md:text-sm">
-                24-hour nowcasting & 7-day forecasts
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span
-                  className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
-                  style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-                >
-                  <Clock className="w-3 h-3" />
-                  Updated 5 min ago
-                </span>
-              </div>
-            </div>
-            <ExportData />
-          </div>
-        </div>
-
-        {/* Stat cards */}
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
-            <span
-              className={`text-xs font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
-            >
-              {statsLabel}, Uganda
-            </span>
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded-full"
-              style={{
-                backgroundColor: isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}20`,
-                color: FAO_BLUE,
-              }}
-            >
-              {dashboardLoading ? "Fetching…" : "Live"}
-            </span>
-            {dashboardError && (
-              <span className="text-[10px] text-red-400 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> {dashboardError}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {apiFetchedAt && !dashboardLoading && (
-              <span className={`text-[10px] ${textMuted} hidden sm:block`}>
-                Updated{" "}
-                {new Date(apiFetchedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            )}
-            <button
-              onClick={() => fetchDashboard(statsId)}
-              disabled={dashboardLoading}
-              title="Refresh weather data"
-              className={`p-1 rounded-md transition-all ${isDarkMode ? "hover:bg-slate-700" : "hover:bg-slate-100"} ${dashboardLoading ? "opacity-40 cursor-not-allowed" : ""}`}
-            >
-              <RefreshCw
-                className={`w-3 h-3 ${dashboardLoading ? "animate-spin" : ""}`}
-                style={{ color: FAO_BLUE }}
-              />
-            </button>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-3">
-          {statCards.map((card, index) => {
-            const Icon = card.icon;
-            const liveVal = liveHoverOverride(card.statKey);
-            const displayValue = liveVal ?? card.value;
-            const numericValue =
-              parseFloat(displayValue.replace(/[^0-9.]/g, "")) || 0;
-            const isActiveParam = paramToStatKey[activeParam] === card.statKey;
-            return (
-              <div
-                key={index}
-                onClick={() => setSelectedParameter(card.statKey)}
-                className={`${cardBg} backdrop-blur-sm border rounded-lg md:rounded-xl p-2.5 md:p-3 shadow-sm animate-fade-in-up transition-all hover:shadow-md cursor-pointer relative overflow-hidden`}
-                style={{
-                  animationDelay: `${index * 0.1}s`,
-                  borderColor: isActiveParam ? card.color : undefined,
-                  borderWidth: isActiveParam ? 2 : undefined,
-                }}
-              >
-                {/* Loading shimmer overlay */}
-                {dashboardLoading && (
-                  <div
-                    className="absolute inset-0 z-10 rounded-lg md:rounded-xl overflow-hidden"
-                    style={{
-                      backgroundColor: isDarkMode
-                        ? "rgba(15,23,42,0.55)"
-                        : "rgba(255,255,255,0.6)",
-                    }}
-                  >
-                    <div
-                      className="absolute inset-0 -translate-x-full animate-[shimmer_1.2s_infinite]"
+          <div className="relative z-10">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <div>
+                <h1 className="text-lg md:text-xl 3xl:text-2xl 4xl:text-3xl font-bold text-white">
+                  Flood Monitoring
+                </h1>
+                <p className="text-slate-200 text-xs md:text-sm 3xl:text-base 4xl:text-lg">
+                  Real-time river discharge & forecast impact assessment
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  {(namedCriticalBasins.length > 0 ||
+                    severeCount > 0 ||
+                    moderateCount > 0) &&
+                  !dataLoading ? (
+                    <button
+                      onClick={() => setShowNotifications(true)}
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white cursor-pointer select-none transition-opacity hover:opacity-80"
                       style={{
-                        background: `linear-gradient(90deg, transparent, ${card.color}22, transparent)`,
+                        backgroundColor:
+                          namedCriticalBasins.length > 0
+                            ? "rgba(239,68,68,0.4)"
+                            : "rgba(249,115,22,0.4)",
                       }}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-start justify-between mb-1">
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-[10px] md:text-xs ${textMuted} mb-0.5 flex items-center gap-1`}
                     >
-                      {card.label}
-                      {liveVal && mapHoverDistrict && (
-                        <span
-                          className="font-semibold"
-                          style={{ color: card.color }}
-                        >
-                          · {mapHoverDistrict}
-                        </span>
-                      )}
-                    </p>
-                    <p
-                      className={`text-base md:text-lg font-bold ${headerText}`}
-                      style={liveVal ? { color: card.color } : undefined}
-                    >
-                      {displayValue}
-                    </p>
-                    {/* Sublabel: extra API fields per card */}
-                    <p
-                      className="text-[10px] truncate mt-0.5"
-                      style={{ color: card.color, opacity: 0.75 }}
-                    >
-                      {card.sublabel}
-                    </p>
-                  </div>
-                  <div
-                    className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ml-2"
-                    style={{ backgroundColor: `${card.color}22` }}
-                  >
-                    <Icon
-                      className="w-3.5 h-3.5 md:w-4 md:h-4"
-                      style={{ color: card.color }}
-                    />
-                  </div>
-                </div>
-                <div
-                  className={`flex items-center gap-1 text-[10px] ${getTrendColor(card.trend, isDarkMode)}`}
-                >
-                  {getTrendIcon(card.trend)}
-                  <span style={{ color: card.color }}>{card.change}</span>
-                  {card.apiNote && (
+                      <AlertTriangle className="w-3 h-3" />
+                      {namedCriticalBasins.length > 0
+                        ? `${namedCriticalBasins.length} critical`
+                        : `${severeCount + moderateCount} elevated`}
+                      {(severeCount > 0 || moderateCount > 0) &&
+                        namedCriticalBasins.length === 0 &&
+                        ` · ${severeCount} severe, ${moderateCount} moderate`}
+                    </button>
+                  ) : (
+                    !dataLoading && (
+                      <span
+                        className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                        style={{ backgroundColor: "rgba(34,197,94,0.3)" }}
+                      >
+                        All basins normal
+                      </span>
+                    )
+                  )}
+                  {currentSeason && (
                     <span
-                      className={`ml-auto text-[9px] truncate max-w-[80px] ${textMuted}`}
-                      title={card.apiNote}
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                      style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
                     >
-                      {card.apiNote}
+                      <Calendar className="w-2.5 h-2.5" />
+                      {currentSeason.name}
+                    </span>
+                  )}
+                  {/* Active leadtime + date indicator */}
+                  {activeForecast && (
+                    <span
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white font-semibold"
+                      style={{ backgroundColor: "rgba(255,255,255,0.22)" }}
+                    >
+                      <Clock className="w-2.5 h-2.5" />+{selectedLeadtime}h
+                      {activeForecast.valid_date &&
+                        ` · ${new Date(activeForecast.valid_date).toLocaleDateString([], { month: "short", day: "numeric" })}`}
+                    </span>
+                  )}
+                  {basinTrend?.trend === "rising" && (
+                    <span
+                      className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md text-white"
+                      style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                    >
+                      <Droplets className="w-3 h-3" /> Rising levels
                     </span>
                   )}
                 </div>
-                <ThresholdScale
-                  value={numericValue}
-                  min={card.min}
-                  max={card.max}
-                  thresholds={card.thresholds}
-                  isDarkMode={isDarkMode}
-                />
               </div>
-            );
-          })}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    refetch();
+                    refreshPipeline();
+                  }}
+                  disabled={dataLoading || pipeline?.status === "running"}
+                  className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 disabled:opacity-50 rounded-lg text-xs font-medium text-white transition-colors"
+                  title={
+                    pipeline?.last_run
+                      ? `Last run: ${new Date(pipeline.last_run).toLocaleString()}`
+                      : "Refresh data"
+                  }
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 ${dataLoading || pipeline?.status === "running" ? "animate-spin" : ""}`}
+                  />
+                  <span className="hidden sm:inline">
+                    {pipeline?.status === "running"
+                      ? "Running…"
+                      : pipeline?.last_run
+                        ? `${Math.round((Date.now() - new Date(pipeline.last_run).getTime()) / 60000)}m ago`
+                        : "Refresh"}
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    floodAPI
+                      .exportData(
+                        "csv",
+                        activeForecastDate || undefined,
+                        selectedBasin,
+                      )
+                      .then(() => {})
+                      .catch(() => {});
+                  }}
+                  className="flex items-center gap-1 px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 rounded-lg text-xs font-medium text-white transition-colors"
+                >
+                  <Download className="w-3 h-3" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* ── Desktop ── */}
+        {/* ── Desktop layout ──────────────────────────────────────────────────── */}
         <div className="hidden lg:grid lg:grid-cols-12 gap-4">
-          {/* Sidebar */}
+          {/* Left sidebar */}
           <div className="lg:col-span-3 flex flex-col">
             <div
               className="flex-1 rounded-xl p-3 shadow-sm flex flex-col"
               style={{
                 background: isDarkMode
-                  ? `linear-gradient(180deg,${FAO_BLUE}30 0%,${FAO_BLUE}15 100%)`
-                  : `linear-gradient(180deg,${FAO_BLUE}15 0%,${FAO_BLUE}05 100%)`,
+                  ? `linear-gradient(180deg, ${FAO_BLUE}30 0%, ${FAO_BLUE}15 100%)`
+                  : `linear-gradient(180deg, ${FAO_BLUE}15 0%, ${FAO_BLUE}05 100%)`,
                 border: `1px solid ${isDarkMode ? `${FAO_BLUE}30` : `${FAO_BLUE}15`}`,
               }}
             >
               <div
                 className={`p-3 rounded-xl ${isDarkMode ? "bg-slate-800/80" : "bg-white/90"} border ${isDarkMode ? "border-slate-700/30" : "border-slate-200"}`}
               >
-                <h3 className={`text-sm font-semibold mb-3 ${textSecondary}`}>
-                  Filters
-                </h3>
                 <FilterContent
-                  selectedRegion={selectedRegion}
-                  setSelectedRegion={setSelectedRegion}
-                  selectedParameter={selectedParameter}
-                  setSelectedParameter={setSelectedParameter}
+                  timeRange={timeRange}
+                  setTimeRange={setTimeRange}
+                  selectedBasin={selectedBasin}
+                  setSelectedBasin={setSelectedBasin}
+                  alertLevelFilter={alertLevelFilter}
+                  setAlertLevelFilter={setAlertLevelFilter}
+                  selectedLeadtime={selectedLeadtime}
+                  onLeadtimeChange={(h) => {
+                    setSelectedLeadtime(h);
+                    setForecastStep(h);
+                  }}
+                  selectedDate={selectedDate}
+                  setSelectedDate={setSelectedDate}
+                  availableDates={availableDates}
+                  availableBasinNames={availableBasinNames}
+                  dateRange={dateRange}
+                  setDateRange={setDateRange}
+                  forecastsFull={forecastsByLeadtime}
                   isDarkMode={isDarkMode}
                   textMuted={textMuted}
                   textSecondary={textSecondary}
                   borderColor={borderColor}
-                  weatherData={weatherData}
-                  dateRange={dateRange}
-                  setDateRange={setDateRange}
-                  district_list={district_list}
+                  headerText={headerText}
+                  riverBasins={riverBasins}
+                  totalPopulation={displayPopulation}
+                  criticalCount={criticalBasinCount}
+                  activeAlerts={criticalBasins + severeCount + moderateCount}
                 />
               </div>
-              <div className="mt-auto pt-3">
+
+              {/* Recent Events */}
+              <div className="mt-3 flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    backgroundImage: "url(/weather-illustration.png)",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    height: "140px",
-                  }}
-                />
+                  className={`flex-1 rounded-xl p-3 flex flex-col min-h-0 ${isDarkMode ? "bg-slate-800/60" : "bg-white/80"} border ${borderColor}`}
+                >
+                  <div className="flex items-center gap-1.5 mb-2 flex-shrink-0">
+                    <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                    <h4 className={`text-xs font-semibold ${headerText}`}>
+                      Recent Events
+                    </h4>
+                  </div>
+                  {actualEvents.length === 0 ? (
+                    <p className={`text-[10px] ${textMuted}`}>
+                      No recent events recorded
+                    </p>
+                  ) : (
+                    <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
+                      {actualEvents.slice(0, 6).map((ev) => {
+                        const severityColor = riskColor(ev.alert_level);
+                        const dateStr = ev.start_date
+                          ? new Date(ev.start_date).toLocaleDateString([], {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "";
+                        const locationLabel =
+                          ev.affected_areas?.length > 0
+                            ? ev.affected_areas[0]
+                            : ev.name || "Unknown location";
+                        return (
+                          <div key={ev.id} className="flex items-start gap-2">
+                            <div
+                              className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"
+                              style={{ backgroundColor: severityColor }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className={`text-[10px] font-medium leading-tight truncate ${headerText}`}
+                              >
+                                {locationLabel}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span
+                                  className="text-[9px] font-semibold"
+                                  style={{ color: severityColor }}
+                                >
+                                  {ev.alert_level}
+                                </span>
+                                {dateStr && (
+                                  <span className={`text-[9px] ${textMuted}`}>
+                                    · {dateStr}
+                                  </span>
+                                )}
+                                {ev.total_affected_population > 0 && (
+                                  <span className={`text-[9px] ${textMuted}`}>
+                                    ·{" "}
+                                    {ev.total_affected_population >= 1000
+                                      ? `${Math.round(ev.total_affected_population / 1000)}K`
+                                      : ev.total_affected_population}{" "}
+                                    affected
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Main */}
-          <div className="lg:col-span-9 space-y-3">
-            {/* Map + cards row — fixed shared height */}
-            <div
-              className="grid grid-cols-12 gap-3"
-              style={{ height: "clamp(520px, 63vh, 940px)" }}
-            >
-              {/* Map — left */}
-              <div className="col-span-8 flex h-full">
+          {/* Main content */}
+          <div className="lg:col-span-9">
+            <div className="grid grid-cols-12 gap-3 h-[550px] xl:h-[620px] 2xl:h-[700px] 3xl:h-[840px] 4xl:h-[1020px] 5xl:h-[1260px]">
+              {/* Map */}
+              <div className="col-span-7 flex h-full">
                 <div
                   className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm flex-1 flex flex-col`}
                 >
-                  {/* Map card header — title + layer-mode tabs + Live badge */}
                   <div
-                    className={`flex items-center justify-between px-2 pt-2 pb-0 border-b ${borderColor} flex-shrink-0`}
+                    className={`flex items-center justify-between p-2 border-b ${borderColor} flex-shrink-0`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <MapIcon
-                        className="w-4 h-4"
-                        style={{ color: FAO_BLUE }}
-                      />
+                      <MapPin className="w-4 h-4" style={{ color: FAO_BLUE }} />
                       <h3 className={`text-sm font-semibold ${headerText}`}>
-                        {selectedParameter === "rainfall"
-                          ? "Precipitation"
-                          : selectedParameter === "wind"
-                            ? "Wind Speed"
-                            : selectedParameter === "humidity"
-                              ? "Humidity"
-                              : "Temperature"}{" "}
-                        Forecast
+                        River Basin Map
                       </h3>
                     </div>
-
-                    {/* Compact pill tab switcher */}
-                    <div
-                      className="flex items-center rounded-full overflow-hidden"
-                      style={{
-                        border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                      }}
-                    >
-                      {(["nowcast", "forecast"] as const).map((tab) => (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveTab(tab)}
-                          className="px-2.5 py-0.5 text-[10px] font-semibold transition-all whitespace-nowrap"
-                          style={{
-                            backgroundColor:
-                              activeTab === tab ? FAO_BLUE : "transparent",
-                            color:
-                              activeTab === tab
-                                ? "#fff"
-                                : isDarkMode
-                                  ? "#94a3b8"
-                                  : "#64748b",
-                          }}
-                        >
-                          {tab === "nowcast" ? "Hourly" : "7-Day"}
-                        </button>
-                      ))}
-                    </div>
-
                     <span
-                      className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      style={{
-                        backgroundColor: isDarkMode
-                          ? `${FAO_BLUE}30`
-                          : `${FAO_BLUE}20`,
-                        color: FAO_BLUE,
-                      }}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${criticalBasinCount > 0 ? "bg-red-500/20 text-red-500" : severeCount > 0 ? "bg-orange-500/20 text-orange-400" : "bg-green-500/20 text-green-500"}`}
                     >
-                      Open-Meteo
+                      {criticalBasinCount > 0
+                        ? `${criticalBasinCount} critical`
+                        : severeCount > 0
+                          ? `${severeCount} severe`
+                          : "All normal"}
                     </span>
                   </div>
-                  <div className="flex-1 relative min-h-0">
-                    <WeatherForcastMap
-                      isDarkMode={isDarkMode}
-                      className="absolute inset-0 w-full h-full rounded-none"
-                      badgeText={selectedDistrictId?.name ?? "Uganda"}
-                      getTheBounds={selectedDistrictId?.name ?? ""}
-                      district_list={district_list}
-                      onHoverChange={handleMapHoverChange}
-                      onModelClick={(model) => setModelInfoModal(model)}
-                    />
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[500]">
-                      <FloodHourSlider
-                        floating
+                  <div className="relative flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 relative min-h-0">
+                      <FloodMap
                         isDarkMode={isDarkMode}
-                        borderColor={borderColor}
-                        textMuted={textMuted}
+                        className="absolute inset-0 w-full h-full"
+                        badgeText={`+${forecastStep}h Forecast`}
+                        onLayerResolved={handleLayerResolved}
+                        onBasinSelect={(name) => setSelectedBasin(name)}
                       />
                     </div>
+                    <FloodHourSlider
+                      isDarkMode={isDarkMode}
+                      borderColor={borderColor}
+                      textMuted={textMuted}
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Right panel — forecast cards (top) + trend chart (bottom) */}
-              <div className="col-span-4 h-full min-h-0 flex flex-col gap-2">
-                {/* Nowcast / Forecast cards — natural height, capped at 56%, scrolls inside */}
+              {/* Right column — KPI + Basin Impacts */}
+              <div className="col-span-5 flex flex-col gap-2 min-h-0">
+                {/* Human Impact */}
                 <div
-                  className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm flex flex-col flex-shrink-0`}
-                  style={{ maxHeight: "56%", overflow: "hidden" }}
+                  className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm flex-shrink-0`}
                 >
-                  <TabBar
-                    mobile={false}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    borderColor={borderColor}
-                    isDarkMode={isDarkMode}
-                    FAO_BLUE={FAO_BLUE}
-                  />
-                  <div className="p-3 overflow-y-auto">
-                    {activeTab?.toLowerCase() === "nowcast" ? (
-                      <>
-                        <h4
-                          className={`text-xs font-semibold mb-2 ${headerText}`}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Users className="w-3.5 h-3.5 text-orange-400" />
+                    <h3 className={`text-sm font-semibold ${headerText}`}>
+                      Human Impact
+                    </h3>
+                    <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 font-semibold">
+                      {criticalBasins > 0
+                        ? "HIGH RISK"
+                        : severeCount > 0
+                          ? "ELEVATED"
+                          : "MONITORED"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 mb-2">
+                    <div className={`${rowBg} rounded-lg p-2`}>
+                      <p
+                        className={`text-[9px] uppercase tracking-wide ${textMuted} mb-0.5`}
+                      >
+                        Affected Population
+                      </p>
+                      <p className="text-xl font-black text-orange-400 leading-none">
+                        {displayPopulation >= 1_000_000
+                          ? `${(displayPopulation / 1_000_000).toFixed(1)}M`
+                          : `${Math.round(displayPopulation / 1_000)}K`}
+                      </p>
+                      <p className={`text-[9px] ${textMuted} mt-0.5`}>
+                        people at risk
+                      </p>
+                    </div>
+                    <div className={`${rowBg} rounded-lg p-2`}>
+                      <p
+                        className={`text-[9px] uppercase tracking-wide ${textMuted} mb-0.5`}
+                      >
+                        Pop. Density
+                      </p>
+                      <p
+                        className="text-xl font-black leading-none"
+                        style={{ color: FAO_BLUE }}
+                      >
+                        {displayDensity}
+                      </p>
+                      <p className={`text-[9px] ${textMuted} mt-0.5`}>
+                        avg/km² in flood zone
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-1 mb-2">
+                    <p
+                      className={`text-[9px] uppercase tracking-wide font-semibold ${textMuted}`}
+                    >
+                      Districts at Risk
+                    </p>
+                    {liveDistrictsAtRisk.slice(0, 4).map((d, index) => {
+                      const pop = d.population_affected ?? 0;
+                      const maxPop = Math.max(
+                        ...liveDistrictsAtRisk.map(
+                          (x) => x.population_affected ?? 0,
+                        ),
+                        1,
+                      );
+                      const riskColor_ = riskColor(d.flood_risk_level);
+                      return (
+                        <div
+                          key={`${d.name}-${index}`}
+                          className="flex items-center gap-1.5"
                         >
-                          Hourly Forecast
-                        </h4>
-                        <HourlyCards
-                          hourlyForecast={hourlyForecast}
-                          isDarkMode={isDarkMode}
-                          textMuted={textMuted}
-                          headerText={headerText}
-                          FAO_BLUE={FAO_BLUE}
-                          selectedIndex={selectedCardIndex}
-                          onSelectCard={setSelectedCardIndex}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <h4
-                          className={`text-xs font-semibold mb-2 ${headerText}`}
-                        >
-                          7-Day Forecast
-                        </h4>
-                        <DailyCards
-                          dailyForecast={dailyForecast}
-                          isDarkMode={isDarkMode}
-                          textMuted={textMuted}
-                          headerText={headerText}
-                          FAO_BLUE={FAO_BLUE}
-                          selectedIndex={selectedCardIndex}
-                          onSelectCard={setSelectedCardIndex}
-                        />
-                      </>
-                    )}
+                          <span
+                            className={`text-[9px] w-[72px] truncate flex-shrink-0 ${textMuted}`}
+                          >
+                            {d.name}
+                          </span>
+                          <div
+                            className="flex-1 h-1.5 rounded-full overflow-hidden"
+                            style={{
+                              background: isDarkMode ? "#1e293b" : "#f1f5f9",
+                            }}
+                          >
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${(pop / maxPop) * 100}%`,
+                                backgroundColor: riskColor_,
+                              }}
+                            />
+                          </div>
+                          <span
+                            className="text-[9px] w-10 text-right font-semibold flex-shrink-0"
+                            style={{ color: riskColor_ }}
+                          >
+                            {pop >= 1000 ? `${Math.round(pop / 1000)}K` : pop}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div
+                    className={`flex items-center gap-1.5 pt-1.5 border-t ${borderColor}`}
+                  >
+                    <Shield className="w-3 h-3 text-green-400 flex-shrink-0" />
+                    <span className={`text-[9px] ${textMuted}`}>
+                      Population estimate source:
+                    </span>
+                    <span className="text-[9px] font-semibold text-green-400">
+                      WorldPop 2024
+                    </span>
+                    <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 font-semibold">
+                      VERIFIED
+                    </span>
                   </div>
                 </div>
 
-                {/* Weather Trend chart — fills all remaining space */}
+                {/* Infrastructure */}
                 <div
-                  className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm flex-1 flex flex-col min-h-0`}
+                  className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm flex-shrink-0`}
                 >
-                  <div className="flex items-center justify-between mb-0.5 flex-shrink-0">
-                    <h3
-                      className={`text-sm font-semibold flex items-center gap-1.5 ${headerText}`}
-                    >
-                      <TrendingUp
-                        className="w-4 h-4"
-                        style={{ color: FAO_BLUE }}
-                      />
-                      Weather Trend
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                    <h3 className={`text-sm font-semibold ${headerText}`}>
+                      Infrastructure
                     </h3>
-                    <div className="flex gap-1">
-                      {(["temp", "rain", "humidity", "wind"] as const).map(
-                        (m) => (
-                          <button
-                            key={m}
-                            onClick={() => handleSetChartMetric(m)}
-                            className={`text-xs px-2 py-0.5 rounded transition-all ${
-                              chartMetric === m
-                                ? "font-semibold text-white"
-                                : textMuted
-                            }`}
-                            style={{
-                              backgroundColor:
-                                chartMetric === m ? FAO_BLUE : "transparent",
-                            }}
-                          >
-                            {m === "temp"
-                              ? "Temp"
-                              : m === "rain"
-                                ? "Rain"
-                                : m === "wind"
-                                  ? "Wind"
-                                  : "Humid"}
-                          </button>
-                        ),
-                      )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 mb-2">
+                    <div className={`${rowBg} rounded-lg p-2`}>
+                      <p
+                        className={`text-[9px] uppercase tracking-wide ${textMuted} mb-0.5`}
+                      >
+                        Roads
+                      </p>
+                      <p className="text-lg font-black text-blue-400 leading-none">
+                        {affectedRoadsKm.toLocaleString()}
+                      </p>
+                      <p className={`text-[9px] ${textMuted}`}>km at risk</p>
+                    </div>
+                    <div className={`${rowBg} rounded-lg p-2`}>
+                      <p
+                        className={`text-[9px] uppercase tracking-wide ${textMuted} mb-0.5`}
+                      >
+                        Buildings
+                      </p>
+                      <p className="text-lg font-black text-purple-400 leading-none">
+                        {affectedBuildings >= 1000
+                          ? `${(affectedBuildings / 1000).toFixed(1)}K`
+                          : affectedBuildings.toLocaleString()}
+                      </p>
+                      <p className={`text-[9px] ${textMuted}`}>at risk</p>
+                    </div>
+                    <div className={`${rowBg} rounded-lg p-2`}>
+                      <p
+                        className={`text-[9px] uppercase tracking-wide ${textMuted} mb-0.5`}
+                      >
+                        POIs
+                      </p>
+                      <Navigation className="w-3 h-3 text-amber-400 mb-0.5" />
+                      <p className="text-lg font-black text-amber-400 leading-none">
+                        {affectedPois.toLocaleString()}
+                      </p>
+                      <p className={`text-[9px] ${textMuted}`}>at risk</p>
                     </div>
                   </div>
-                  <p className={`text-[10px] ${textMuted} mb-1 flex-shrink-0`}>
-                    {activeTab === "nowcast" ? "Hourly" : "7-Day"} ·{" "}
-                    {statsLabel} ·{" "}
-                    {selectedParameter.charAt(0).toUpperCase() +
-                      selectedParameter.slice(1)}
-                  </p>
-                  <div className="flex-1 min-h-0">
-                    <WeatherTrendChart
-                      hourlyForecast={hourlyForecast}
+                  <div>
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-[9px] text-blue-400 font-semibold">
+                        Roads {affectedRoadsKm.toLocaleString()} km
+                      </span>
+                      <span className="text-[9px] text-purple-400 font-semibold">
+                        Buildings {affectedBuildings.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full flex overflow-hidden gap-px">
+                      <div
+                        className="h-full rounded-l-full bg-blue-500/70"
+                        style={{ width: `${roadsBarPct}%` }}
+                      />
+                      <div
+                        className="h-full rounded-r-full bg-purple-500/70"
+                        style={{ width: `${buildingsBarPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Flood Metrics + Basin Impacts */}
+                <div
+                  className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm flex-1 min-h-0 flex flex-col`}
+                >
+                  <div className="flex items-center gap-1.5 mb-2 flex-shrink-0">
+                    <Waves className="w-3.5 h-3.5 text-blue-400" />
+                    <h3 className={`text-sm font-semibold ${headerText}`}>
+                      Flood Metrics
+                    </h3>
+                    <span
+                      className={`ml-auto text-[9px] px-1.5 py-0.5 rounded font-semibold ${thresholdMode === "EXCEEDED" ? "bg-red-500/15 text-red-400" : thresholdMode === "WARNING" ? "bg-orange-500/15 text-orange-400" : "bg-green-500/15 text-green-400"}`}
+                    >
+                      {thresholdMode}
+                    </span>
+                  </div>
+
+                  {/* Gauges */}
+                  <div
+                    className={`flex items-start justify-around pb-2 mb-2 border-b flex-shrink-0 ${borderColor}`}
+                  >
+                    <ArcGauge
+                      value={maxDischarge}
+                      max={5000}
+                      label="Max Discharge"
+                      unit="m³/s"
+                      color="#ef4444"
                       isDarkMode={isDarkMode}
-                      gradientId="tempFillDesktop"
-                      height="100%"
-                      margin={{ top: 4, right: 4, left: -24, bottom: 10 }}
-                      fontSize={9}
-                      chartData={chartData}
-                      metric={chartMetric}
                     />
+                    <div
+                      className="w-px self-stretch"
+                      style={{
+                        backgroundColor: isDarkMode ? "#1e293b" : "#e2e8f0",
+                      }}
+                    />
+                    <ArcGauge
+                      value={avgDischarge}
+                      max={5000}
+                      label="Avg Discharge"
+                      unit="m³/s"
+                      color={FAO_BLUE}
+                      isDarkMode={isDarkMode}
+                    />
+                    <div
+                      className="w-px self-stretch"
+                      style={{
+                        backgroundColor: isDarkMode ? "#1e293b" : "#e2e8f0",
+                      }}
+                    />
+                    <ArcGauge
+                      value={parseFloat(currentLevel.toFixed(2))}
+                      max={6}
+                      label="Current Level"
+                      unit="m"
+                      color="#f97316"
+                      isDarkMode={isDarkMode}
+                    />
+                  </div>
+
+                  {/* Basin impact cards — scrollable */}
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    <div className="flex items-center gap-1.5 mb-1.5 flex-shrink-0">
+                      <BarChart3
+                        className="w-3 h-3"
+                        style={{ color: isDarkMode ? "#64748b" : "#94a3b8" }}
+                      />
+                      <p
+                        className={`text-[9px] uppercase tracking-wide font-semibold ${textMuted}`}
+                      >
+                        Basin Impacts — +{selectedLeadtime}h Forecast
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {allImpacts.length === 0 ? (
+                        <p className={`text-[10px] ${textMuted}`}>
+                          No impact data for this leadtime
+                        </p>
+                      ) : (
+                        allImpacts
+                          .sort(
+                            (a, b) =>
+                              (b.max_discharge ?? 0) - (a.max_discharge ?? 0),
+                          )
+                          .map((impact, idx) => (
+                            <BasinImpactCard
+                              key={`${impact.river_basin_name ?? impact.district_name}-${idx}`}
+                              impact={impact}
+                              isDarkMode={isDarkMode}
+                              borderColor={borderColor}
+                              rowBg={rowBg}
+                              textMuted={textMuted}
+                              headerText={headerText}
+                            />
+                          ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1620,126 +1646,135 @@ export default function WeatherForecastPage({
           </div>
         </div>
 
-        {/* ── Mobile ── */}
-        <div className="block lg:hidden space-y-3">
+        {/* About row */}
+        <div className="hidden lg:block mt-4">
           <div
-            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg shadow-sm overflow-hidden`}
+            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
           >
-            <TabBar
-              mobile={true}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              borderColor={borderColor}
+            <h3
+              className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}
+            >
+              <Info className="w-4 h-4" style={{ color: FAO_BLUE }} />
+              About Flood Monitoring
+            </h3>
+            <p className={`text-xs ${textMuted} mb-2`}>
+              Real-time monitoring of Uganda's major river basins with automated
+              alerts when water levels exceed safe thresholds. Data is collected
+              from multiple sensors and updated every 15 minutes.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                ["Rainfall monitoring", Droplets],
+                ["Trend analysis", TrendingUp],
+                ["Flow discharge tracking", Waves],
+              ].map(([label, Icon]: any) => (
+                <div
+                  key={label}
+                  className={`flex items-center gap-1.5 text-xs ${textSecondary}`}
+                >
+                  <Icon className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Mobile layout ────────────────────────────────────────────────────── */}
+        <div className="block lg:hidden space-y-3">
+          {/* Mobile leadtime tabs */}
+          <div
+            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Clock className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
+              <h3 className={`text-sm font-semibold ${headerText}`}>
+                Forecast Lead Time
+              </h3>
+            </div>
+            <LeadtimeTabs
+              selected={selectedLeadtime}
+              onChange={(h) => {
+                setSelectedLeadtime(h);
+                setForecastStep(h);
+              }}
+              forecasts={forecastsByLeadtime}
               isDarkMode={isDarkMode}
-              FAO_BLUE={FAO_BLUE}
             />
-            <div className="p-3">
-              {activeTab === "nowcast" ? (
-                <>
-                  <h3
-                    className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}
-                  >
-                    <Clock className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                    Hourly Forecast
-                  </h3>
-                  <HourlyCards
-                    hourlyForecast={hourlyForecast}
-                    isDarkMode={isDarkMode}
-                    textMuted={textMuted}
-                    headerText={headerText}
-                    FAO_BLUE={FAO_BLUE}
-                    selectedIndex={selectedCardIndex}
-                    onSelectCard={setSelectedCardIndex}
-                  />
-                </>
-              ) : (
-                <>
-                  <h3
-                    className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${headerText}`}
-                  >
-                    <Calendar className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                    7-Day Forecast
-                  </h3>
-                  <DailyCards
-                    dailyForecast={dailyForecast}
-                    isDarkMode={isDarkMode}
-                    textMuted={textMuted}
-                    headerText={headerText}
-                    FAO_BLUE={FAO_BLUE}
-                    mobile
-                    selectedIndex={selectedCardIndex}
-                    onSelectCard={setSelectedCardIndex}
-                  />
-                </>
-              )}
+          </div>
+
+          {/* Human Impact (mobile) */}
+          <div
+            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Users className="w-3.5 h-3.5 text-orange-400" />
+              <h3 className={`text-sm font-semibold ${headerText}`}>
+                Human Impact
+              </h3>
+              <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 font-semibold">
+                {criticalBasinCount > 0
+                  ? "HIGH RISK"
+                  : severeCount > 0
+                    ? "ELEVATED"
+                    : "MONITORED"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className={`${rowBg} rounded-lg p-2`}>
+                <p className={`text-[9px] ${textMuted} mb-0.5`}>
+                  Affected Population
+                </p>
+                <p className="text-xl font-black text-orange-400 leading-none">
+                  {displayPopulation >= 1_000_000
+                    ? `${(displayPopulation / 1_000_000).toFixed(1)}M`
+                    : `${Math.round(displayPopulation / 1_000)}K`}
+                </p>
+              </div>
+              <div className={`${rowBg} rounded-lg p-2`}>
+                <p className={`text-[9px] ${textMuted} mb-0.5`}>Pop. Density</p>
+                <p
+                  className="text-xl font-black leading-none"
+                  style={{ color: FAO_BLUE }}
+                >
+                  {displayDensity}/km²
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Map */}
+          {/* Map (mobile) */}
           <div className="relative">
             <div
-              className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg md:rounded-xl overflow-hidden shadow-sm`}
+              className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg overflow-hidden shadow-sm`}
             >
               <div
-                className={`flex items-center justify-between px-2 pt-2 pb-0 border-b ${borderColor}`}
+                className={`flex items-center justify-between p-2 border-b ${borderColor}`}
               >
                 <div className="flex items-center gap-1.5">
-                  <MapIcon className="w-4 h-4" style={{ color: FAO_BLUE }} />
+                  <MapPin className="w-4 h-4" style={{ color: FAO_BLUE }} />
                   <h3 className={`text-sm font-semibold ${headerText}`}>
-                    Weather Map
+                    River Basin Map
                   </h3>
                 </div>
-
-                {/* Compact pill tab switcher */}
-                <div
-                  className="flex items-center rounded-full overflow-hidden"
-                  style={{
-                    border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                  }}
-                >
-                  {(["nowcast", "forecast"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className="px-2.5 py-0.5 text-[10px] font-semibold transition-all whitespace-nowrap"
-                      style={{
-                        backgroundColor:
-                          activeTab === tab ? FAO_BLUE : "transparent",
-                        color:
-                          activeTab === tab
-                            ? "#fff"
-                            : isDarkMode
-                              ? "#94a3b8"
-                              : "#64748b",
-                      }}
-                    >
-                      {tab === "nowcast" ? "Hourly" : "7-Day"}
-                    </button>
-                  ))}
-                </div>
-
                 <span
-                  className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                  style={{
-                    backgroundColor: isDarkMode
-                      ? `${FAO_BLUE}30`
-                      : `${FAO_BLUE}20`,
-                    color: FAO_BLUE,
-                  }}
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${criticalBasinCount > 0 ? "bg-red-500/20 text-red-500" : "bg-green-500/20 text-green-500"}`}
                 >
-                  Live
+                  {criticalBasinCount > 0
+                    ? `${criticalBasinCount} critical`
+                    : "All normal"}
                 </span>
               </div>
-              <div className="relative aspect-[16/11]">
-                <WeatherForcastMap
-                  isDarkMode={isDarkMode}
-                  className="absolute inset-0 w-full h-full"
-                  badgeText={selectedDistrictId?.name ?? "Uganda"}
-                  getTheBounds={selectedDistrictId?.name ?? ""}
-                  district_list={district_list}
-                  onHoverChange={handleMapHoverChange}
-                  onModelClick={(model) => setModelInfoModal(model)}
-                />
+              <div className="relative aspect-video flex flex-col">
+                <div className="flex-1 relative">
+                  <FloodMap
+                    isDarkMode={isDarkMode}
+                    className="absolute inset-0 w-full h-full"
+                    badgeText={`+${forecastStep}h`}
+                    onLayerResolved={handleLayerResolved}
+                    onBasinSelect={(name) => setSelectedBasin(name)}
+                  />
+                </div>
                 <button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center shadow-md z-[1001] text-white"
@@ -1747,14 +1782,11 @@ export default function WeatherForecastPage({
                 >
                   <Filter className="w-4 h-4" />
                 </button>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[500]">
-                  <FloodHourSlider
-                    floating
-                    isDarkMode={isDarkMode}
-                    borderColor={borderColor}
-                    textMuted={textMuted}
-                  />
-                </div>
+                <FloodHourSlider
+                  isDarkMode={isDarkMode}
+                  borderColor={borderColor}
+                  textMuted={textMuted}
+                />
               </div>
             </div>
             {showMobileFilters && (
@@ -1778,76 +1810,175 @@ export default function WeatherForecastPage({
                     </button>
                   </div>
                   <FilterContent
-                    selectedRegion={selectedRegion}
-                    setSelectedRegion={setSelectedRegion}
-                    selectedParameter={selectedParameter}
-                    setSelectedParameter={setSelectedParameter}
+                    timeRange={timeRange}
+                    setTimeRange={setTimeRange}
+                    selectedBasin={selectedBasin}
+                    setSelectedBasin={setSelectedBasin}
+                    alertLevelFilter={alertLevelFilter}
+                    setAlertLevelFilter={setAlertLevelFilter}
+                    selectedLeadtime={selectedLeadtime}
+                    onLeadtimeChange={(h) => {
+                      setSelectedLeadtime(h);
+                      setForecastStep(h);
+                    }}
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                    availableDates={availableDates}
+                    availableBasinNames={availableBasinNames}
+                    dateRange={dateRange}
+                    setDateRange={setDateRange}
+                    forecastsFull={forecastsByLeadtime}
                     isDarkMode={isDarkMode}
                     textMuted={textMuted}
                     textSecondary={textSecondary}
                     borderColor={borderColor}
-                    weatherData={weatherData}
-                    dateRange={dateRange}
-                    setDateRange={setDateRange}
-                    district_list={district_list}
+                    headerText={headerText}
+                    riverBasins={riverBasins}
+                    totalPopulation={displayPopulation}
+                    criticalCount={criticalBasinCount}
+                    activeAlerts={criticalBasins + severeCount + moderateCount}
                   />
                 </div>
               </>
             )}
           </div>
 
-          {/* Trend */}
+          {/* Basin impacts (mobile) */}
           <div
             className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
           >
-            <div className="flex items-center justify-between mb-0.5">
-              <h3
-                className={`text-sm font-semibold flex items-center gap-1.5 ${headerText}`}
-              >
-                <TrendingUp className="w-4 h-4" style={{ color: FAO_BLUE }} />
-                Weather Trend
+            <div className="flex items-center gap-1.5 mb-2">
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: FAO_BLUE }} />
+              <h3 className={`text-sm font-semibold ${headerText}`}>
+                Basin Impacts — +{selectedLeadtime}h
               </h3>
-              <div className="flex gap-1">
-                {(["temp", "rain", "humidity", "wind"] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => handleSetChartMetric(m)}
-                    className={`text-xs px-1.5 py-0.5 rounded transition-all ${
-                      chartMetric === m ? "font-semibold text-white" : textMuted
-                    }`}
-                    style={{
-                      backgroundColor:
-                        chartMetric === m ? FAO_BLUE : "transparent",
-                    }}
-                  >
-                    {m === "temp"
-                      ? "°C"
-                      : m === "rain"
-                        ? "mm"
-                        : m === "wind"
-                          ? "km/h"
-                          : "%"}
-                  </button>
-                ))}
-              </div>
             </div>
-            <p className={`text-[10px] ${textMuted} mb-2`}>
-              {activeTab === "nowcast" ? "Hourly" : "7-Day"} · {statsLabel} ·{" "}
-              {selectedParameter.charAt(0).toUpperCase() +
-                selectedParameter.slice(1)}
-            </p>
-            <div className="h-36">
-              <WeatherTrendChart
-                hourlyForecast={hourlyForecast}
+            <div className="space-y-1.5">
+              {allImpacts.length === 0 ? (
+                <p className={`text-[10px] ${textMuted}`}>
+                  No impact data for this leadtime
+                </p>
+              ) : (
+                allImpacts
+                  .sort(
+                    (a, b) => (b.max_discharge ?? 0) - (a.max_discharge ?? 0),
+                  )
+                  .map((impact, idx) => (
+                    <BasinImpactCard
+                      key={`m-${impact.river_basin_name ?? impact.district_name}-${idx}`}
+                      impact={impact}
+                      isDarkMode={isDarkMode}
+                      borderColor={borderColor}
+                      rowBg={rowBg}
+                      textMuted={textMuted}
+                      headerText={headerText}
+                    />
+                  ))
+              )}
+            </div>
+          </div>
+
+          {/* Infrastructure (mobile) */}
+          <div
+            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Building2 className="w-3.5 h-3.5 text-blue-400" />
+              <h3 className={`text-sm font-semibold ${headerText}`}>
+                Infrastructure
+              </h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                {
+                  label: "Roads",
+                  value: `${affectedRoadsKm.toLocaleString()} km`,
+                  color: "text-blue-400",
+                },
+                {
+                  label: "Buildings",
+                  value:
+                    affectedBuildings >= 1000
+                      ? `${(affectedBuildings / 1000).toFixed(1)}K`
+                      : String(affectedBuildings),
+                  color: "text-purple-400",
+                },
+                {
+                  label: "POIs",
+                  value: affectedPois.toLocaleString(),
+                  color: "text-amber-400",
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className={`${rowBg} rounded-lg p-2 text-center`}
+                >
+                  <p className={`text-base font-black leading-none ${s.color}`}>
+                    {s.value}
+                  </p>
+                  <p className={`text-[9px] mt-0.5 ${textMuted}`}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Flood Metrics (mobile) */}
+          <div
+            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Waves className="w-3.5 h-3.5 text-blue-400" />
+              <h3 className={`text-sm font-semibold ${headerText}`}>
+                Flood Metrics
+              </h3>
+            </div>
+            <div
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg mb-2 ${thresholdMode === "EXCEEDED" ? "bg-red-500/15" : thresholdMode === "WARNING" ? "bg-orange-500/15" : "bg-green-500/15"}`}
+            >
+              <AlertTriangle
+                className={`w-3.5 h-3.5 ${thresholdMode === "EXCEEDED" ? "text-red-400" : thresholdMode === "WARNING" ? "text-orange-400" : "text-green-400"}`}
+              />
+              <span
+                className={`text-xs font-bold ${thresholdMode === "EXCEEDED" ? "text-red-400" : thresholdMode === "WARNING" ? "text-orange-400" : "text-green-400"}`}
+              >
+                Threshold {thresholdMode}
+              </span>
+            </div>
+            <div className="flex justify-around">
+              <ArcGauge
+                value={maxDischarge}
+                max={5000}
+                label="Max Discharge"
+                unit="m³/s"
+                color="#ef4444"
                 isDarkMode={isDarkMode}
-                gradientId="tempFillMobile"
-                height="100%"
-                margin={{ top: 4, right: 4, left: -28, bottom: 10 }}
-                fontSize={8}
-                chartData={chartData}
-                metric={chartMetric}
+              />
+              <ArcGauge
+                value={avgDischarge}
+                max={5000}
+                label="Avg Discharge"
+                unit="m³/s"
+                color={FAO_BLUE}
+                isDarkMode={isDarkMode}
               />
             </div>
+          </div>
+
+          {/* About (mobile) */}
+          <div
+            className={`${cardBg} backdrop-blur-sm border ${borderColor} rounded-lg p-3 shadow-sm`}
+          >
+            <h3
+              className={`text-sm font-semibold mb-1.5 flex items-center gap-1.5 ${headerText}`}
+            >
+              <Info className="w-4 h-4" style={{ color: FAO_BLUE }} /> About
+              Flood Monitoring
+            </h3>
+            <p className={`text-xs ${textMuted}`}>
+              Real-time monitoring of Uganda's major river basins with automated
+              alerts when water levels exceed safe thresholds. Updated every 15
+              minutes.
+            </p>
           </div>
         </div>
 
@@ -1869,19 +2000,10 @@ export default function WeatherForecastPage({
       </div>
 
       <style>{`
-        @keyframes drift    { from { transform: translateX(-100%); } to { transform: translateX(100vw); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes shimmer  { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
-        .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+        @keyframes wave{0%,100%{transform:translateX(-100%);opacity:0}50%{transform:translateX(100%);opacity:0.2}}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .animate-fade-in-up{animation:fadeInUp 0.4s ease-out forwards}
       `}</style>
-
-      {modelInfoModal && (
-        <ForecastModelModal
-          model={modelInfoModal}
-          isDarkMode={isDarkMode}
-          onClose={() => setModelInfoModal(null)}
-        />
-      )}
     </div>
   );
 }
