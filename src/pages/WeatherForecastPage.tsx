@@ -1058,9 +1058,9 @@ export default function WeatherForecastPage({
   const apiHumDelta = dashboardData?.humidity_delta ?? 0;
   const apiWind = dashboardData?.wind_speed ?? 0;
   const apiWindDelta = dashboardData?.wind_speed_delta ?? 0;
-  const apiFeelsLike = dashboardData?.feels_like ?? 0;
+  // const apiFeelsLike = dashboardData?.feels_like ?? 0;
   const apiDewPoint = dashboardData?.dew_point ?? 0;
-  const apiWindDir = dashboardData?.wind_direction_label ?? "—";
+  // const apiWindDir = dashboardData?.wind_direction_label ?? "—";
   const apiWeatherDesc = dashboardData?.weather_description ?? "—";
   const apiFetchedAt = dashboardData?.fetched_at ?? "";
   const apiAvgTemp = dashboardData?.avg_temp ?? 0;
