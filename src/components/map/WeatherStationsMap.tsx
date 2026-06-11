@@ -22,12 +22,9 @@ import {
 import { geoData } from "@/utils/geodata";
 import type { LayerDef, UgandaBoundaryMapProps } from "@/types/data_types";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const FAO_BLUE = "#318DDE";
-const GEO_SERVER_URL =
-  "https://multihazard.rosewillbome.com/geoserver/wfews/wms";
-
-const WMS_BASE_OPTIONS = {
+const GEO_SERVER = "https://multihazard.rosewillbome.com/geoserver/wfews/wms";
+const WMS_OPTS = {
   format: "image/png" as const,
   transparent: true,
   version: "1.1.0",
@@ -44,12 +41,12 @@ function clearLayer<T extends L.Layer>(
   }
 }
 
-// ── Station type ─────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 export type StationStatus = "online" | "maintenance" | "offline";
 
 export interface WeatherStation {
   id: string;
-  code?: string;           // station code used for readings API, e.g. "ARU001"
+  code?: string;
   name: string;
   region?: string;
   status: StationStatus;
@@ -64,49 +61,6 @@ export interface WeatherStation {
   lastUpdate?: string;
 }
 
-// ── Status helpers ────────────────────────────────────────────────────────────
-const STATUS_COLOR: Record<StationStatus, string> = {
-  online: "#22c55e",
-  maintenance: "#eab308",
-  offline: "#ef4444",
-};
-
-const STATUS_LABEL: Record<StationStatus, string> = {
-  online: "Online",
-  maintenance: "Maintenance",
-  offline: "Offline",
-};
-
-/** Build the HTML for a station pin marker */
-function makeStationMarkerHtml(station: WeatherStation, isDark: boolean): string {
-  const color = STATUS_COLOR[station.status];
-  const pinBg   = isDark ? "rgba(8,12,24,0.88)"     : "rgba(255,255,255,0.92)";
-  const labelBg = isDark ? "rgba(8,12,24,0.82)"     : "rgba(255,255,255,0.90)";
-  const labelBorder = isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.10)";
-  const labelText   = isDark ? "rgba(255,255,255,0.90)" : "rgba(15,23,42,0.85)";
-  const caretColor  = isDark ? "rgba(8,12,24,0.82)"    : "rgba(255,255,255,0.90)";
-  const pulse =
-    station.status === "online"
-      ? `<span style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.35;animation:stationPulse 2s ease-out infinite;"></span>`
-      : "";
-  return `
-<div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);font-family:ui-sans-serif,system-ui,sans-serif;">
-  <div style="position:relative;width:28px;height:28px;border-radius:50%;background:${pinBg};border:2.5px solid ${color};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.4);">
-    ${pulse}
-    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4.9 4.9a10 10 0 0 1 14.14 0M7.76 7.76a6 6 0 0 1 8.49 0M10.6 10.6a2 2 0 0 1 2.83 0"/>
-      <circle cx="12" cy="14" r="1" fill="${color}" stroke="none"/>
-      <line x1="12" y1="15" x2="12" y2="20"/>
-    </svg>
-  </div>
-  <div style="margin-top:3px;background:${labelBg};backdrop-filter:blur(8px);border-radius:6px;padding:2px 6px;white-space:nowrap;border:1px solid ${labelBorder};">
-    <span style="font-size:9px;font-weight:700;color:${labelText};">${station.name}</span>
-  </div>
-  <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid ${caretColor};"></div>
-</div>`;
-}
-
-// ── Props ─────────────────────────────────────────────────────────────────────
 export interface WeatherStationsMapProps extends Omit<
   UgandaBoundaryMapProps,
   "legendTitle" | "legendItems"
@@ -115,30 +69,71 @@ export interface WeatherStationsMapProps extends Omit<
   onStationClick?: (station: WeatherStation) => void;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+const STATUS_COLOR: Record<StationStatus, string> = {
+  online: "#22c55e",
+  maintenance: "#eab308",
+  offline: "#ef4444",
+};
+const STATUS_LABEL: Record<StationStatus, string> = {
+  online: "Online",
+  maintenance: "Maintenance",
+  offline: "Offline",
+};
+
+// ── Marker HTML ────────────────────────────────────────────────────────────────
+function makeMarkerHtml(station: WeatherStation, isDark: boolean): string {
+  const c = STATUS_COLOR[station.status];
+  const bg = isDark ? "rgba(8,12,24,0.88)" : "rgba(255,255,255,0.92)";
+  const lb = isDark ? "rgba(8,12,24,0.82)" : "rgba(255,255,255,0.90)";
+  const lc = isDark ? "rgba(255,255,255,0.90)" : "rgba(15,23,42,0.85)";
+  const pulse =
+    station.status === "online"
+      ? `<span style="position:absolute;inset:0;border-radius:50%;background:${c};opacity:.35;animation:stationPulse 2s ease-out infinite;"></span>`
+      : "";
+  return `<div style="display:flex;flex-direction:column;align-items:center;width:80px;font-family:ui-sans-serif,system-ui,sans-serif;">
+  <div style="position:relative;width:28px;height:28px;border-radius:50%;background:${bg};border:2.5px solid ${c};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.4);flex-shrink:0;">
+    ${pulse}
+    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.9 4.9a10 10 0 0 1 14.14 0M7.76 7.76a6 6 0 0 1 8.49 0M10.6 10.6a2 2 0 0 1 2.83 0"/>
+      <circle cx="12" cy="14" r="1" fill="${c}" stroke="none"/><line x1="12" y1="15" x2="12" y2="20"/>
+    </svg>
+  </div>
+  <div style="margin-top:3px;background:${lb};border-radius:6px;padding:2px 4px;width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;">
+    <span style="font-size:9px;font-weight:700;color:${lc};">${station.name}</span>
+  </div>
+  <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid ${isDark ? "rgba(8,12,24,.82)" : "rgba(255,255,255,.90)"};flex-shrink:0;"></div>
+</div>`;
+}
+
+function doesNameFit(map: L.Map, layer: L.GeoJSON, name: string): boolean {
+  const tl = map.latLngToLayerPoint(layer.getBounds().getNorthWest());
+  const br = map.latLngToLayerPoint(layer.getBounds().getSouthEast());
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  ctx.font = "14px sans-serif";
+  return ctx.measureText(name).width + 10 <= br.x - tl.x && 24 <= br.y - tl.y;
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
 export default function WeatherStationsMap({
   className = "",
   isDarkMode,
   badgeText = "Uganda",
   district,
-  setDistrict,
   getTheBounds,
   zoom = 6.8,
   minZoom = 6.8,
   stations = [],
   onStationClick,
 }: WeatherStationsMapProps) {
-  const { currentPage, forecastStep, dateRange } = useAppStore(
-    (state) => state,
-  );
-
+  const { currentPage, forecastStep, dateRange } = useAppStore((s) => s);
   const LAYER_GROUPS = getLayerGroups({
     today: formatDate(dateRange),
     forecastStep,
     dateRange,
   });
 
-  // ── Refs ────────────────────────────────────────────────────────────────────
+  // ── Refs ───────────────────────────────────────────────────────────────────
   const rootRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -148,341 +143,375 @@ export default function WeatherStationsMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const wmsLayersRef = useRef<Record<string, L.TileLayer.WMS>>({});
   const stationMarkersRef = useRef<L.Marker[]>([]);
+  // Stable refs — so map event handlers always see latest values
+  const stationsRef = useRef(stations);
+  const onClickRef = useRef(onStationClick);
+  useEffect(() => {
+    stationsRef.current = stations;
+  }, [stations]);
+  useEffect(() => {
+    onClickRef.current = onStationClick;
+  }, [onStationClick]);
 
-  // ── UI state ────────────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [hoveredDistrict, setHoveredDistrict] = useState<string | null>(null);
   const [hoveredStation, setHoveredStation] = useState<WeatherStation | null>(
     null,
   );
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [hoveredDistrictName, setHoveredDistrictName] = useState<string | null>(
-    null,
-  );
 
-  // ── Fullscreen ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
+    const h = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
   }, []);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) rootRef.current?.requestFullscreen?.();
     else document.exitFullscreen?.();
   };
 
-  // ── Label-fit helper ─────────────────────────────────────────────────────────
-  const doesNameFitInLeafletBoundary = (
-    layer: any,
-    name: string,
-    fontSize = 14,
-    fontFamily = "sans-serif",
-    padding = 5,
-  ): boolean => {
-    if (!mapRef.current) return false;
-    const bounds = layer.getBounds();
-    const topLeft = mapRef.current.latLngToLayerPoint(bounds.getNorthWest());
-    const bottomRight = mapRef.current.latLngToLayerPoint(
-      bounds.getSouthEast(),
-    );
-    const availableWidth = bottomRight.x - topLeft.x;
-    const availableHeight = bottomRight.y - topLeft.y;
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d")!;
-    ctx.font = `${fontSize}px ${fontFamily}`;
-    const textWidth = ctx.measureText(name).width;
-    const paddedW = textWidth + padding * 2;
-    const paddedH = fontSize + padding * 2;
-    return paddedW <= availableWidth && paddedH <= availableHeight;
-  };
-
-  // ── Toggle WMS panel layer ───────────────────────────────────────────────────
-  const toggleLayer = (layerDef: LayerDef) => {
-    if (!mapRef.current) return;
-    if (activeLayers.has(layerDef.id)) {
-      if (wmsLayersRef.current[layerDef.id]) {
-        mapRef.current.removeLayer(wmsLayersRef.current[layerDef.id]);
-        delete wmsLayersRef.current[layerDef.id];
+  // ── WMS layer toggle ───────────────────────────────────────────────────────
+  const toggleLayer = (ld: LayerDef) => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (activeLayers.has(ld.id)) {
+      const ex = wmsLayersRef.current[ld.id];
+      if (ex) {
+        map.removeLayer(ex);
+        delete wmsLayersRef.current[ld.id];
       }
-      setActiveLayers((prev) => {
-        const next = new Set(prev);
-        next.delete(layerDef.id);
-        return next;
+      setActiveLayers((p) => {
+        const n = new Set(p);
+        n.delete(ld.id);
+        return n;
       });
     } else {
-      const wmsLayer = L.tileLayer
-        .wms(GEO_SERVER_URL, {
-          ...WMS_BASE_OPTIONS,
-          layers: `wfews:${layerDef.wms}`,
-          opacity: 1.0,
-        })
-        .addTo(mapRef.current);
-      wmsLayer.bringToFront();
-      wmsLayersRef.current[layerDef.id] = wmsLayer;
-      setActiveLayers((prev) => new Set(prev).add(layerDef.id));
+      const wl = L.tileLayer
+        .wms(GEO_SERVER, { ...WMS_OPTS, layers: `wfews:${ld.wms}`, opacity: 1 })
+        .addTo(map);
+      wl.bringToFront();
+      wmsLayersRef.current[ld.id] = wl;
+      setActiveLayers((p) => new Set(p).add(ld.id));
     }
   };
 
-  // ── Initialise map ───────────────────────────────────────────────────────────
+  // ── Map init — deferred until container has real CSS dimensions ────────────
   useEffect(() => {
-    if (!mapContainerRef.current || !geoData) return;
-    if (!isValidGeoJSON(geoData)) return;
+    if (!mapContainerRef.current || !geoData || !isValidGeoJSON(geoData))
+      return;
+    const container = mapContainerRef.current;
+    let cleanedUp = false;
 
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-    }
+    const doInit = () => {
+      if (cleanedUp || mapRef.current) return;
 
-    // CartoDB base + optional labels overlay
-    tileLayerRef.current = L.tileLayer(
-      isDarkMode
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-      { maxZoom: 19, attribution: "© CartoDB" },
-    );
+      tileLayerRef.current = L.tileLayer(
+        isDarkMode
+          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        { maxZoom: 19, attribution: "© CartoDB" },
+      );
 
-    mapRef.current = L.map(mapContainerRef.current, {
-      center: [1.3733, 32.2903],
-      zoom,
-      minZoom,
-      layers: [tileLayerRef.current],
-      zoomControl: false,
-      attributionControl: false,
-    });
+      const map = L.map(container, {
+        center: [1.3733, 32.2903],
+        zoom,
+        minZoom,
+        layers: [tileLayerRef.current],
+        zoomControl: false,
+        attributionControl: false,
+      });
+      mapRef.current = map;
 
-    // District boundary polygons
-    districtLayerRef.current = L.geoJSON(geoData, {
-      style: {
-        color: isDarkMode ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)",
-        weight: 0.5,
-        fill: false,
-      },
-    }).addTo(mapRef.current);
+      // District boundaries
+      districtLayerRef.current = L.geoJSON(geoData, {
+        interactive: false,
+        style: {
+          color: isDarkMode ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)",
+          weight: 0.5,
+          fill: false,
+        },
+      }).addTo(map);
 
-    // District name labels
-    const updateLabelVisibility = () => {
-      if (!mapRef.current || !districtLayerRef.current) return;
-      districtLayerRef.current.eachLayer((layer: any) => {
-        layer.closeTooltip();
-        const name = layer.feature?.properties?.name;
-        if (!name) return;
-        if (doesNameFitInLeafletBoundary(layer, name)) {
-          layer
-            .bindTooltip(name, {
+      const updateLabels = () => {
+        if (!mapRef.current || !districtLayerRef.current) return;
+        districtLayerRef.current.eachLayer((l: any) => {
+          l.closeTooltip();
+          const name: string | undefined = l.feature?.properties?.name;
+          if (!name) return;
+          if (doesNameFit(mapRef.current!, l, name))
+            l.bindTooltip(name, {
               permanent: true,
               direction: "center",
               className: "district-label",
-            })
-            .openTooltip();
-          layer.bringToFront();
+            }).openTooltip();
+        });
+      };
+      map.on("zoomend", updateLabels);
+      updateLabels();
+
+      // Water areas
+      if (waterAreas) {
+        riverLayerRef.current = L.geoJSON(waterAreas as any, {
+          interactive: false,
+          style: {
+            color: "#d2efff",
+            weight: 0.1,
+            fillColor: "#d2efff",
+            fillOpacity: 0.3,
+          },
+          onEachFeature(feat, l: any) {
+            const n: string | undefined = feat.properties?.NAME;
+            if (n)
+              l.bindTooltip(n, {
+                permanent: true,
+                direction: "center",
+                className: "waterAreas-label",
+              });
+          },
+        }).addTo(map);
+        riverLayerRef.current.bringToBack();
+      }
+
+      // ── Click: hit-test against stations by pixel distance ────────────────
+      // Markers are interactive:false so we catch the click on the map itself.
+      map.on("click", (ev: L.LeafletMouseEvent) => {
+        const clickPt = ev.containerPoint;
+        let closest: WeatherStation | null = null;
+        let closestDist = 30; // px threshold
+        stationsRef.current.forEach((st) => {
+          if (!Number.isFinite(st.lat) || !Number.isFinite(st.lng)) return;
+          const pt = map.latLngToContainerPoint([st.lat, st.lng]);
+          const d = Math.hypot(clickPt.x - pt.x, clickPt.y - pt.y);
+          if (d < closestDist) {
+            closestDist = d;
+            closest = st;
+          }
+        });
+        if (closest) {
+          console.log(
+            "[MAP] station clicked:",
+            (closest as WeatherStation).name,
+          );
+          onClickRef.current?.(closest);
         }
       });
+
+      // ── Mousemove: district tooltip + station hover ────────────────────────
+      map.on("mousemove", (ev: L.LeafletMouseEvent) => {
+        setMousePos({ x: ev.containerPoint.x, y: ev.containerPoint.y });
+
+        // District hover
+        let foundDistrict: string | null = null;
+        districtLayerRef.current?.eachLayer((l: any) => {
+          if (foundDistrict) return;
+          if (isPointInPolygon(ev.latlng, l.getLatLngs()))
+            foundDistrict = l.feature?.properties?.name ?? null;
+        });
+        setHoveredDistrict(foundDistrict);
+
+        // Station hover — find nearest within 30px
+        const pt = ev.containerPoint;
+        let nearestSt: WeatherStation | null = null;
+        let nearestDist = 30;
+        stationsRef.current.forEach((st) => {
+          if (!Number.isFinite(st.lat) || !Number.isFinite(st.lng)) return;
+          const sp = map.latLngToContainerPoint([st.lat, st.lng]);
+          const d = Math.hypot(pt.x - sp.x, pt.y - sp.y);
+          if (d < nearestDist) {
+            nearestDist = d;
+            nearestSt = st;
+          }
+        });
+        setHoveredStation(nearestSt);
+      });
+      map.on("mouseout", () => {
+        setHoveredDistrict(null);
+        setHoveredStation(null);
+      });
+
+      map.invalidateSize();
     };
-    mapRef.current.on("zoomend", updateLabelVisibility);
-    updateLabelVisibility();
 
-    // Click → highlight district
-    mapRef.current.on("click", (ev: L.LeafletMouseEvent) => {
-      let clickedFeature: any = null;
-      districtLayerRef.current?.eachLayer((layer: any) => {
-        if (clickedFeature) return;
-        if (isPointInPolygon(ev.latlng, layer.getLatLngs()))
-          clickedFeature = layer.feature;
-      });
-      if (!clickedFeature) return;
-      if (setDistrict)
-        setDistrict(clickedFeature.properties.name?.toUpperCase());
-      clearLayer(mapRef.current!, boundaryLayerRef);
-      boundaryLayerRef.current = L.geoJSON(clickedFeature, {
-        style: { color: "#308DE0", weight: 4, fill: false },
-      })
-        .addTo(mapRef.current!)
-        .bringToFront();
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      if (width > 0 && height > 0) {
+        if (!mapRef.current) doInit();
+        else mapRef.current.invalidateSize();
+      }
     });
+    ro.observe(container);
 
-    // Water / lake overlay
-    clearLayer(mapRef.current, riverLayerRef);
-    if (waterAreas) {
-      riverLayerRef.current = L.geoJSON(waterAreas as any, {
-        style: {
-          color: "#d2efff",
-          weight: 0.1,
-          fillColor: "#d2efff",
-          fillOpacity: 0.3,
-        },
-        onEachFeature(feature, layer: any) {
-          const waterName = feature.properties?.NAME;
-          if (waterName)
-            layer.bindTooltip(waterName, {
-              permanent: true,
-              direction: "center",
-              className: "waterAreas-label",
-            });
-        },
-      }).addTo(mapRef.current);
-      riverLayerRef.current.bringToBack();
-    }
-
-    // Hover: district detection
-    mapRef.current.on("mousemove", (ev: L.LeafletMouseEvent) => {
-      setMousePos({ x: ev.containerPoint.x, y: ev.containerPoint.y });
-      let found: string | null = null;
-      districtLayerRef.current?.eachLayer((layer: any) => {
-        if (found) return;
-        if (isPointInPolygon(ev.latlng, layer.getLatLngs()))
-          found = layer.feature?.properties?.name ?? null;
-      });
-      setHoveredDistrictName(found);
-    });
-    mapRef.current.on("mouseout", () => setHoveredDistrictName(null));
-
-    // ResizeObserver
-    const ro = new ResizeObserver(() => mapRef.current?.invalidateSize());
-    ro.observe(mapContainerRef.current);
+    const { width, height } = container.getBoundingClientRect();
+    if (width > 0 && height > 0) doInit();
 
     return () => {
+      cleanedUp = true;
       ro.disconnect();
-      mapRef.current?.remove();
-      mapRef.current = null;
+      stationMarkersRef.current.forEach((m) => m.remove());
+      stationMarkersRef.current = [];
+      Object.values(wmsLayersRef.current).forEach((l) =>
+        mapRef.current?.removeLayer(l),
+      );
+      wmsLayersRef.current = {};
+      if (mapRef.current) {
+        [
+          districtLayerRef,
+          boundaryLayerRef,
+          riverLayerRef,
+          tileLayerRef,
+        ].forEach((r) => {
+          if (r.current) {
+            mapRef.current!.removeLayer(r.current);
+            (r as any).current = null;
+          }
+        });
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
   }, [geoData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Swap base tile on dark/light toggle ──────────────────────────────────────
+  // ── Dark/light tile swap ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !tileLayerRef.current) return;
-    mapRef.current.removeLayer(tileLayerRef.current);
+    const map = mapRef.current;
+    if (!map || !tileLayerRef.current) return;
+    map.removeLayer(tileLayerRef.current);
     tileLayerRef.current = L.tileLayer(
       isDarkMode
         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
       { maxZoom: 19, attribution: "© CartoDB" },
-    ).addTo(mapRef.current);
+    ).addTo(map);
     tileLayerRef.current.bringToBack();
   }, [isDarkMode]);
 
-  // ── Highlight district from external prop ────────────────────────────────────
+  // ── District highlight ─────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !geoData || !isValidGeoJSON(geoData)) return;
+    const map = mapRef.current;
+    if (!map || !geoData || !isValidGeoJSON(geoData)) return;
     if (
       !district ||
       district.trim() === "" ||
       district.trim().toLowerCase() === "all"
     ) {
-      clearLayer(mapRef.current, boundaryLayerRef);
+      clearLayer(map, boundaryLayerRef);
       return;
     }
     const matched = geoData.features.filter(
       (f: any) => f?.properties?.name === capitalize(district.toLowerCase()),
     );
     if (!matched.length) return;
-    clearLayer(mapRef.current, boundaryLayerRef);
+    clearLayer(map, boundaryLayerRef);
     boundaryLayerRef.current = L.geoJSON(
       { type: "FeatureCollection", features: matched } as any,
       { style: { color: FAO_BLUE, weight: 4, fill: false } },
     )
-      .addTo(mapRef.current)
+      .addTo(map)
       .bringToBack();
   }, [district, geoData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Fit viewport to getTheBounds ─────────────────────────────────────────────
+  // ── Fit bounds ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current || !geoData || !isValidGeoJSON(geoData)) return;
+    const map = mapRef.current;
+    if (!map || !geoData || !isValidGeoJSON(geoData)) return;
     if (!getTheBounds || getTheBounds.trim().length === 0) return;
-
     if (
       getTheBounds.trim().toLowerCase() === "all" ||
       getTheBounds.trim() === ""
     ) {
-      clearLayer(mapRef.current, boundaryLayerRef);
-      mapRef.current.setMaxBounds(
+      clearLayer(map, boundaryLayerRef);
+      map.setMaxBounds(
         L.latLngBounds([
           [-90, -180],
           [90, 180],
         ]),
       );
-      mapRef.current.setMinZoom(minZoom);
-      mapRef.current.setView([1.3733, 32.2903], zoom);
+      map.setMinZoom(minZoom);
+      map.setView([1.3733, 32.2903], zoom);
       return;
     }
-
     const matched = geoData.features.filter(
       (f: any) =>
         f?.properties?.name === capitalize(getTheBounds.toLowerCase()),
     );
     if (!matched.length) return;
-
-    clearLayer(mapRef.current, boundaryLayerRef);
+    clearLayer(map, boundaryLayerRef);
     boundaryLayerRef.current = L.geoJSON(
       { ...geoData, features: matched } as any,
       { style: { color: FAO_BLUE, weight: 2, fill: false } },
     )
-      .addTo(mapRef.current)
+      .addTo(map)
       .bringToBack();
-
-    const bounds = boundaryLayerRef.current.getBounds();
-    if (bounds.isValid()) {
-      mapRef.current.fitBounds(bounds, { padding: [40, 40] });
-      mapRef.current.setMaxBounds(bounds.pad(0.3));
+    const b = boundaryLayerRef.current.getBounds();
+    if (b.isValid()) {
+      map.fitBounds(b, { padding: [40, 40] });
+      map.setMaxBounds(b.pad(0.3));
     }
   }, [getTheBounds, geoData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Station markers ───────────────────────────────────────────────────────────
+  // ── Station markers (visual only) ─────────────────────────────────────────
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    // Remove old markers
+    const map = mapRef.current;
+    if (!map) return;
     stationMarkersRef.current.forEach((m) => m.remove());
     stationMarkersRef.current = [];
-
     stations.forEach((station) => {
+      if (!Number.isFinite(station.lat) || !Number.isFinite(station.lng))
+        return;
+      const zIndex =
+        station.status === "online"
+          ? 300
+          : station.status === "maintenance"
+            ? 200
+            : 100;
       const marker = L.marker([station.lat, station.lng], {
         icon: L.divIcon({
-          className: "",
-          html: makeStationMarkerHtml(station, isDarkMode),
-          iconSize: [1, 1],
-          iconAnchor: [0, 0],
+          className: "station-marker-icon",
+          html: makeMarkerHtml(station, isDarkMode),
+          iconSize: [80, 53],
+          iconAnchor: [40, 53],
         }),
-        zIndexOffset:
-          station.status === "online"
-            ? 300
-            : station.status === "maintenance"
-              ? 200
-              : 100,
-      })
-        .on("click", () => onStationClick?.(station))
-        .on("mouseover", (e) => {
-          setHoveredStation(station);
-          setMousePos({ x: e.containerPoint.x, y: e.containerPoint.y });
-        })
-        .on("mouseout", () => setHoveredStation(null))
-        .addTo(mapRef.current!);
+        zIndexOffset: zIndex,
+        interactive: false,
+      }).addTo(map);
       stationMarkersRef.current.push(marker);
     });
-  }, [stations, onStationClick, isDarkMode]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      stationMarkersRef.current.forEach((m) => m.remove());
+      stationMarkersRef.current = [];
+    };
+  }, [stations, isDarkMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Layer panel visibility filter ────────────────────────────────────────────
-  const isVisibleOnPage = (layer: LayerDef): boolean => {
-    if (!layer.pages || layer.pages.includes("*")) return true;
-    return layer.pages.some((route) => (currentPage ?? "").startsWith(route));
-  };
-  const visibleGroups = LAYER_GROUPS.map((group) => ({
-    ...group,
-    layers: group.layers.filter(isVisibleOnPage),
-  })).filter((group) => group.layers.length > 0);
+  // ── Layer panel visibility ─────────────────────────────────────────────────
+  const visibleGroups = LAYER_GROUPS.map((g) => ({
+    ...g,
+    layers: g.layers.filter(
+      (l) =>
+        !l.pages ||
+        l.pages.includes("*") ||
+        l.pages.some((r) => (currentPage ?? "").startsWith(r)),
+    ),
+  })).filter((g) => g.layers.length > 0);
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Tooltip positions ──────────────────────────────────────────────────────
+  const tipX = mousePos.x > 360 ? mousePos.x - 170 : mousePos.x + 14;
+  const tipY = Math.max(mousePos.y - 10, 8);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div ref={rootRef} className={`relative overflow-hidden ${className}`}>
-      {/* Map container */}
       <div
         ref={mapContainerRef}
-        className="absolute inset-0 z-0"
+        className="absolute inset-0"
         style={{ background: isDarkMode ? "#0f172a" : "#f1f5f9" }}
       />
 
       {/* Badge */}
-      <div className="absolute top-2 left-2 z-[400]">
+      <div className="absolute top-2 left-2 z-[400] pointer-events-none">
         <span
           className="rounded px-2 py-0.5 text-[10px] font-medium shadow-sm"
           style={{
@@ -494,13 +523,15 @@ export default function WeatherStationsMap({
         </span>
       </div>
 
-      {/* Fullscreen button */}
+      {/* Fullscreen */}
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
         className="absolute top-[44px] left-2 z-[400] flex items-center justify-center w-[30px] h-[30px] rounded-lg shadow-md transition-all"
         style={{
-          background: isDarkMode ? "rgba(10,15,30,0.65)" : "rgba(255,255,255,0.80)",
+          background: isDarkMode
+            ? "rgba(10,15,30,0.65)"
+            : "rgba(255,255,255,0.80)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
           border: `1px solid ${isDarkMode ? `${FAO_BLUE}55` : `${FAO_BLUE}40`}`,
@@ -513,7 +544,7 @@ export default function WeatherStationsMap({
         )}
       </button>
 
-      {/* MAP LAYERS toggle button */}
+      {/* MAP LAYERS button */}
       <button
         onClick={() => setShowLayerPanel((v) => !v)}
         className="absolute top-2 right-2 z-[400] flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-md transition-all"
@@ -527,24 +558,25 @@ export default function WeatherStationsMap({
           border: `1px solid ${FAO_BLUE}55`,
         }}
       >
-        <Layers className="w-3.5 h-3.5" />
-        MAP LAYERS
+        <Layers className="w-3.5 h-3.5" /> MAP LAYERS
       </button>
 
-      {/* Zoom controls */}
+      {/* Zoom */}
       <div className="absolute top-[46px] right-2 z-[400] flex flex-col gap-1">
-        {[
-          {
-            icon: Plus,
-            title: "Zoom in",
-            action: () => mapRef.current?.zoomIn(),
-          },
-          {
-            icon: Minus,
-            title: "Zoom out",
-            action: () => mapRef.current?.zoomOut(),
-          },
-        ].map(({ icon: Icon, title, action }) => (
+        {(
+          [
+            {
+              icon: Plus,
+              title: "Zoom in",
+              action: () => mapRef.current?.zoomIn(),
+            },
+            {
+              icon: Minus,
+              title: "Zoom out",
+              action: () => mapRef.current?.zoomOut(),
+            },
+          ] as const
+        ).map(({ icon: Icon, title, action }) => (
           <button
             key={title}
             onClick={action}
@@ -568,14 +600,9 @@ export default function WeatherStationsMap({
             onClick={() => setShowLayerPanel(false)}
           />
           <div
-            className={`absolute top-10 right-2 z-[700] w-64 overflow-y-auto rounded-xl shadow-xl flex flex-col ${
-              isDarkMode
-                ? "bg-slate-800 border border-slate-700"
-                : "bg-white border border-slate-200"
-            }`}
+            className={`absolute top-10 right-2 z-[700] w-64 overflow-y-auto rounded-xl shadow-xl flex flex-col ${isDarkMode ? "bg-slate-800 border border-slate-700" : "bg-white border border-slate-200"}`}
             style={{ maxHeight: "90%" }}
           >
-            {/* Panel header */}
             <div
               className="flex items-center justify-between px-3 py-2.5 flex-shrink-0 border-b"
               style={{ borderColor: isDarkMode ? "#334155" : "#e2e8f0" }}
@@ -587,19 +614,13 @@ export default function WeatherStationsMap({
               </span>
               <button
                 onClick={() => setShowLayerPanel(false)}
-                className={`p-0.5 rounded transition-colors ${
-                  isDarkMode
-                    ? "hover:bg-slate-700 text-slate-400"
-                    : "hover:bg-slate-100 text-slate-500"
-                }`}
+                className={`p-0.5 rounded transition-colors ${isDarkMode ? "hover:bg-slate-700 text-slate-400" : "hover:bg-slate-100 text-slate-500"}`}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            {/* Layer list */}
-            <div className="overflow-y-auto flex-1 py-1 h-[calc(100%-40px)]">
-              {visibleGroups?.map((group) => (
+            <div className="overflow-y-auto flex-1 py-1">
+              {visibleGroups.map((group) => (
                 <div key={group.title} className="mb-1">
                   <p
                     className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-widest"
@@ -607,17 +628,13 @@ export default function WeatherStationsMap({
                   >
                     {group.title}
                   </p>
-                  {group.layers.map((layerDef) => {
-                    const isActive = activeLayers.has(layerDef.id);
+                  {group.layers.map((ld) => {
+                    const isActive = activeLayers.has(ld.id);
                     return (
                       <div
-                        key={layerDef.id}
-                        onClick={() => toggleLayer(layerDef)}
-                        className={`flex items-center justify-between px-3 py-1.5 cursor-pointer transition-colors select-none ${
-                          isDarkMode
-                            ? "hover:bg-slate-700/50"
-                            : "hover:bg-slate-50"
-                        }`}
+                        key={ld.id}
+                        onClick={() => toggleLayer(ld)}
+                        className={`flex items-center justify-between px-3 py-1.5 cursor-pointer transition-colors select-none ${isDarkMode ? "hover:bg-slate-700/50" : "hover:bg-slate-50"}`}
                       >
                         <div className="flex items-center gap-2">
                           <div
@@ -652,14 +669,14 @@ export default function WeatherStationsMap({
                           <span
                             className={`text-xs ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
                           >
-                            {layerDef.label}
+                            {ld.label}
                           </span>
                         </div>
-                        {layerDef.date && (
+                        {ld.date && (
                           <span
                             className={`text-[10px] ml-2 flex-shrink-0 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
                           >
-                            {layerDef.date}
+                            {ld.date}
                           </span>
                         )}
                       </div>
@@ -674,9 +691,11 @@ export default function WeatherStationsMap({
 
       {/* Station legend */}
       <div
-        className="absolute bottom-4 left-2 z-[400] px-3 py-2.5 rounded-xl shadow-lg"
+        className="absolute bottom-4 left-2 z-[400] px-3 py-2.5 rounded-xl shadow-lg pointer-events-none"
         style={{
-          background: isDarkMode ? "rgba(8,12,24,0.68)" : "rgba(255,255,255,0.82)",
+          background: isDarkMode
+            ? "rgba(8,12,24,0.68)"
+            : "rgba(255,255,255,0.82)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
           border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
@@ -702,7 +721,11 @@ export default function WeatherStationsMap({
                 />
                 <span
                   className="text-[10px]"
-                  style={{ color: isDarkMode ? "rgba(255,255,255,0.70)" : "rgba(15,23,42,0.70)" }}
+                  style={{
+                    color: isDarkMode
+                      ? "rgba(255,255,255,0.70)"
+                      : "rgba(15,23,42,0.70)",
+                  }}
                 >
                   {STATUS_LABEL[status]}
                 </span>
@@ -718,225 +741,217 @@ export default function WeatherStationsMap({
         </div>
       </div>
 
-      {/* Hover tooltip — station details or district name */}
-      {(hoveredStation || hoveredDistrictName) &&
-        (() => {
-          const tx = mousePos.x > 360 ? mousePos.x - 168 : mousePos.x + 14;
-          const ty = Math.max(mousePos.y - 62, 8);
-          return (
-            <div
-              className="absolute pointer-events-none z-[450]"
-              style={{
-                left: tx,
-                top: ty,
-                background: isDarkMode
-                  ? "rgba(8,12,24,0.9)"
-                  : "rgba(255,255,255,0.92)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)"}`,
-                borderRadius: 10,
-                padding: "8px 12px",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
-                minWidth: 150,
-              }}
-            >
-              {hoveredStation ? (
-                <>
-                  {/* Station tooltip */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        backgroundColor: STATUS_COLOR[hoveredStation.status],
-                      }}
-                    />
-                    <p
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: isDarkMode
-                          ? "rgba(255,255,255,0.9)"
-                          : "rgba(0,0,0,0.85)",
-                      }}
-                    >
-                      {hoveredStation.name}
-                    </p>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 9,
-                      letterSpacing: 1,
-                      textTransform: "uppercase",
-                      color: STATUS_COLOR[hoveredStation.status],
-                      marginBottom: 6,
-                    }}
-                  >
-                    {STATUS_LABEL[hoveredStation.status]}
-                  </p>
-                  {hoveredStation.status !== "offline" && (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                      {hoveredStation.temp !== undefined && (
-                        <div>
-                          <p
-                            style={{
-                              fontSize: 8,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.4)"
-                                : "rgba(0,0,0,0.4)",
-                            }}
-                          >
-                            TEMP
-                          </p>
-                          <p
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.9)"
-                                : "rgba(0,0,0,0.85)",
-                            }}
-                          >
-                            {hoveredStation.temp}°C
-                          </p>
-                        </div>
-                      )}
-                      {hoveredStation.humidity !== undefined && (
-                        <div>
-                          <p
-                            style={{
-                              fontSize: 8,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.4)"
-                                : "rgba(0,0,0,0.4)",
-                            }}
-                          >
-                            HUMIDITY
-                          </p>
-                          <p
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.9)"
-                                : "rgba(0,0,0,0.85)",
-                            }}
-                          >
-                            {hoveredStation.humidity}%
-                          </p>
-                        </div>
-                      )}
-                      {hoveredStation.wind !== undefined && (
-                        <div>
-                          <p
-                            style={{
-                              fontSize: 8,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.4)"
-                                : "rgba(0,0,0,0.4)",
-                            }}
-                          >
-                            WIND
-                          </p>
-                          <p
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.9)"
-                                : "rgba(0,0,0,0.85)",
-                            }}
-                          >
-                            {hoveredStation.wind} km/h
-                          </p>
-                        </div>
-                      )}
-                      {hoveredStation.rain !== undefined && (
-                        <div>
-                          <p
-                            style={{
-                              fontSize: 8,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.4)"
-                                : "rgba(0,0,0,0.4)",
-                            }}
-                          >
-                            RAIN
-                          </p>
-                          <p
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: isDarkMode
-                                ? "rgba(255,255,255,0.9)"
-                                : "rgba(0,0,0,0.85)",
-                            }}
-                          >
-                            {hoveredStation.rain} mm
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {hoveredStation.lastUpdate && (
-                    <p
-                      style={{
-                        fontSize: 8,
-                        color: isDarkMode
-                          ? "rgba(255,255,255,0.3)"
-                          : "rgba(0,0,0,0.3)",
-                        marginTop: 6,
-                      }}
-                    >
-                      Updated {hoveredStation.lastUpdate}
-                    </p>
-                  )}
-                </>
-              ) : (
-                /* District tooltip */
-                <p
+      {/* Hover tooltip — station takes priority over district */}
+      {(hoveredStation || hoveredDistrict) && (
+        <div
+          className="absolute pointer-events-none z-[450]"
+          style={{
+            left: tipX,
+            top: tipY,
+            background: isDarkMode
+              ? "rgba(8,12,24,0.92)"
+              : "rgba(255,255,255,0.96)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: `1px solid ${isDarkMode ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)"}`,
+            borderRadius: 10,
+            padding: "8px 12px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.30)",
+            minWidth: 140,
+          }}
+        >
+          {hoveredStation ? (
+            <>
+              {/* Station name + status */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
                   style={{
-                    fontSize: 11,
-                    fontWeight: 600,
+                    backgroundColor: STATUS_COLOR[hoveredStation.status],
+                    display: "inline-block",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
                     color: isDarkMode
-                      ? "rgba(255,255,255,0.8)"
-                      : "rgba(0,0,0,0.75)",
+                      ? "rgba(255,255,255,0.95)"
+                      : "rgba(15,23,42,0.90)",
                   }}
                 >
-                  {hoveredDistrictName}
+                  {hoveredStation.name}
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: STATUS_COLOR[hoveredStation.status],
+                }}
+              >
+                {STATUS_LABEL[hoveredStation.status]}
+              </span>
+              {/* Readings — only when online/maintenance */}
+              {hoveredStation.status !== "offline" && (
+                <div
+                  className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 pt-2"
+                  style={{
+                    borderTop: `1px solid ${isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)"}`,
+                  }}
+                >
+                  {hoveredStation.temp !== undefined && (
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 8,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.4)"
+                            : "rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        TEMP
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.9)"
+                            : "rgba(0,0,0,0.85)",
+                        }}
+                      >
+                        {hoveredStation.temp}°C
+                      </p>
+                    </div>
+                  )}
+                  {hoveredStation.humidity !== undefined && (
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 8,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.4)"
+                            : "rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        HUMIDITY
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.9)"
+                            : "rgba(0,0,0,0.85)",
+                        }}
+                      >
+                        {hoveredStation.humidity}%
+                      </p>
+                    </div>
+                  )}
+                  {hoveredStation.wind !== undefined && (
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 8,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.4)"
+                            : "rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        WIND
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.9)"
+                            : "rgba(0,0,0,0.85)",
+                        }}
+                      >
+                        {hoveredStation.wind} km/h
+                      </p>
+                    </div>
+                  )}
+                  {hoveredStation.rain !== undefined && (
+                    <div>
+                      <p
+                        style={{
+                          fontSize: 8,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.4)"
+                            : "rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        RAIN
+                      </p>
+                      <p
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: isDarkMode
+                            ? "rgba(255,255,255,0.9)"
+                            : "rgba(0,0,0,0.85)",
+                        }}
+                      >
+                        {hoveredStation.rain} mm
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {hoveredStation.lastUpdate && (
+                <p
+                  style={{
+                    fontSize: 8,
+                    color: isDarkMode
+                      ? "rgba(255,255,255,0.3)"
+                      : "rgba(0,0,0,0.3)",
+                    marginTop: 6,
+                  }}
+                >
+                  Updated {hoveredStation.lastUpdate}
                 </p>
               )}
-            </div>
-          );
-        })()}
+            </>
+          ) : (
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                color: isDarkMode
+                  ? "rgba(255,255,255,0.8)"
+                  : "rgba(0,0,0,0.75)",
+              }}
+            >
+              {hoveredDistrict}
+            </p>
+          )}
+        </div>
+      )}
 
-      {/* Leaflet label styles + station pulse animation */}
       <style>{`
         .district-label {
-          background: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-          font-size: 11px;
-          font-weight: 600;
+          background: transparent !important; border: none !important; box-shadow: none !important;
+          font-size: 11px; font-weight: 600; white-space: nowrap; pointer-events: none;
           color: ${isDarkMode ? "rgba(255,255,255,0.9)" : "rgba(15,23,42,0.80)"};
-          text-shadow: ${isDarkMode
-            ? "0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)"
-            : "0 1px 3px rgba(255,255,255,0.9), 0 0 6px rgba(255,255,255,0.7)"};
-          white-space: nowrap;
-          pointer-events: none;
+          text-shadow: ${isDarkMode ? "0 1px 4px rgba(0,0,0,0.9)" : "0 1px 3px rgba(255,255,255,0.9)"};
         }
         .waterAreas-label {
-          background: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-          font-size: 10px;
-          color: ${isDarkMode ? "#93c5fd" : "#2563eb"};
-          text-shadow: ${isDarkMode ? "0 1px 3px rgba(0,0,0,0.8)" : "0 1px 2px rgba(255,255,255,0.8)"};
-          pointer-events: none;
+          background: transparent !important; border: none !important; box-shadow: none !important;
+          font-size: 10px; pointer-events: none; color: ${isDarkMode ? "#93c5fd" : "#2563eb"};
+        }
+        .station-marker-icon {
+          background: transparent !important; border: none !important; overflow: visible !important;
         }
         @keyframes stationPulse {
-          0%   { transform: scale(1); opacity: 0.35; }
-          100% { transform: scale(2.5); opacity: 0; }
+          0%   { transform: scale(1);   opacity: 0.35; }
+          100% { transform: scale(2.5); opacity: 0;    }
         }
       `}</style>
     </div>
