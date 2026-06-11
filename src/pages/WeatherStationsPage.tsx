@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   // Radio,
   MapPin,
@@ -512,6 +512,24 @@ const StationReadingsPanel = ({
     }));
   })();
 
+  // Measure the chart wrapper height so ResponsiveContainer always gets a
+  // concrete pixel value — avoids the Recharts 0×0 warning on first render.
+  const chartWrapperRef = useRef<HTMLDivElement>(null);
+  const [chartHeight, setChartHeight] = useState(160);
+  useEffect(() => {
+    const el = chartWrapperRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height;
+      if (h && h > 0) setChartHeight(h);
+    });
+    ro.observe(el);
+    // measure immediately in case already laid out
+    const h = el.getBoundingClientRect().height;
+    if (h > 0) setChartHeight(h);
+    return () => ro.disconnect();
+  }, []);
+
   const statusDot = (s: string) =>
     ({
       online: "bg-green-500",
@@ -733,8 +751,12 @@ const StationReadingsPanel = ({
               No historical data available
             </div>
           ) : (
-            <div className="flex-1 min-h-0 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <div
+              ref={chartWrapperRef}
+              className="flex-1 min-h-0 w-full"
+              style={{ minHeight: 120 }}
+            >
+              <ResponsiveContainer width="100%" height={chartHeight}>
                 <AreaChart
                   data={chartData}
                   margin={{ top: 5, right: 5, left: -25, bottom: 0 }}
@@ -938,8 +960,27 @@ export default function WeatherStationsPage({
 
   const handleStatusChange = (val: string) => {
     setSelectedStatus(val);
-    setSelectedStation(null); // effect will re-pick from newly filtered list
+    setSelectedStation(null);
   };
+
+  // stationsRef gives handleMapStationClick access to the latest stations
+  // without making it a dependency — stations is a new array every render
+  // (derived from rawStations.map), so useCallback([stations]) would give a
+  // new function reference every render, which still triggers marker rebuilds.
+  const stationsRef = useRef(stations);
+  useEffect(() => {
+    stationsRef.current = stations;
+  }, [stations]);
+
+  // ── Handler: marker click on map → sync dropdown + readings panel ─────────
+  // Empty deps [] means this function reference is created once and never
+  // changes, so the marker effect never rebuilds due to this prop changing.
+  const handleMapStationClick = useCallback((s: WeatherStation) => {
+    const found = stationsRef.current.find((st) => st.id === s.id) ?? s;
+    console.log("[PAGE] handleMapStationClick →", found.name, found.code);
+    setSelectedStation(found);
+    setSelectedStationCode(found.code ?? "");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Readings — fetch for the currently selected station ───────────────────
   const stationCode = selectedStation?.code;
@@ -1232,13 +1273,7 @@ export default function WeatherStationsPage({
                       isDarkMode={isDarkMode}
                       className="absolute inset-0 w-full h-full"
                       stations={displayedStations}
-                      onStationClick={(s) => {
-                        const found = stations.find((st) => st.id === s.id);
-                        if (found) {
-                          setSelectedStation(found);
-                          if (found.code) setSelectedStationCode(found.code);
-                        }
-                      }}
+                      onStationClick={handleMapStationClick}
                     />
                   </div>
                 </div>
@@ -1386,13 +1421,7 @@ export default function WeatherStationsPage({
                     isDarkMode={isDarkMode}
                     className="absolute inset-0 w-full h-full"
                     stations={displayedStations}
-                    onStationClick={(s) => {
-                      const found = stations.find((st) => st.id === s.id);
-                      if (found) {
-                        setSelectedStation(found);
-                        if (found.code) setSelectedStationCode(found.code);
-                      }
-                    }}
+                    onStationClick={handleMapStationClick}
                   />
                 </div>
                 <button
