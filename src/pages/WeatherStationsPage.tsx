@@ -513,7 +513,7 @@ const StationReadingsPanel = ({
   })();
 
   // Measure the chart wrapper height so ResponsiveContainer always gets a
-  // concrete pixel value — avoids the Recharts 0×0 warning on first render.
+  // concrete pixel value — avoids the Recharts 0×0 warning on first renders.
   const chartWrapperRef = useRef<HTMLDivElement>(null);
   const [chartHeight, setChartHeight] = useState(160);
   useEffect(() => {
