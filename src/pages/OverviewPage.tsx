@@ -356,10 +356,10 @@ export default function OverviewPage({
           Icon: Activity,
         },
         {
-          label: "Rising Levels",
+          label: "Active Basins",
           value: "--",
           sub: undefined,
-          Icon: TrendingUp,
+          Icon: Activity,
         },
         { label: "Active Alerts", value: "--", Icon: AlertCircle },
       ],
@@ -374,7 +374,7 @@ export default function OverviewPage({
       stats: [
         { label: "Stations Online", value: "--", Icon: Signal },
         { label: "Data Frequency", value: "15 min", Icon: Timer },
-        { label: "Missing Reports", value: "0", Icon: AlertCircle },
+        { label: "Network Health", value: "--", Icon: Signal },
         { label: "Last Transmission", value: "--", Icon: Clock },
       ],
     },
@@ -618,16 +618,20 @@ export default function OverviewPage({
             ? `${(Math.round(effectiveMaxDischarge * 10) / 10).toLocaleString()} m³/s`
             : "--";
 
-        // 3. Rising Levels: basins at moderate/severe/extreme (same filter as FloodMonitoringPage)
+        // 3. Active Basins: unique basin names from the current forecast's impact rows —
+        //    same source as the flood monitor's basin filter dropdown.
         const isElevatedStatus = (s?: string | null) =>
-          s === "moderate" || s === "severe" || s === "extreme" || s === "high" || s === "critical";
-        const risingBasins = bs?.filter((b) => isElevatedStatus(b.status)) ?? [];
-        const risingStr =
-          bs != null
-            ? risingBasins.length > 0
-              ? `${risingBasins.length} basin${risingBasins.length !== 1 ? "s" : ""}`
-              : "None"
-            : "--";
+          s === "severe" || s === "extreme" || s === "high" || s === "critical";
+        const activeBasinNames = Array.from(
+          new Set(
+            (latestForecast?.impacts ?? [])
+              .map((i) => i.river_basin_name)
+              .filter((n): n is string => n != null),
+          ),
+        );
+        const totalBasinsStr = activeBasinNames.length > 0
+          ? String(activeBasinNames.length)
+          : "--";
 
         // 4. Active Alerts: build named critical-basin list exactly like FloodMonitoringPage does,
         //    then use its length. If the store already has floodAlerts (set by FloodMonitoringPage),
@@ -652,7 +656,7 @@ export default function OverviewPage({
           }
         });
         // Merge elevated basins from basin-status not yet in the list
-        risingBasins.forEach((b) => {
+        (bs ?? []).filter((b) => isElevatedStatus(b.status)).forEach((b) => {
           if (!derivedAlerts.find((n) => n.basinName === b.name))
             derivedAlerts.push({
               id: `flood-${b.name}`,
@@ -677,7 +681,7 @@ export default function OverviewPage({
         const floodStats: StatPatch[] = [
           { value: peopleStr, sub: undefined },
           { value: dischargeStr, sub: effectiveMaxBasinName },
-          { value: risingStr, sub: undefined },
+          { value: totalBasinsStr, sub: undefined },
           { value: alertsStr, sub: undefined },
         ];
 
@@ -694,15 +698,20 @@ export default function OverviewPage({
           qs?.last_updated ??
           "";
         const lastTxStr = lastTxRaw ? formatTimeAgo(lastTxRaw) : "--";
-        const missingReports =
-          net?.offline_count ??
-          allStations.filter((s: any) => s.status === "offline").length ??
-          0;
+        // Network Health: use uptime % — meaningful to any user, not an internal error count
+        const networkHealthStr =
+          net?.network_uptime_percent != null
+            ? `${Math.round(net.network_uptime_percent)}%`
+            : net?.online_count != null && net?.total_stations > 0
+              ? `${Math.round((net.online_count / net.total_stations) * 100)}%`
+              : stationsTotal > 0
+                ? `${Math.round((stationsOnline / stationsTotal) * 100)}%`
+                : "--";
 
         const stationStats: StatPatch[] = [
           { value: onlineStr },
           { value: "15 min" },
-          { value: String(missingReports) },
+          { value: networkHealthStr },
           { value: lastTxStr },
         ];
 
