@@ -592,23 +592,30 @@ export default function OverviewPage({
                 : String(peopleAtRisk)
             : "--";
 
-        // 2. Highest Discharge: from basin status (most real-time) or forecast impacts
-        const allDischarges = bs?.map((b) => b.discharge_rate ?? 0) ?? [];
-        const impactDischarges = (latestForecast?.impacts ?? []).map(
-          (i) => i.max_discharge ?? 0,
+        // 2. Highest Discharge: use basin-level impact rows from the active forecast
+        //    (same source as FloodMonitoringPage — allImpacts.map(i => i.max_discharge))
+        //    Basin rows have district_name === null and carry river_basin_name.
+        const basinLevelImpacts = (latestForecast?.impacts ?? []).filter(
+          (i) => i.district_name === null,
         );
-        const maxDischarge =
-          allDischarges.length > 0
-            ? Math.max(...allDischarges)
-            : impactDischarges.length > 0
-              ? Math.max(...impactDischarges)
-              : null;
-        const maxDischargeSrc = bs?.find(
-          (b) => b.discharge_rate === maxDischarge,
-        );
+        const maxDischargeRow = basinLevelImpacts.length > 0
+          ? basinLevelImpacts.reduce((best, i) =>
+              (i.max_discharge ?? 0) > (best.max_discharge ?? 0) ? i : best,
+            )
+          : null;
+        const maxDischarge = maxDischargeRow?.max_discharge ?? null;
+        // Fall back to basin-status discharge_rate if forecast impacts have no data
+        const maxDischargeFallbackRow = bs && bs.length > 0
+          ? bs.reduce((best, b) =>
+              (b.discharge_rate ?? 0) > (best.discharge_rate ?? 0) ? b : best,
+            )
+          : null;
+        const effectiveMaxDischarge = maxDischarge ?? maxDischargeFallbackRow?.discharge_rate ?? null;
+        const effectiveMaxBasinName =
+          maxDischargeRow?.river_basin_name ?? maxDischargeFallbackRow?.name ?? undefined;
         const dischargeStr =
-          maxDischarge != null
-            ? `${(Math.round(maxDischarge * 10) / 10).toLocaleString()} m³/s`
+          effectiveMaxDischarge != null
+            ? `${(Math.round(effectiveMaxDischarge * 10) / 10).toLocaleString()} m³/s`
             : "--";
 
         // 3. Rising Levels: basins at moderate/severe/extreme (same filter as FloodMonitoringPage)
@@ -669,7 +676,7 @@ export default function OverviewPage({
 
         const floodStats: StatPatch[] = [
           { value: peopleStr, sub: undefined },
-          { value: dischargeStr, sub: maxDischargeSrc?.name ?? undefined },
+          { value: dischargeStr, sub: effectiveMaxBasinName },
           { value: risingStr, sub: undefined },
           { value: alertsStr, sub: undefined },
         ];
