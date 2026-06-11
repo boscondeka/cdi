@@ -494,28 +494,45 @@ export default function OverviewPage({
         // ── Weather Forecast stats ────────────────────────────────
         const weatherStats: StatPatch[] = [
           {
-            value: extremes?.highest_rainfall?.value != null
-              ? `${extremes.highest_rainfall.value} mm`
-              : wd?.rainfall_24h != null ? `${wd.rainfall_24h} mm` : "--",
-            sub: extremes?.highest_rainfall?.district ?? wd?.district ?? undefined,
+            value:
+              extremes?.highest_rainfall?.value != null
+                ? `${extremes.highest_rainfall.value} mm`
+                : wd?.rainfall_24h != null
+                  ? `${wd.rainfall_24h} mm`
+                  : "--",
+            sub:
+              extremes?.highest_rainfall?.district ?? wd?.district ?? undefined,
           },
           {
-            value: extremes?.highest_temperature?.value != null
-              ? `${extremes.highest_temperature.value}°C`
-              : wd?.temperature != null ? `${wd.temperature}°C` : "--",
-            sub: extremes?.highest_temperature?.district ?? wd?.district ?? undefined,
+            value:
+              extremes?.highest_temperature?.value != null
+                ? `${extremes.highest_temperature.value}°C`
+                : wd?.temperature != null
+                  ? `${wd.temperature}°C`
+                  : "--",
+            sub:
+              extremes?.highest_temperature?.district ??
+              wd?.district ??
+              undefined,
           },
           {
-            value: extremes?.highest_wind?.value != null
-              ? `${extremes.highest_wind.value} km/h`
-              : wd?.wind_speed != null ? `${wd.wind_speed} km/h` : "--",
+            value:
+              extremes?.highest_wind?.value != null
+                ? `${extremes.highest_wind.value} km/h`
+                : wd?.wind_speed != null
+                  ? `${wd.wind_speed} km/h`
+                  : "--",
             sub: extremes?.highest_wind?.district ?? wd?.district ?? undefined,
           },
           {
-            value: extremes?.highest_humidity?.value != null
-              ? `${extremes.highest_humidity.value}%`
-              : wd?.humidity != null ? `${wd.humidity}%` : "--",
-            sub: extremes?.highest_humidity?.district ?? wd?.district ?? undefined,
+            value:
+              extremes?.highest_humidity?.value != null
+                ? `${extremes.highest_humidity.value}%`
+                : wd?.humidity != null
+                  ? `${wd.humidity}%`
+                  : "--",
+            sub:
+              extremes?.highest_humidity?.district ?? wd?.district ?? undefined,
           },
         ];
 
@@ -721,18 +738,21 @@ export default function OverviewPage({
             <p className="text-xs mt-0.5" style={{ color: mt }}>
               Uganda Multi Hazard Observatory System
             </p>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <MapPin className="w-3 h-3" style={{ color: FAO_BLUE }} />
-              <span className="text-xs font-medium" style={{ color: bd }}>
-                {selectedDistrictId?.name} , {selectedDistrictId?.region} Region
-              </span>
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-                style={{ background: `${FAO_BLUE}18`, color: FAO_BLUE }}
-              >
-                Live
-              </span>
-            </div>
+            {selectedDistrictId?.name && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <MapPin className="w-3 h-3" style={{ color: FAO_BLUE }} />
+                <span className="text-xs font-medium" style={{ color: bd }}>
+                  {selectedDistrictId?.name} , {selectedDistrictId?.region}{" "}
+                  Region
+                </span>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                  style={{ background: `${FAO_BLUE}18`, color: FAO_BLUE }}
+                >
+                  Live
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col sm:items-end gap-2">
             {quickStats.lastUpdated && (
