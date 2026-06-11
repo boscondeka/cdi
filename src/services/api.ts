@@ -259,6 +259,7 @@ export interface FloodImpact {
   id: number;
   district_name: string | null;
   river_basin_name: string | null;
+  flood_risk_level: string | null;
   affected_population: number;
   affected_roads_km: number;
   affected_buildings_count: number;
@@ -442,10 +443,56 @@ export const floodAPI = {
       leadtimeHours,
     })}`;
     // The API returns a paginated object { count, results: FloodForecastFull[] }
-    const raw = await fetchData<{ count: number; results: FloodForecastFull[] } | FloodForecastFull[]>(endpoint);
-    // Handle both paginated and plain-array responses
-    if (Array.isArray(raw)) return raw;
-    return (raw as any).results ?? [];
+    const raw = await fetchData<{ count: number; results: any[] } | any[]>(endpoint);
+    const results: any[] = Array.isArray(raw) ? raw : ((raw as any).results ?? []);
+
+    // The API returns basin-level impacts with nested districts[].
+    // Basin affected_population is always 0 (uses "ratio" source), so we sum
+    // district values ourselves. We also flatten districts into the impacts array
+    // so the rest of the app can filter by district_name / river_basin_name.
+    return results.map((forecast) => ({
+      ...forecast,
+      impacts: (forecast.impacts ?? []).flatMap((basin: any) => {
+        const districts: any[] = basin.districts ?? [];
+
+        // Basin row — population summed from its districts
+        const basinRow: FloodImpact = {
+          id: basin.id,
+          river_basin_name: basin.basin_name ?? null,
+          district_name: null,
+          flood_risk_level: basin.flood_risk_level ?? null,
+          affected_population: districts.reduce(
+            (sum, d) => sum + (d.affected_population ?? 0),
+            0,
+          ),
+          affected_roads_km: basin.affected_roads_km ?? 0,
+          affected_buildings_count: basin.affected_buildings_count ?? 0,
+          affected_pois_count: basin.affected_pois_count ?? 0,
+          affected_landuse_area_km2: basin.affected_landuse_area_km2 ?? 0,
+          max_discharge: basin.max_discharge ?? 0,
+          avg_discharge: basin.avg_discharge ?? 0,
+          flood_extent_km2: basin.flood_extent_km2 ?? 0,
+        };
+
+        // District rows — each carries its basin name for filtering
+        const districtRows: FloodImpact[] = districts.map((d) => ({
+          id: d.id,
+          river_basin_name: basin.basin_name ?? null,
+          district_name: d.district_name ?? null,
+          flood_risk_level: d.flood_risk_level ?? null,
+          affected_population: d.affected_population ?? 0,
+          affected_roads_km: d.affected_roads_km ?? 0,
+          affected_buildings_count: d.affected_buildings_count ?? 0,
+          affected_pois_count: d.affected_pois_count ?? 0,
+          affected_landuse_area_km2: d.affected_landuse_area_km2 ?? 0,
+          max_discharge: d.max_discharge ?? 0,
+          avg_discharge: d.avg_discharge ?? 0,
+          flood_extent_km2: d.flood_extent_km2 ?? 0,
+        }));
+
+        return [basinRow, ...districtRows];
+      }),
+    })) as FloodForecastFull[];
   },
 
   /**

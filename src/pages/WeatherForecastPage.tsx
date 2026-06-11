@@ -102,13 +102,13 @@ async function fetchOmDailyForecast(
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lng));
-  url.searchParams.set("models", "icon_seamless");
+  url.searchParams.set("models", "icon_global");
   url.searchParams.set(
     "daily",
     "temperature_2m_max,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean",
   );
   url.searchParams.set("timezone", "Africa/Kampala");
-  url.searchParams.set("forecast_days", "7");
+  url.searchParams.set("forecast_days", "6");
 
   const res = await fetch(url.href);
   if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
@@ -164,7 +164,7 @@ async function fetchOmHourlyForecast(
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("longitude", String(lng));
-  url.searchParams.set("models", "icon_seamless");
+  url.searchParams.set("models", "icon_global");
   url.searchParams.set("hourly", "wind_speed_10m,relative_humidity_2m");
   url.searchParams.set("timezone", "Africa/Kampala");
   url.searchParams.set("forecast_days", "2");
@@ -1058,9 +1058,9 @@ export default function WeatherForecastPage({
   const apiHumDelta = dashboardData?.humidity_delta ?? 0;
   const apiWind = dashboardData?.wind_speed ?? 0;
   const apiWindDelta = dashboardData?.wind_speed_delta ?? 0;
-  const apiFeelsLike = dashboardData?.feels_like ?? 0;
+  // const apiFeelsLike = dashboardData?.feels_like ?? 0;
   const apiDewPoint = dashboardData?.dew_point ?? 0;
-  const apiWindDir = dashboardData?.wind_direction_label ?? "—";
+  // const apiWindDir = dashboardData?.wind_direction_label ?? "—";
   const apiWeatherDesc = dashboardData?.weather_description ?? "—";
   const apiFetchedAt = dashboardData?.fetched_at ?? "";
   const apiAvgTemp = dashboardData?.avg_temp ?? 0;
@@ -1075,7 +1075,7 @@ export default function WeatherForecastPage({
   const statCards = [
     {
       label: "Temperature",
-      sublabel: `Feels like ${apiFeelsLike}°C`,
+      // sublabel: `Feels like ${apiFeelsLike}°C`,
       apiNote: `Avg ${apiAvgTemp}° · Max ${apiMaxTemp}° · Min ${apiMinTemp}°`,
       statKey: "temperature" as keyof typeof STAT_COLOR,
       icon: Thermometer,
@@ -1132,7 +1132,7 @@ export default function WeatherForecastPage({
     },
     {
       label: "Wind Speed",
-      sublabel: `Direction: ${apiWindDir}`,
+      // sublabel: `Direction: ${apiWindDir}`,
       apiNote: ``,
       statKey: "wind" as keyof typeof STAT_COLOR,
       icon: Wind,
