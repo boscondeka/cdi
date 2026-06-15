@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { X, Download } from "lucide-react";
 import { BulletinReport } from "./BulletinReport";
 import html2canvas from "html2canvas";
@@ -16,39 +16,94 @@ export const BulletinDownloadModal: React.FC<BulletinDownloadModalProps> = ({
   isDarkMode = false,
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
-  const [isDownloading, setIsDownloading] = React.useState(false);
+  const hiddenRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   if (!isOpen) return null;
 
   const handleDownloadPDF = async () => {
-    if (!reportRef.current) return;
+    if (!hiddenRef.current) return;
 
     setIsDownloading(true);
     try {
-      // Capture the report as canvas
-      const canvas = await html2canvas(reportRef.current, {
+      const element = hiddenRef.current;
+
+      // Capture the full off-screen element (opacity:0 is fine — html2canvas still paints it)
+      const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        // Tell html2canvas where the element actually is in the document,
+        // so absolutely-positioned children render correctly even off-screen
+        x: element.getBoundingClientRect().left + window.scrollX,
+        y: element.getBoundingClientRect().top + window.scrollY,
+        scrollX: -window.scrollX,
+        scrollY: -window.scrollY,
       });
 
-      // Convert to PDF
-      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageWidthMm = 210;
+      const pageHeightMm = 297;
 
-      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      // Browser canvas max is ~16384px on most engines. If we hit it, the canvas
+      // will be blank. Guard against it — in practice scale:2 on a long report
+      // can exceed this, so we warn and suggest a retry at lower scale.
+      const MAX_CANVAS_PX = 16000;
+      if (canvas.height > MAX_CANVAS_PX || canvas.width > MAX_CANVAS_PX) {
+        console.warn(
+          `Canvas size ${canvas.width}×${canvas.height}px exceeds safe limits. ` +
+            "PDF may be incomplete. Consider reducing scale.",
+        );
+      }
 
-      // Generate filename with date
+      // How many canvas pixels correspond to one A4 page height
+      const pageHeightPx = Math.floor(
+        canvas.width * (pageHeightMm / pageWidthMm),
+      );
+      const totalPages = Math.ceil(canvas.height / pageHeightPx);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+
+        const srcY = page * pageHeightPx;
+        const srcHeight = Math.min(pageHeightPx, canvas.height - srcY);
+
+        // Slice just this page out of the full canvas
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = srcHeight;
+        const ctx = sliceCanvas.getContext("2d");
+        if (!ctx) continue;
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          srcY,
+          canvas.width,
+          srcHeight,
+          0,
+          0,
+          canvas.width,
+          srcHeight,
+        );
+
+        const imgData = sliceCanvas.toDataURL("image/png");
+        const sliceHeightMm = (srcHeight * pageWidthMm) / canvas.width;
+        pdf.addImage(imgData, "PNG", 0, 0, pageWidthMm, sliceHeightMm);
+      }
+
       const date = new Date();
-      const filename = `Uganda_Multi-Hazard_Bulletin_${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}.pdf`;
+      const filename = `Uganda_Multi-Hazard_Bulletin_${date.getFullYear()}-${String(
+        date.getMonth() + 1,
+      ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}.pdf`;
 
       pdf.save(filename);
     } catch (error) {
@@ -159,6 +214,25 @@ export const BulletinDownloadModal: React.FC<BulletinDownloadModalProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Off-screen full-height clone used exclusively for PDF capture.
+          Must NOT use visibility:hidden or display:none — html2canvas skips those.
+          Pushed far off-screen with opacity:0 so it is painted but invisible. */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: "-9999px",
+          width: "210mm",
+          pointerEvents: "none",
+          opacity: 0,
+          zIndex: -1,
+        }}
+      >
+        <div ref={hiddenRef}>
+          <BulletinReport isDarkMode={false} />
         </div>
       </div>
 
