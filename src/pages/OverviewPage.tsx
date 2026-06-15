@@ -283,7 +283,7 @@ export default function OverviewPage({
   onNavigate,
   isDarkMode = true,
 }: OverviewPageProps) {
-  const { selectedDistrictId } = useAppStore((s) => s);
+  const { selectedDistrictId, floodAlerts } = useAppStore((s) => s);
   const { extremeCount, trendingCount, improvingCount, month, year } =
     useAssessmentCounts();
 
@@ -356,10 +356,10 @@ export default function OverviewPage({
           Icon: Activity,
         },
         {
-          label: "Rising Levels",
+          label: "Active Basins",
           value: "--",
           sub: undefined,
-          Icon: TrendingUp,
+          Icon: Activity,
         },
         { label: "Active Alerts", value: "--", Icon: AlertCircle },
       ],
@@ -374,7 +374,7 @@ export default function OverviewPage({
       stats: [
         { label: "Stations Online", value: "--", Icon: Signal },
         { label: "Data Frequency", value: "15 min", Icon: Timer },
-        { label: "Missing Reports", value: "0", Icon: AlertCircle },
+        { label: "Network Health", value: "--", Icon: Signal },
         { label: "Last Transmission", value: "--", Icon: Clock },
       ],
     },
@@ -386,6 +386,11 @@ export default function OverviewPage({
   const [isLoading, setIsLoading] = useState(true);
   const [weather, setWeather] = useState<any>(null);
   const [showBulletinModal, setShowBulletinModal] = useState(false);
+  const [alertsHover, setAlertsHover] = useState(false);
+  // Critical basins derived directly from basin-status + forecasts (same source as FloodMonitoringPage)
+  const [liveFloodAlerts, setLiveFloodAlerts] = useState<Array<{
+    id: string; basinName: string; status: string; discharge: number; population: number;
+  }>>([]);
   const [quickStats, setQuickStats] = useState({
     lastUpdated: "",
     alerts: 0,
@@ -557,13 +562,27 @@ export default function OverviewPage({
         ];
 
         // ── Flood Monitor stats ───────────────────────────────────
-        // Backend now returns complete dynamic data — prefer flood dashboard (fd) directly
-        // 1. People at Risk: from flood dashboard or latest forecast
-        const latestForecast =
-          fcs.find((f) => f.leadtime_hours === 24) ?? fcs[0];
+        // Mirror FloodMonitoringPage's logic exactly so the overview card
+        // always shows the same numbers as the flood monitor itself.
+
+        // 1. People at Risk
+        //    FloodMonitoringPage sums affected_population from DISTRICT-level impact rows only:
+        //      districtImpacts = activeForecast.impacts.filter(i => i.district_name !== null)
+        //      total = districtImpacts.reduce((s,i) => s + i.affected_population, 0)
+        //    Summing basin-status.population_at_risk instead inflates the figure because
+        //    basin rows are not deduplicated — people in multi-basin districts get counted 3x.
+        const latestForecast = fcs.find((f) => f.leadtime_hours === 24) ?? fcs[0];
+        const districtImpacts = (latestForecast?.impacts ?? []).filter(
+          (i) => i.district_name !== null,
+        );
+        const forecastPopulation =
+          districtImpacts.length > 0
+            ? districtImpacts.reduce((s, i) => s + (i.affected_population ?? 0), 0)
+            : null;
         const peopleAtRisk =
-          fd?.summary?.at_risk_population ??
-          latestForecast?.total_affected_population;
+          forecastPopulation != null
+            ? forecastPopulation
+            : fd?.summary?.at_risk_population ?? latestForecast?.total_affected_population;
         const peopleStr =
           peopleAtRisk != null
             ? peopleAtRisk >= 1_000_000
@@ -573,51 +592,96 @@ export default function OverviewPage({
                 : String(peopleAtRisk)
             : "--";
 
-        // 2. Highest Discharge: from basin status or forecast impacts
-        const allDischarges = bs?.map((b) => b.discharge_rate ?? 0) ?? [];
-        const impactDischarges = (latestForecast?.impacts ?? []).map(
-          (i) => i.max_discharge ?? 0,
+        // 2. Highest Discharge: use basin-level impact rows from the active forecast
+        //    (same source as FloodMonitoringPage — allImpacts.map(i => i.max_discharge))
+        //    Basin rows have district_name === null and carry river_basin_name.
+        const basinLevelImpacts = (latestForecast?.impacts ?? []).filter(
+          (i) => i.district_name === null,
         );
-        const maxDischarge =
-          allDischarges.length > 0
-            ? Math.max(...allDischarges)
-            : impactDischarges.length > 0
-              ? Math.max(...impactDischarges)
-              : null;
-        const maxDischargeSrc = bs?.find(
-          (b) => b.discharge_rate === maxDischarge,
-        );
+        const maxDischargeRow = basinLevelImpacts.length > 0
+          ? basinLevelImpacts.reduce((best, i) =>
+              (i.max_discharge ?? 0) > (best.max_discharge ?? 0) ? i : best,
+            )
+          : null;
+        const maxDischarge = maxDischargeRow?.max_discharge ?? null;
+        // Fall back to basin-status discharge_rate if forecast impacts have no data
+        const maxDischargeFallbackRow = bs && bs.length > 0
+          ? bs.reduce((best, b) =>
+              (b.discharge_rate ?? 0) > (best.discharge_rate ?? 0) ? b : best,
+            )
+          : null;
+        const effectiveMaxDischarge = maxDischarge ?? maxDischargeFallbackRow?.discharge_rate ?? null;
+        const effectiveMaxBasinName =
+          maxDischargeRow?.river_basin_name ?? maxDischargeFallbackRow?.name ?? undefined;
         const dischargeStr =
-          maxDischarge != null
-            ? `${(Math.round(maxDischarge * 10) / 10).toLocaleString()} m³/s`
+          effectiveMaxDischarge != null
+            ? `${(Math.round(effectiveMaxDischarge * 10) / 10).toLocaleString()} m³/s`
             : "--";
 
-        // 3. Rising Levels: count of basins with rising trend from basin status
-        const risingBasins =
-          bs?.filter(
-            (b) =>
-              b.status === "severe" ||
-              b.status === "extreme" ||
-              b.status === "moderate",
-          ) ?? [];
-        const risingStr =
-          bs != null
-            ? risingBasins.length > 0
-              ? `${risingBasins.length} basin${risingBasins.length !== 1 ? "s" : ""}`
-              : "None"
-            : "--";
+        // 3. Active Basins: unique basin names from the current forecast's impact rows —
+        //    same source as the flood monitor's basin filter dropdown.
+        const isElevatedStatus = (s?: string | null) =>
+          s === "severe" || s === "extreme" || s === "high" || s === "critical";
+        const activeBasinNames = Array.from(
+          new Set(
+            (latestForecast?.impacts ?? [])
+              .map((i) => i.river_basin_name)
+              .filter((n): n is string => n != null),
+          ),
+        );
+        const totalBasinsStr = activeBasinNames.length > 0
+          ? String(activeBasinNames.length)
+          : "--";
 
-        // 4. Active Alerts: from flood dashboard directly
+        // 4. Active Alerts: build named critical-basin list exactly like FloodMonitoringPage does,
+        //    then use its length. If the store already has floodAlerts (set by FloodMonitoringPage),
+        //    prefer that — otherwise derive here from the same data.
+        //    This ensures the overview count and FloodMonitoringPage count always agree.
+        const derivedAlerts: Array<{
+          id: string; basinName: string; status: string; discharge: number; population: number;
+        }> = [];
+        // From forecast impacts (flood_risk_level is authoritative per basin)
+        const basinImpactsForAlerts = (latestForecast?.impacts ?? [])
+          .filter((i) => i.district_name == null && i.river_basin_name != null);
+        basinImpactsForAlerts.forEach((i) => {
+          if (isElevatedStatus(i.flood_risk_level) && i.river_basin_name &&
+              !derivedAlerts.find((n) => n.basinName === i.river_basin_name)) {
+            derivedAlerts.push({
+              id: `flood-${i.river_basin_name}`,
+              basinName: i.river_basin_name,
+              status: i.flood_risk_level ?? "high",
+              discharge: Math.round(i.max_discharge ?? 0),
+              population: i.affected_population ?? 0,
+            });
+          }
+        });
+        // Merge elevated basins from basin-status not yet in the list
+        (bs ?? []).filter((b) => isElevatedStatus(b.status)).forEach((b) => {
+          if (!derivedAlerts.find((n) => n.basinName === b.name))
+            derivedAlerts.push({
+              id: `flood-${b.name}`,
+              basinName: b.name,
+              status: b.status,
+              discharge: Math.round(b.discharge_rate),
+              population: b.population_at_risk ?? 0,
+            });
+        });
+
+        // The store's floodAlerts are set by FloodMonitoringPage (the authoritative view);
+        // if they exist use them, otherwise use what we just derived here.
+        const effectiveAlerts = floodAlerts.length > 0 ? floodAlerts : derivedAlerts;
+        setLiveFloodAlerts(effectiveAlerts);
+
         const activeAlerts =
-          fd?.summary?.active_alerts ??
-          fd?.summary?.critical_basins ??
-          qs?.active_alerts;
+          effectiveAlerts.length > 0
+            ? effectiveAlerts.length
+            : fd?.summary?.active_alerts ?? fd?.summary?.critical_basins ?? qs?.active_alerts;
         const alertsStr = activeAlerts != null ? String(activeAlerts) : "--";
 
         const floodStats: StatPatch[] = [
           { value: peopleStr, sub: undefined },
-          { value: dischargeStr, sub: maxDischargeSrc?.name ?? undefined },
-          { value: risingStr, sub: undefined },
+          { value: dischargeStr, sub: effectiveMaxBasinName },
+          { value: totalBasinsStr, sub: undefined },
           { value: alertsStr, sub: undefined },
         ];
 
@@ -634,15 +698,20 @@ export default function OverviewPage({
           qs?.last_updated ??
           "";
         const lastTxStr = lastTxRaw ? formatTimeAgo(lastTxRaw) : "--";
-        const missingReports =
-          net?.offline_count ??
-          allStations.filter((s: any) => s.status === "offline").length ??
-          0;
+        // Network Health: use uptime % — meaningful to any user, not an internal error count
+        const networkHealthStr =
+          net?.network_uptime_percent != null
+            ? `${Math.round(net.network_uptime_percent)}%`
+            : net?.online_count != null && net?.total_stations > 0
+              ? `${Math.round((net.online_count / net.total_stations) * 100)}%`
+              : stationsTotal > 0
+                ? `${Math.round((stationsOnline / stationsTotal) * 100)}%`
+                : "--";
 
         const stationStats: StatPatch[] = [
           { value: onlineStr },
           { value: "15 min" },
-          { value: String(missingReports) },
+          { value: networkHealthStr },
           { value: lastTxStr },
         ];
 
@@ -680,7 +749,7 @@ export default function OverviewPage({
     load();
     const iv = setInterval(load, 5 * 60 * 1000);
     return () => clearInterval(iv);
-  }, [selectedDistrictId, extremeCount, trendingCount, improvingCount]);
+  }, [selectedDistrictId, extremeCount, trendingCount, improvingCount, floodAlerts]);
 
   const temp = weather?.temperature ?? 0;
   const humid = weather?.humidity ?? 0;
@@ -947,6 +1016,7 @@ export default function OverviewPage({
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4">
           {modules.map((mod) => {
             const ModIcon = mod.Icon;
+            const isFlood = mod.id === "flood";
             return (
               <button
                 key={mod.id}
@@ -1018,8 +1088,14 @@ export default function OverviewPage({
                 <div className="grid grid-cols-4 gap-2 mb-5">
                   {mod.stats.map((s) => {
                     const StatIcon = s.Icon;
+                    const isAlertsCell = isFlood && s.label === "Active Alerts";
                     return (
-                      <div key={s.label} className="flex flex-col gap-1">
+                      <div
+                        key={s.label}
+                        className="flex flex-col gap-1 relative"
+                        onMouseEnter={isAlertsCell ? (e) => { e.stopPropagation(); setAlertsHover(true); } : undefined}
+                        onMouseLeave={isAlertsCell ? (e) => { e.stopPropagation(); setAlertsHover(false); } : undefined}
+                      >
                         {StatIcon && (
                           <div
                             className="w-6 h-6 rounded-md flex items-center justify-center mb-0.5"
@@ -1039,7 +1115,7 @@ export default function OverviewPage({
                         </span>
                         <span
                           className="text-sm font-bold leading-tight"
-                          style={{ color: hd }}
+                          style={{ color: isAlertsCell && liveFloodAlerts.length > 0 ? "#ef4444" : hd }}
                         >
                           {s.value}
                         </span>
@@ -1050,6 +1126,64 @@ export default function OverviewPage({
                           >
                             {s.sub}
                           </span>
+                        )}
+
+                        {/* Alerts mini-list popover — only on "Active Alerts" cell */}
+                        {isAlertsCell && alertsHover && liveFloodAlerts.length > 0 && (
+                          <div
+                            className="absolute bottom-full mb-2 left-1/2 z-50 w-52 rounded-xl border shadow-xl overflow-hidden"
+                            style={{
+                              transform: "translateX(-60%)",
+                              background: isDarkMode ? "#1e293b" : "#ffffff",
+                              borderColor: isDarkMode ? "rgba(71,85,105,0.6)" : "#e2e8f0",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div
+                              className="px-3 py-2 border-b flex items-center justify-between"
+                              style={{ borderColor: isDarkMode ? "rgba(71,85,105,0.4)" : "#f1f5f9" }}
+                            >
+                              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#ef4444" }}>
+                                Active Alerts
+                              </span>
+                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "#ef44441a", color: "#ef4444" }}>
+                                {liveFloodAlerts.length}
+                              </span>
+                            </div>
+                            <div className="py-1 max-h-40 overflow-y-auto">
+                              {liveFloodAlerts.map((a) => {
+                                const statusColor =
+                                  a.status === "extreme" || a.status === "critical" ? "#ef4444"
+                                    : a.status === "severe" || a.status === "high" ? "#f97316"
+                                    : "#eab308";
+                                return (
+                                  <div
+                                    key={a.id}
+                                    className="px-3 py-1.5 flex items-center justify-between gap-2"
+                                    style={{ borderBottom: `1px solid ${isDarkMode ? "rgba(71,85,105,0.2)" : "#f8fafc"}` }}
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span
+                                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                        style={{ background: statusColor }}
+                                      />
+                                      <span
+                                        className="text-[10px] font-semibold truncate"
+                                        style={{ color: isDarkMode ? "#e2e8f0" : "#1e293b" }}
+                                      >
+                                        {a.basinName}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <span className="text-[9px] font-bold" style={{ color: statusColor }}>
+                                        {a.discharge > 0 ? `${a.discharge.toLocaleString()} m³/s` : a.status.toUpperCase()}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         )}
                       </div>
                     );
