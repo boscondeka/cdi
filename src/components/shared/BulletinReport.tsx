@@ -89,7 +89,7 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
             marginBottom: "15px",
           }}
         >
-          {/* Weather Situation and Forecast */}
+          {/* Weather Situation and Forecasts */}
           <div
             style={{
               backgroundColor: "#E8F4FD",
@@ -106,47 +106,34 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
                 textTransform: "uppercase",
               }}
             >
-              Weather Situation and Forecast
+              Review Summary:
             </h3>
             <div style={{ fontSize: "9pt", lineHeight: "1.5" }}>
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-                Current Conditions:
-              </p>
-              <p style={{ margin: "0 0 10px 0" }}>
-                Moderate to heavy rainfall has been observed across northern and
-                eastern regions over the past 24 hours, with amounts ranging
-                from 20-60mm. Central regions experienced light to moderate
-                showers (5-25mm), while western areas remained relatively dry.
-                Temperatures have been within normal seasonal ranges (20-28°C).
-              </p>
-
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-                7-Day Forecast (Next Week):
-              </p>
-              <p style={{ margin: "0 0 10px 0" }}>
-                Rainfall is expected to continue across most parts of the
-                country, with above-normal amounts anticipated in the Lake
-                Victoria basin and eastern highlands. Northern regions should
-                prepare for thunderstorms with localized heavy downpours. The
-                cattle corridor may experience scattered showers, improving
-                pasture conditions.
-              </p>
-
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-                Regional Outlook:
-              </p>
               <ul style={{ margin: "0", paddingLeft: "18px" }}>
                 <li>
-                  Northern: Heavy rainfall with thunderstorms, 40-80mm expected
+                  The past week recorded "heavy" to "moderate" rainfall across
+                  "northern, southern, central, eastern" regions, particularly
+                  "districts".
                 </li>
                 <li>
-                  Eastern: Moderate to heavy showers, possible flash floods
+                  but intense and short-lived in others, reflecting high
+                  temporal variability
                 </li>
                 <li>
-                  Central: Scattered rainfall, generally favorable conditions
+                  The "River" showed a sustained rise with downstream
+                  propagation, while the "River" remained generally stable to
+                  slightly decline
                 </li>
                 <li>
-                  Western: Light to moderate showers, improving moisture levels
+                  As at the last assessment in "month/year", drought conditions
+                  improved across "number of districts", but moderate to severe
+                  drought persists in "number of districts", especially
+                  "district where drought is severe"
+                </li>
+                <li>
+                  Field reports indicate partial recovery in some areas, but
+                  continued water, pasture, and livelihood stress in "district
+                  with sustained severe over 3 months"
                 </li>
               </ul>
             </div>
@@ -169,42 +156,76 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
                 textTransform: "uppercase",
               }}
             >
-              Agrometeorological / Drought Situation
+              Forecast Highlight:
             </h3>
             <div style={{ fontSize: "9pt", lineHeight: "1.5" }}>
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-                Soil Moisture and Crop Conditions:
-              </p>
-              <p style={{ margin: "0 0 10px 0" }}>
-                Soil moisture levels have improved significantly in most
-                agricultural zones following recent rainfall. First season crops
-                are at various vegetative stages with generally good growth
-                observed in central and eastern regions. However, the cattle
-                corridor continues to experience moisture stress requiring close
-                monitoring.
-              </p>
-
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-                Water Availability:
-              </p>
-              <p style={{ margin: "0 0 10px 0" }}>
-                Water sources are generally adequate for both domestic and
-                agricultural use. Major water bodies including Lakes Victoria,
-                Kyoga, and Albert are at normal levels. Some boreholes in
-                Karamoja sub-region continue to report reduced yields, requiring
-                water trucking in isolated areas.
-              </p>
-
-              <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-                Agricultural Advisory:
-              </p>
               <ul style={{ margin: "0", paddingLeft: "18px" }}>
-                <li>Continue land preparation and timely planting</li>
-                <li>Apply fertilizers during rainfall periods</li>
-                <li>Monitor and control Fall Armyworm infestations</li>
-                <li>Prepare drainage systems in flood-prone areas</li>
+                <li>
+                  "Light" to "moderate" rain is expected over parts of "list
+                  first 5 districts in the north" in Uganda and localized areas
+                  in the "list first 5 districts in central Uganda", while dry
+                  conditions dominate "5 districts that will receive minimum
+                  rainfall".
+                </li>
+                <li>
+                  "High/Moderate/Low" temperatures "Minimum–Maximum °C" will
+                  persist across much of "northern, central and southern"
+                  Uganda, increasing evapotranspiration and moisture stress
+                </li>
+                <li>
+                  "River name check on the discharge levels in floods" River
+                  levels remain elevated and propagating downstream, posing a
+                  risk of localized flooding if additional upstream and local
+                  rainfall occurs
+                </li>
+                <li>
+                  • Rainfall is expected to result in localized improvements,
+                  but recovery will remain uneven, particularly in "list 5
+                  districts with worse droughts" drought-affected areas
+                </li>
               </ul>
             </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: "#E1F5FE",
+            padding: "12px",
+            marginBottom: "15px",
+            borderLeft: "4px solid #06B6D4",
+          }}
+        >
+          <h3
+            style={{
+              margin: "0 0 10px 0",
+              fontSize: "11pt",
+              fontWeight: "bold",
+              color: "#06B6D4",
+              textTransform: "uppercase",
+            }}
+          >
+            Review of Observed Seasonal and Weekly Weather Conditions and
+            Experienced Impacts
+          </h3>
+          <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
+            Districts on Flood Watch:
+          </p>
+          <div style={{ fontSize: "9pt", lineHeight: "1.5" }}>
+            <p style={{ margin: "0 0 10px 0" }}>
+              During the week between "start Date" and "End Date" (Figure 1),
+              "heavy rainfall" above 100 mm was observed at "list station names
+              (mm recorded)/no rainfall above 100 mm was recorded at any
+              station". Moderate rains of above 50 mm were recorded at "list
+              station names (mm recorded)". Light rains above 30 mm were
+              received at "list station names (mm recorded)".
+            </p>
+            <p style={{ margin: "0 0 10px 0" }}>
+              Over the week, of the "total number of districts in Uganda",
+              "number of districts that received rainfall". The "rainfall was
+              well distributed = if districts in the north, central and southern
+              region received rainfall"
+            </p>
           </div>
         </div>
 
@@ -247,145 +268,992 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
           </p>
         </div>
 
-        {/* Regional Analysis */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "15px",
-            marginBottom: "15px",
-          }}
-        >
-          {/* Karamoja Region */}
-          <div style={{ fontSize: "9pt" }}>
+        {/* ── Weekly Weather Forecast Section ── */}
+        <div style={{ marginBottom: "15px" }}>
+          {/* Section title */}
+          <div
+            style={{
+              backgroundColor: "#318DDE",
+              padding: "8px 12px",
+              marginBottom: "12px",
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "12pt",
+                fontWeight: "bold",
+                color: "#ffffff",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Monthly and Weekly Weather Forecast
+            </h2>
+          </div>
+
+          {/* ── Rainfall Forecast ── */}
+          <div style={{ marginBottom: "14px" }}>
             <h3
               style={{
                 margin: "0 0 8px 0",
-                fontSize: "10pt",
+                fontSize: "11pt",
                 fontWeight: "bold",
-                color: "#424242",
-                borderBottom: "2px solid #318DDE",
+                color: "#1565C0",
+                borderBottom: "2px solid #1565C0",
                 paddingBottom: "4px",
               }}
             >
-              Karamoja Region Analysis
+              Rainfall Forecast for Period 14 to 20 April 2026
             </h3>
-            <p style={{ margin: "0 0 8px 0" }}>
-              <strong>Situation:</strong> Dry conditions persist with
-              below-normal rainfall recorded. Pasture and water availability
-              remain a concern. Livestock body conditions deteriorating in some
-              areas.
+
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "9pt",
+                lineHeight: "1.6",
+              }}
+            >
+              According to NOAA-NCEP GFS and Icosahedral Nonhydrostatic (ICON),
+              pockets of light rainfall are expected over{" "}
+              <span
+                style={{
+                  backgroundColor: "#BBDEFB",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [# districts – Northern]
+              </span>{" "}
+              districts in the Northern region,{" "}
+              <span
+                style={{
+                  backgroundColor: "#BBDEFB",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [# districts – Central]
+              </span>{" "}
+              in Central, and{" "}
+              <span
+                style={{
+                  backgroundColor: "#BBDEFB",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [# districts – Southern]
+              </span>{" "}
+              in Southern Uganda (Figure 6). These light rains are also possible
+              over very scattered areas in the districts listed below.
             </p>
-            <p style={{ margin: "0" }}>
-              <strong>Advisory:</strong> Continue water trucking operations.
-              Monitor livestock health closely. Supplement animal feed where
-              necessary.
+
+            {/* Scattered-rain districts table */}
+            <div style={{ marginBottom: "10px" }}>
+              <p
+                style={{
+                  margin: "0 0 4px 0",
+                  fontSize: "9pt",
+                  fontWeight: "bold",
+                }}
+              >
+                Districts with Scattered Light Rains Expected:
+              </p>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "8.5pt",
+                }}
+              >
+                <thead>
+                  <tr style={{ backgroundColor: "#1565C0", color: "#ffffff" }}>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #90CAF9",
+                      }}
+                    >
+                      #
+                    </th>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #90CAF9",
+                      }}
+                    >
+                      District
+                    </th>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #90CAF9",
+                      }}
+                    >
+                      Region
+                    </th>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #90CAF9",
+                      }}
+                    >
+                      Expected Rainfall (mm)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr
+                      key={i}
+                      style={{
+                        backgroundColor: i % 2 === 0 ? "#E3F2FD" : "#ffffff",
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #BBDEFB",
+                        }}
+                      >
+                        {i}
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #BBDEFB",
+                          color: "#9E9E9E",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        [District name]
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #BBDEFB",
+                          color: "#9E9E9E",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        [Region]
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #BBDEFB",
+                          color: "#9E9E9E",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        [Range]
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "9pt",
+                lineHeight: "1.6",
+              }}
+            >
+              Dry conditions are likely over most other areas. Districts
+              expected to remain dry are listed below, along with cumulative
+              total estimates.
             </p>
+
+            {/* Dry districts table */}
+            <div style={{ marginBottom: "10px" }}>
+              <p
+                style={{
+                  margin: "0 0 4px 0",
+                  fontSize: "9pt",
+                  fontWeight: "bold",
+                }}
+              >
+                Districts with Dry Conditions Expected:
+              </p>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "8.5pt",
+                }}
+              >
+                <thead>
+                  <tr style={{ backgroundColor: "#E65100", color: "#ffffff" }}>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #FFCCBC",
+                      }}
+                    >
+                      #
+                    </th>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #FFCCBC",
+                      }}
+                    >
+                      District
+                    </th>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #FFCCBC",
+                      }}
+                    >
+                      Region
+                    </th>
+                    <th
+                      style={{
+                        padding: "5px 8px",
+                        textAlign: "left",
+                        border: "1px solid #FFCCBC",
+                      }}
+                    >
+                      Cumulative Total Estimate (mm)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr
+                      key={i}
+                      style={{
+                        backgroundColor: i % 2 === 0 ? "#FBE9E7" : "#ffffff",
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #FFCCBC",
+                        }}
+                      >
+                        {i}
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #FFCCBC",
+                          color: "#9E9E9E",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        [District name]
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #FFCCBC",
+                          color: "#9E9E9E",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        [Region]
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 8px",
+                          border: "1px solid #FFCCBC",
+                          color: "#9E9E9E",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        [Estimate]
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p
+              style={{
+                margin: "0 0 10px 0",
+                fontSize: "9pt",
+                lineHeight: "1.6",
+              }}
+            >
+              The rains over{" "}
+              <span
+                style={{
+                  backgroundColor: "#BBDEFB",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [districts with rainfall above 50 mm]
+              </span>{" "}
+              may cumulate to over 50 mm by the end of the forecast week.
+            </p>
+
+            {/* Rainfall map placeholder */}
+            <div
+              style={{
+                backgroundColor: "#F5F5F5",
+                border: "1px dashed #90CAF9",
+                borderRadius: "4px",
+                padding: "12px",
+                textAlign: "center",
+                marginBottom: "4px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "9pt",
+                  color: "#757575",
+                  fontStyle: "italic",
+                }}
+              >
+                📍 Figure 6: Map – Cumulative Rainfall Total Forecast
+              </p>
+              <div
+                style={{
+                  height: "150px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#BDBDBD",
+                  fontSize: "8pt",
+                }}
+              >
+                [Insert rainfall cumulative total forecast map here]
+              </div>
+            </div>
           </div>
 
-          {/* Lake Victoria Basin */}
-          <div style={{ fontSize: "9pt" }}>
+          {/* ── Temperature Forecast ── */}
+          <div style={{ marginBottom: "14px" }}>
             <h3
               style={{
                 margin: "0 0 8px 0",
-                fontSize: "10pt",
+                fontSize: "11pt",
                 fontWeight: "bold",
-                color: "#424242",
-                borderBottom: "2px solid #06B6D4",
+                color: "#B71C1C",
+                borderBottom: "2px solid #B71C1C",
                 paddingBottom: "4px",
               }}
             >
-              Lake Victoria Basin
+              Temperature Forecast
             </h3>
-            <p style={{ margin: "0 0 8px 0" }}>
-              <strong>Situation:</strong> Above-normal rainfall causing
-              localized flooding in low-lying areas. Lake levels rising
-              gradually. Some fishing activities disrupted by rough waters.
-            </p>
-            <p style={{ margin: "0" }}>
-              <strong>Advisory:</strong> Communities in flood-prone areas should
-              remain vigilant. Strengthen drainage systems. Fishermen advised to
-              exercise caution.
-            </p>
-          </div>
-        </div>
 
-        {/* Flood Risk / Hydrological Situation */}
-        <div
-          style={{
-            backgroundColor: "#E1F5FE",
-            padding: "12px",
-            marginBottom: "15px",
-            borderLeft: "4px solid #06B6D4",
-          }}
-        >
-          <h3
-            style={{
-              margin: "0 0 10px 0",
-              fontSize: "11pt",
-              fontWeight: "bold",
-              color: "#06B6D4",
-              textTransform: "uppercase",
-            }}
-          >
-            Hydrological Situation / Flood Risk
-          </h3>
-          <div style={{ fontSize: "9pt", lineHeight: "1.5" }}>
-            <p style={{ margin: "0 0 10px 0" }}>
-              River discharge rates are elevated in several basins following
-              recent heavy rainfall. Three river basins (Aswa, Mpologoma, and
-              Katonga) are currently under flood watch with discharge rates
-              approaching moderate flood thresholds. Communities along these
-              river systems should remain alert.
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "9pt",
+                lineHeight: "1.6",
+              }}
+            >
+              According to NOAA-NCEP GFS, hot conditions (35–40°C) dominate in{" "}
+              <span
+                style={{
+                  backgroundColor: "#FFCDD2",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [districts with temperature above 35°C]
+              </span>
+              , while{" "}
+              <span
+                style={{
+                  backgroundColor: "#FFCDD2",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [districts with 30–35°C]
+              </span>{" "}
+              remain slightly cooler (30–35°C). The spatial variation of maximum
+              temperatures is as follows (Figure 7):
             </p>
-            <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-              Districts on Flood Watch:
-            </p>
-            <p style={{ margin: "0" }}>
-              Lira, Soroti, Pallisa, Butaleja, Kyotera, Rakai, Mityana, Mubende
-              (partial)
-            </p>
-          </div>
-        </div>
 
-        {/* Food Security Status */}
-        <div
-          style={{
-            backgroundColor: "#FFF9E6",
-            padding: "12px",
-            marginBottom: "15px",
-            borderLeft: "4px solid #FFC107",
-          }}
-        >
-          <h3
-            style={{
-              margin: "0 0 10px 0",
-              fontSize: "11pt",
-              fontWeight: "bold",
-              color: "#F57C00",
-              textTransform: "uppercase",
-            }}
-          >
-            Food Security Outlook
-          </h3>
-          <div style={{ fontSize: "9pt", lineHeight: "1.5" }}>
-            <p style={{ margin: "0 0 10px 0" }}>
-              Overall food security situation remains stable across most
-              regions. However, pockets of concern exist in parts of Karamoja
-              where consecutive dry spells have affected crop production. First
-              season harvest prospects are favorable in central, eastern, and
-              western regions with adequate rainfall received during critical
-              growth stages.
+            {/* Max temperature breakdown */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "8.5pt",
+                marginBottom: "10px",
+              }}
+            >
+              <thead>
+                <tr style={{ backgroundColor: "#B71C1C", color: "#ffffff" }}>
+                  <th
+                    style={{
+                      padding: "5px 8px",
+                      textAlign: "left",
+                      border: "1px solid #FFCDD2",
+                      width: "25%",
+                    }}
+                  >
+                    Max Temp Range
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 8px",
+                      textAlign: "left",
+                      border: "1px solid #FFCDD2",
+                      width: "25%",
+                    }}
+                  >
+                    Classification
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 8px",
+                      textAlign: "left",
+                      border: "1px solid #FFCDD2",
+                    }}
+                  >
+                    Districts / Areas
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { range: "35–40 °C", label: "Moderately High" },
+                  { range: "30–35 °C", label: "High" },
+                  { range: "25–30 °C", label: "Moderate" },
+                ].map((row, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      backgroundColor: i % 2 === 0 ? "#FFEBEE" : "#ffffff",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #FFCDD2",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {row.range}
+                    </td>
+                    <td
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #FFCDD2",
+                      }}
+                    >
+                      {row.label}
+                    </td>
+                    <td
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #FFCDD2",
+                        color: "#9E9E9E",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [Insert districts / areas]
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Rainfall map placeholder – Figure 7 */}
+            <div
+              style={{
+                backgroundColor: "#F5F5F5",
+                border: "1px dashed #FFCDD2",
+                borderRadius: "4px",
+                padding: "12px",
+                textAlign: "center",
+                marginBottom: "10px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "9pt",
+                  color: "#757575",
+                  fontStyle: "italic",
+                }}
+              >
+                🌡️ Figure 7: Map – Maximum Temperature Distribution
+              </p>
+              <div
+                style={{
+                  height: "130px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#BDBDBD",
+                  fontSize: "8pt",
+                }}
+              >
+                [Insert maximum temperature distribution map here]
+              </div>
+            </div>
+
+            <p
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "9pt",
+                lineHeight: "1.6",
+              }}
+            >
+              Night-time temperatures are expected to remain warm (25–30°C)
+              across{" "}
+              <span
+                style={{
+                  backgroundColor: "#FFCDD2",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [districts]
+              </span>
+              , with moderate conditions (20–25°C) prevailing elsewhere and only
+              localized cooler conditions over{" "}
+              <span
+                style={{
+                  backgroundColor: "#FFCDD2",
+                  padding: "1px 4px",
+                  borderRadius: "2px",
+                  fontStyle: "italic",
+                }}
+              >
+                [districts]
+              </span>
+              . The spatial variation of minimum temperatures is as follows
+              (Figure 8):
             </p>
-            <p style={{ margin: "0 0 8px 0", fontWeight: "bold" }}>
-              Market Situation:
-            </p>
-            <p style={{ margin: "0" }}>
-              Staple food prices remain within normal ranges. Maize and beans
-              are readily available in most markets. Minor price increases
-              observed in northern districts due to transportation challenges
-              during wet season.
-            </p>
+
+            {/* Min temperature breakdown */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "8.5pt",
+                marginBottom: "10px",
+              }}
+            >
+              <thead>
+                <tr style={{ backgroundColor: "#E53935", color: "#ffffff" }}>
+                  <th
+                    style={{
+                      padding: "5px 8px",
+                      textAlign: "left",
+                      border: "1px solid #FFCDD2",
+                      width: "25%",
+                    }}
+                  >
+                    Min Temp Range
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 8px",
+                      textAlign: "left",
+                      border: "1px solid #FFCDD2",
+                      width: "25%",
+                    }}
+                  >
+                    Classification
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 8px",
+                      textAlign: "left",
+                      border: "1px solid #FFCDD2",
+                    }}
+                  >
+                    Districts / Areas
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { range: "25–30 °C", label: "High (Warm nights)" },
+                  { range: "20–25 °C", label: "Moderately High" },
+                  { range: "15–20 °C", label: "Moderate" },
+                  { range: "< 15 °C", label: "Cool (Highlands)" },
+                ].map((row, i) => (
+                  <tr
+                    key={i}
+                    style={{
+                      backgroundColor: i % 2 === 0 ? "#FFEBEE" : "#ffffff",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #FFCDD2",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {row.range}
+                    </td>
+                    <td
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #FFCDD2",
+                      }}
+                    >
+                      {row.label}
+                    </td>
+                    <td
+                      style={{
+                        padding: "4px 8px",
+                        border: "1px solid #FFCDD2",
+                        color: "#9E9E9E",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [Insert districts / areas]
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Temperature map placeholder – Figure 8 */}
+            <div
+              style={{
+                backgroundColor: "#F5F5F5",
+                border: "1px dashed #FFCDD2",
+                borderRadius: "4px",
+                padding: "12px",
+                textAlign: "center",
+                marginBottom: "4px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "9pt",
+                  color: "#757575",
+                  fontStyle: "italic",
+                }}
+              >
+                🌡️ Figure 8: Map – Minimum Temperature Distribution
+              </p>
+              <div
+                style={{
+                  height: "130px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#BDBDBD",
+                  fontSize: "8pt",
+                }}
+              >
+                [Insert minimum temperature distribution map here]
+              </div>
+            </div>
+          </div>
+
+          {/* ── Impacts Section ── */}
+          <div>
+            <h3
+              style={{
+                margin: "0 0 8px 0",
+                fontSize: "11pt",
+                fontWeight: "bold",
+                color: "#1B5E20",
+                borderBottom: "2px solid #1B5E20",
+                paddingBottom: "4px",
+              }}
+            >
+              Impacts Associated with the Weekly Weather Forecast
+            </h3>
+
+            {/* Impact items */}
+            {[
+              {
+                icon: "🌵",
+                title: "Drought",
+                color: "#E65100",
+                bg: "#FFF3E0",
+                border: "#FF9800",
+                body: (
+                  <>
+                    Drought conditions are expected to continue easing in{" "}
+                    <span
+                      style={{
+                        backgroundColor: "#FFE0B2",
+                        padding: "1px 4px",
+                        borderRadius: "2px",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [districts]
+                    </span>{" "}
+                    due to recent and forecast rains. However, moderate to
+                    severe drought will likely persist across{" "}
+                    <span
+                      style={{
+                        backgroundColor: "#FFE0B2",
+                        padding: "1px 4px",
+                        borderRadius: "2px",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [districts]
+                    </span>
+                    , where rainfall remains limited, uneven, or delayed.
+                  </>
+                ),
+              },
+              {
+                icon: "💧",
+                title: "Water and Pasture",
+                color: "#0277BD",
+                bg: "#E1F5FE",
+                border: "#03A9F4",
+                body: (
+                  <>
+                    Forecast rains are likely to support localized regeneration
+                    of pasture, browse, and surface water, especially in{" "}
+                    <span
+                      style={{
+                        backgroundColor: "#B3E5FC",
+                        padding: "1px 4px",
+                        borderRadius: "2px",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [districts]
+                    </span>
+                    .
+                  </>
+                ),
+              },
+              {
+                icon: "🌊",
+                title: "Flood Risk",
+                color: "#1565C0",
+                bg: "#E3F2FD",
+                border: "#1976D2",
+                body: (
+                  <>
+                    Although river levels remain at{" "}
+                    <span
+                      style={{
+                        backgroundColor: "#BBDEFB",
+                        padding: "1px 4px",
+                        borderRadius: "2px",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [moderate]
+                    </span>{" "}
+                    flood thresholds, the sustained rise and downstream
+                    propagation requires continued monitoring. Potential
+                    affected persons are summarised in the table below.
+                    {/* Flood affected persons table */}
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontSize: "8.5pt",
+                        marginTop: "8px",
+                      }}
+                    >
+                      <thead>
+                        <tr
+                          style={{
+                            backgroundColor: "#1565C0",
+                            color: "#ffffff",
+                          }}
+                        >
+                          <th
+                            style={{
+                              padding: "5px 8px",
+                              textAlign: "left",
+                              border: "1px solid #BBDEFB",
+                            }}
+                          >
+                            River / Area
+                          </th>
+                          <th
+                            style={{
+                              padding: "5px 8px",
+                              textAlign: "left",
+                              border: "1px solid #BBDEFB",
+                            }}
+                          >
+                            District
+                          </th>
+                          <th
+                            style={{
+                              padding: "5px 8px",
+                              textAlign: "left",
+                              border: "1px solid #BBDEFB",
+                            }}
+                          >
+                            Risk Level
+                          </th>
+                          <th
+                            style={{
+                              padding: "5px 8px",
+                              textAlign: "left",
+                              border: "1px solid #BBDEFB",
+                            }}
+                          >
+                            Est. Persons at Risk
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[1, 2, 3].map((i) => (
+                          <tr
+                            key={i}
+                            style={{
+                              backgroundColor:
+                                i % 2 === 0 ? "#E3F2FD" : "#ffffff",
+                            }}
+                          >
+                            {[
+                              "[River/Area]",
+                              "[District]",
+                              "[Low/Med/High]",
+                              "[Number]",
+                            ].map((cell, j) => (
+                              <td
+                                key={j}
+                                style={{
+                                  padding: "4px 8px",
+                                  border: "1px solid #BBDEFB",
+                                  color: "#9E9E9E",
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                ),
+              },
+              {
+                icon: "🌡️",
+                title: "Heat Stress",
+                color: "#B71C1C",
+                bg: "#FFEBEE",
+                border: "#EF5350",
+                body: (
+                  <>
+                    Persistently high daytime (35–40°C) and warm nighttime
+                    temperatures (25–30°C) across{" "}
+                    <span
+                      style={{
+                        backgroundColor: "#FFCDD2",
+                        padding: "1px 4px",
+                        borderRadius: "2px",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      [districts]
+                    </span>{" "}
+                    are expected to increase heat stress on humans and
+                    livestock, accelerate evapotranspiration, and limit soil
+                    moisture recovery, especially in drought-affected areas.
+                  </>
+                ),
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  backgroundColor: item.bg,
+                  borderLeft: `4px solid ${item.border}`,
+                  padding: "10px 12px",
+                  marginBottom: "8px",
+                  borderRadius: "0 4px 4px 0",
+                }}
+              >
+                <p
+                  style={{
+                    margin: "0 0 4px 0",
+                    fontSize: "9.5pt",
+                    fontWeight: "bold",
+                    color: item.color,
+                  }}
+                >
+                  {item.icon} {item.title}
+                </p>
+                <p style={{ margin: 0, fontSize: "9pt", lineHeight: "1.6" }}>
+                  {item.body}
+                </p>
+              </div>
+            ))}
+
+            {/* Agriculture – only shown during MAM / OND seasons */}
+            {(() => {
+              const month = date.getMonth() + 1; // 1-indexed
+              const isMAM = month >= 3 && month <= 5;
+              const isOND = month >= 10 && month <= 12;
+              if (!isMAM && !isOND) return null;
+              return (
+                <div
+                  style={{
+                    backgroundColor: "#F1F8E9",
+                    borderLeft: "4px solid #7CB342",
+                    padding: "10px 12px",
+                    marginBottom: "8px",
+                    borderRadius: "0 4px 4px 0",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 4px 0",
+                      fontSize: "9.5pt",
+                      fontWeight: "bold",
+                      color: "#33691E",
+                    }}
+                  >
+                    🌾 Agriculture and Livelihoods{" "}
+                    <span
+                      style={{
+                        fontSize: "8pt",
+                        fontWeight: "normal",
+                        color: "#558B2F",
+                      }}
+                    >
+                      ({isMAM ? "MAM" : "OND"} Season)
+                    </span>
+                  </p>
+                  <p style={{ margin: 0, fontSize: "9pt", lineHeight: "1.6" }}>
+                    Light to moderate rains will support ongoing agricultural
+                    activities, including weeding and staggered planting in some
+                    areas. However, the season remains shortened and highly
+                    uncertain, with uneven rainfall distribution, crop pests,
+                    livestock disease, and weakened household resilience likely
+                    to constrain recovery. Livelihood recovery therefore remains
+                    slow, cautious, and spatially uneven.
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
