@@ -89,7 +89,7 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
             marginBottom: "15px",
           }}
         >
-          {/* Weather Situation and Forecast */}
+          {/* Weather Situation and Forecasts */}
           <div
             style={{
               backgroundColor: "#E8F4FD",
