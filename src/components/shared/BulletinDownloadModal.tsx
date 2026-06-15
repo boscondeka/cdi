@@ -21,7 +21,7 @@ export const BulletinDownloadModal: React.FC<BulletinDownloadModalProps> = ({
 
   /**
    * Renders the BulletinReport to a static HTML string, opens it in a hidden
-   * print window, and triggers the browser's native Save as PDF dialog.
+   * print window, and triggers the browser's native Save as PDF dialogs.
    *
    * This approach:
    *  - Never produces a blank page (no canvas size limits)
