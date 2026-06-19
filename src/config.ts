@@ -17,6 +17,12 @@ export const GEOSERVER_BASE: string =
   (import.meta.env.VITE_GEOSERVER_URL as string) ||
   "http://localhost:8090/geoserver";
 
+// Drought base URL
+
+export const DROUGHT_BASE: string =
+  (import.meta.env.VITE_DROUGHT_URL as string) ||
+  "http://localhost:8090/geoserver";
+
 /** GeoServer WMS endpoint for the wfews workspace (boundaries, floods, geodata) */
 export const GEOSERVER_WFEWS_WMS = `${GEOSERVER_BASE}/wfews/wms`;
 
@@ -25,3 +31,10 @@ export const GEOSERVER_WEATHER_WMS = `${GEOSERVER_BASE}/uganda_weather/wms`;
 
 /** GeoServer WCS endpoint for the uganda_weather workspace (raw GeoTIFF downloads) */
 export const GEOSERVER_WEATHER_WCS = `${GEOSERVER_BASE}/uganda_weather/wcs`;
+
+// drougth endpoint assesment count
+export const DROUGHT_ASSESMENT_COUNT = `${DROUGHT_BASE}data/district/assessment/count`;
+
+// drought endpoint images
+
+export const DROUGHT_CDI_IMAGE = `${DROUGHT_BASE}data/all/cdi`;

@@ -36,6 +36,7 @@ import {
 import type { FloodForecastFull, BasinStatus } from "../services/api";
 import { useAppStore } from "@/store/useAppStore";
 import { useAssessmentCounts } from "@/hooks/useAssessmentCounts";
+import { useWeatherForecast } from "@/hooks/useWeatherForecast";
 
 interface OverviewPageProps {
   onNavigate: (page: PageType) => void;
@@ -284,8 +285,9 @@ export default function OverviewPage({
   isDarkMode = true,
 }: OverviewPageProps) {
   const { selectedDistrictId, floodAlerts } = useAppStore((s) => s);
-  const { extremeCount, trendingCount, improvingCount, month, year } =
+  const { extremeCount, trendingCount, improvingCount, month, year, drought } =
     useAssessmentCounts();
+  const { forecast } = useWeatherForecast();
 
   /* ── Module definitions ─────────────────────────────────────────── */
   const MODULES: {
@@ -1282,6 +1284,8 @@ export default function OverviewPage({
         isOpen={showBulletinModal}
         onClose={() => setShowBulletinModal(false)}
         isDarkMode={isDarkMode}
+        drought={drought}
+        forecast={forecast}
       />
     </div>
   );

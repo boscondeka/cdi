@@ -2,17 +2,22 @@ import React, { useRef, useState } from "react";
 import { X, Download } from "lucide-react";
 import { BulletinReport } from "./BulletinReport";
 import ReactDOMServer from "react-dom/server";
+import type { WeatherForecastData } from "@/hooks/useWeatherForecast";
 
 interface BulletinDownloadModalProps {
   isOpen: boolean;
   onClose: () => void;
   isDarkMode?: boolean;
+  drought: any;
+  forecast?: WeatherForecastData | null;
 }
 
 export const BulletinDownloadModal: React.FC<BulletinDownloadModalProps> = ({
   isOpen,
   onClose,
   isDarkMode = false,
+  drought,
+  forecast,
 }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -35,7 +40,7 @@ export const BulletinDownloadModal: React.FC<BulletinDownloadModalProps> = ({
     try {
       // Serialize the report to an HTML string
       const reportHtml = ReactDOMServer.renderToStaticMarkup(
-        <BulletinReport isDarkMode={false} />,
+        <BulletinReport drought={drought} forecast={forecast} isDarkMode={false} />,
       );
 
       // Collect all <style> and <link rel="stylesheet"> from the current page
@@ -194,7 +199,7 @@ export const BulletinDownloadModal: React.FC<BulletinDownloadModalProps> = ({
           >
             <div className="p-6">
               <div ref={reportRef}>
-                <BulletinReport isDarkMode={false} />
+                <BulletinReport drought={drought} forecast={forecast} isDarkMode={false} />
               </div>
             </div>
           </div>
