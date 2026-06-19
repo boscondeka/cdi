@@ -21,7 +21,7 @@ export const GEOSERVER_BASE: string =
 
 export const DROUGHT_BASE: string =
   (import.meta.env.VITE_DROUGHT_URL as string) ||
-  "http://localhost:8090/geoserver";
+  "https://droughtbackend.rosewillbome.co.ke/";
 
 /** GeoServer WMS endpoint for the wfews workspace (boundaries, floods, geodata) */
 export const GEOSERVER_WFEWS_WMS = `${GEOSERVER_BASE}/wfews/wms`;
