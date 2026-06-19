@@ -166,7 +166,7 @@ function AppContent() {
         );
       case "weather":
         return <WeatherForecastPage isDarkMode={isDarkMode} />;
-     
+
       case "drought":
         return <DroughtMonitoringPage isDarkMode={isDarkMode} />;
       case "flood":
@@ -355,7 +355,7 @@ function AppContent() {
               <Bell
                 className={`w-5 h-5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
               />
-              {(alertsData.length + floodAlerts.length) > 0 && (
+              {alertsData.length + floodAlerts.length > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               )}
             </button>
@@ -380,15 +380,20 @@ function AppContent() {
                 <div className="max-h-80 overflow-y-auto">
                   {/* Flood critical basin alerts from live API */}
                   {floodAlerts.length > 0 && (
-                    <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-500 bg-slate-800/50" : "text-slate-400 bg-slate-50"}`}>
-                      Flood Alerts · {floodAlerts.length} basin{floodAlerts.length !== 1 ? "s" : ""}
+                    <div
+                      className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide ${isDarkMode ? "text-slate-500 bg-slate-800/50" : "text-slate-400 bg-slate-50"}`}
+                    >
+                      Flood Alerts · {floodAlerts.length} basin
+                      {floodAlerts.length !== 1 ? "s" : ""}
                     </div>
                   )}
                   {floodAlerts.map((alert) => {
                     const statusColor =
-                      alert.status === "extreme" ? "#ef4444"
-                      : alert.status === "severe" ? "#f97316"
-                      : "#eab308";
+                      alert.status === "extreme"
+                        ? "#ef4444"
+                        : alert.status === "severe"
+                          ? "#f97316"
+                          : "#eab308";
                     return (
                       <div
                         key={alert.id}
@@ -399,22 +404,39 @@ function AppContent() {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className={`text-sm font-semibold truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}>
+                          <span
+                            className={`text-sm font-semibold truncate ${isDarkMode ? "text-white" : "text-slate-900"}`}
+                          >
                             {alert.basinName}
                           </span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold flex-shrink-0"
-                            style={{ backgroundColor: `${statusColor}20`, color: statusColor }}>
+                          <span
+                            className="text-[9px] px-1.5 py-0.5 rounded font-bold flex-shrink-0"
+                            style={{
+                              backgroundColor: `${statusColor}20`,
+                              color: statusColor,
+                            }}
+                          >
                             {alert.status.toUpperCase()}
                           </span>
                         </div>
-                        <div className={`flex items-center gap-3 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                        <div
+                          className={`flex items-center gap-3 text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
+                        >
                           <span className="flex items-center gap-1">
-                            <span className="font-medium" style={{ color: statusColor }}>{alert.discharge.toLocaleString()}</span>
+                            <span
+                              className="font-medium"
+                              style={{ color: statusColor }}
+                            >
+                              {alert.discharge.toLocaleString()}
+                            </span>
                             <span>m³/s</span>
                           </span>
                           {alert.population > 0 && (
                             <span className="flex items-center gap-1">
-                              <span className="font-medium" style={{ color: "#f97316" }}>
+                              <span
+                                className="font-medium"
+                                style={{ color: "#f97316" }}
+                              >
                                 {alert.population >= 1_000_000
                                   ? `${(alert.population / 1_000_000).toFixed(1)}M`
                                   : alert.population >= 1000
@@ -441,12 +463,18 @@ function AppContent() {
                       <div className="flex items-start gap-2">
                         <AlertTriangle
                           className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                            alert.severity === "high" ? "text-red-500" : "text-yellow-500"
+                            alert.severity === "high"
+                              ? "text-red-500"
+                              : "text-yellow-500"
                           }`}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{alert.title}</p>
-                          <div className={`flex items-center gap-2 text-xs mt-1 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                          <p className="text-sm font-medium truncate">
+                            {alert.title}
+                          </p>
+                          <div
+                            className={`flex items-center gap-2 text-xs mt-1 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
+                          >
                             <MapPin className="w-3 h-3" />
                             <span>{alert.location}</span>
                             <span>•</span>
@@ -457,16 +485,23 @@ function AppContent() {
                     </div>
                   ))}
                   {alertsData.length === 0 && floodAlerts.length === 0 && (
-                    <div className={`p-4 text-center text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                    <div
+                      className={`p-4 text-center text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
+                    >
                       No active alerts
                     </div>
                   )}
                 </div>
-                <div className={`p-2 border-t text-center ${isDarkMode ? "border-slate-700/30" : "border-slate-200"}`}>
+                <div
+                  className={`p-2 border-t text-center ${isDarkMode ? "border-slate-700/30" : "border-slate-200"}`}
+                >
                   <button
                     className="text-xs hover:underline"
                     style={{ color: FAO_BLUE }}
-                    onClick={() => { setShowNotifications(false); setCurrentPage("flood"); }}
+                    onClick={() => {
+                      setShowNotifications(false);
+                      setCurrentPage("flood");
+                    }}
                   >
                     View Flood Monitor
                   </button>
@@ -527,7 +562,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes default
-      gcTime: 30 * 60 * 1000,   // 30 minutes in memory
+      gcTime: 30 * 60 * 1000, // 30 minutes in memory
     },
   },
 });

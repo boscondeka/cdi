@@ -463,7 +463,7 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <img
-            src="/fao-white.png"
+            src="/fao_logo_3lines_en1.png"
             alt="FAO"
             style={{ height: "48px", objectFit: "contain" }}
             onError={(e) => {
@@ -498,8 +498,7 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
             UGANDA WEEKLY WEATHER FORECAST
           </h1>
           <p style={{ margin: "4px 0 0 0", fontSize: "9pt", color: "#333" }}>
-            Valid From {validFrom ?? ph("{Start Date}")} to{" "}
-            {validTo ?? ph("{End Date}")}
+            Valid From {validFrom} to {validTo}
           </p>
           <p style={{ margin: "2px 0 0 0", fontSize: "8pt", color: "#666" }}>
             Bulletin #{bulletinId}
@@ -508,267 +507,279 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
       </div>
 
       {/* ── Main Content ── */}
-      <div style={{ padding: "16px 20px 24px 20px" }}>
-        {sectionHeading("Monthly and Weekly Weather Forecast")}
 
-        {/* ── Review Summary ── */}
-        {sectionHeading("Review Summary")}
+      {drought?.cdi_image?.length === 0 || !forecast ? (
+        <div
+          className={`fixed inset-0 z-[100] flex items-center justify-center bg-white/90 backdrop-blur-sm`}
+        >
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className={"text-slate-600"}>Loading...</p>
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "16px 20px 24px 20px" }}>
+          {sectionHeading("Monthly and Weekly Weather Forecast")}
 
-        {bullet(
-          <>
-            During the review period, rainfall conditions ranged from{" "}
-            {rainfallMin != null && rainfallMax != null ? (
-              <strong>
-                {fmt.mm(rainfallMin)} – {fmt.mm(rainfallMax)}
-              </strong>
-            ) : (
-              ph("{minimum rainfall – maximum rainfall}")
-            )}{" "}
-            across Uganda, with notable observations in{" "}
-            {topRainfallDistricts ? (
-              <strong>{topRainfallDistricts}</strong>
-            ) : (
-              ph("{districts that received highest rainfall}")
-            )}
-            .
-          </>,
-        )}
+          {/* ── Review Summary ── */}
+          {sectionHeading("Review Summary")}
 
-        {bullet(
-          rs?.rainfall_distribution_summary ? (
-            <>{rs.rainfall_distribution_summary}</>
-          ) : (
+          {bullet(
             <>
-              Rainfall distribution varied across locations, with differences
-              observed in intensity, duration, and spatial coverage.
-            </>
-          ),
-        )}
+              During the review period, rainfall conditions ranged from{" "}
+              {rainfallMin != null && rainfallMax != null ? (
+                <strong>
+                  {fmt.mm(rainfallMin)} – {fmt.mm(rainfallMax)}
+                </strong>
+              ) : (
+                ph("{minimum rainfall – maximum rainfall}")
+              )}{" "}
+              across Uganda, with notable observations in{" "}
+              {topRainfallDistricts ? (
+                <strong>{topRainfallDistricts}</strong>
+              ) : (
+                ph("{districts that received highest rainfall}")
+              )}
+              .
+            </>,
+          )}
 
-        {bullet(
-          <>
-            River monitoring indicated that{" "}
-            {riverName ? (
-              <strong>{riverName}</strong>
+          {bullet(
+            rs?.rainfall_distribution_summary ? (
+              <>{rs.rainfall_distribution_summary}</>
             ) : (
-              ph("{river_name_with_the_most_discharge}")
-            )}{" "}
-            experienced{" "}
-            {riverTrend ? (
-              <strong>{fmt.cap(riverTrend)} conditions</strong>
-            ) : (
-              ph("{river_trend}")
-            )}
-            .
-          </>,
-        )}
+              <>
+                Rainfall distribution varied across locations, with differences
+                observed in intensity, duration, and spatial coverage.
+              </>
+            ),
+          )}
 
-        {bullet(
-          <>
-            Across the districts as at{" "}
-            <strong>
-              {drought.month} {drought.year}
-            </strong>
-            , the drought conditions were:
-          </>,
-        )}
+          {bullet(
+            <>
+              River monitoring indicated that{" "}
+              {riverName ? (
+                <strong>{riverName}</strong>
+              ) : (
+                ph("{river_name_with_the_most_discharge}")
+              )}{" "}
+              experienced{" "}
+              {riverTrend ? (
+                <strong>{fmt.cap(riverTrend)} conditions</strong>
+              ) : (
+                ph("{river_trend}")
+              )}
+              .
+            </>,
+          )}
 
-        {droughtTable}
-        {mapPlaceholder("{add main CDI map}", drought?.cdi_image[4])}
-
-        {/* ── Forecast Highlights ── */}
-        {sectionHeading("Forecast Highlights")}
-
-        {/* Rainfall */}
-        {subHeading("Rainfall Forecasts")}
-
-        {bullet(
-          <>
-            According to NOAA-NCEP GFS and Icosahedral Nonhydrostatic (ICON),
-            pockets of light rainfall are expected over Uganda. Rainfall is
-            forecasted to range from{" "}
-            {fh?.rainfall_forecast_range?.minimum_mm != null &&
-            fh?.rainfall_forecast_range?.maximum_mm != null ? (
+          {bullet(
+            <>
+              Across the districts as at{" "}
               <strong>
-                {fmt.mm(fh.rainfall_forecast_range.minimum_mm)} –{" "}
-                {fmt.mm(fh.rainfall_forecast_range.maximum_mm)}
+                {drought.month} {drought.year}
+              </strong>
+              , the drought conditions were:
+            </>,
+          )}
+
+          {droughtTable}
+          {mapPlaceholder("{add main CDI map}", drought?.cdi_image[4])}
+
+          {/* ── Forecast Highlights ── */}
+          {sectionHeading("Forecast Highlights")}
+
+          {/* Rainfall */}
+          {subHeading("Rainfall Forecasts")}
+
+          {bullet(
+            <>
+              According to NOAA-NCEP GFS and Icosahedral Nonhydrostatic (ICON),
+              pockets of light rainfall are expected over Uganda. Rainfall is
+              forecasted to range from{" "}
+              {fh?.rainfall_forecast_range?.minimum_mm != null &&
+              fh?.rainfall_forecast_range?.maximum_mm != null ? (
+                <strong>
+                  {fmt.mm(fh.rainfall_forecast_range.minimum_mm)} –{" "}
+                  {fmt.mm(fh.rainfall_forecast_range.maximum_mm)}
+                </strong>
+              ) : (
+                ph("{min – max rainfall range)")
+              )}{" "}
+              across districts.
+            </>,
+          )}
+
+          {rainfallTable}
+
+          {mapPlaceholder("{add_rainfall_forecast_map}")}
+
+          {figureCaption(
+            <>
+              <strong>Figure 1:</strong> Spatial distribution of forecast
+              rainfall across Uganda, valid {validFrom ?? ph("{start_date}")} to{" "}
+              {validTo ?? ph("{end_date}")}.
+            </>,
+          )}
+
+          {bullet(
+            <>
+              Higher rainfall accumulations are forecast in{" "}
+              {higherRainfallAreas ? (
+                <strong>{higherRainfallAreas}</strong>
+              ) : (
+                ph("{higher_rainfall_areas}")
+              )}
+              .
+            </>,
+          )}
+
+          {/* Temperature */}
+          {subHeading("Temperature Forecasts")}
+
+          {bullet(
+            <>
+              Temperature conditions are expected to range from{" "}
+              {tempMin != null ? (
+                <strong>{fmt.temp(tempMin)}</strong>
+              ) : (
+                ph("{min_temperature_range}")
+              )}{" "}
+              recorded at{" "}
+              {tempMinDst ? (
+                <strong>{tempMinDst}</strong>
+              ) : (
+                ph("{district_to_experience_minimum_range}")
+              )}{" "}
+              to{" "}
+              {tempMax != null ? (
+                <strong>{fmt.temp(tempMax)}</strong>
+              ) : (
+                ph("{max_temperature_range}")
+              )}{" "}
+              recorded at{" "}
+              {tempMaxDst ? (
+                <strong>{tempMaxDst}</strong>
+              ) : (
+                ph("{district_to_experience_maximum_range}")
+              )}
+              .
+            </>,
+          )}
+
+          {temperatureTable}
+
+          {mapPlaceholder("{add_temperature_distribution_mean_forecast_map}")}
+
+          {figureCaption(
+            <>
+              <strong>Figure 2:</strong> Spatial distribution of forecast mean
+              temperature across Uganda, valid {validFrom ?? ph("{start_date}")}{" "}
+              to {validTo ?? ph("{end_date}")}.
+            </>,
+          )}
+
+          {/* Floods */}
+          {subHeading("Floods Forecast")}
+
+          {bullet(
+            <>
+              River conditions in{" "}
+              {floodRiverName ? (
+                <strong>{floodRiverName}</strong>
+              ) : (
+                ph("{river_name}")
+              )}{" "}
+              are expected to remain{" "}
+              {floodCondition ? (
+                <strong>{fmt.cap(floodCondition)}</strong>
+              ) : (
+                ph("{river_condition}")
+              )}
+              . The discharge levels are summarized below:
+            </>,
+          )}
+
+          {floodTable}
+
+          {/* Impact Assessment */}
+          {subHeading("Impact Assessment")}
+
+          <p style={{ margin: "6px 0", fontSize: "10pt", lineHeight: "1.6" }}>
+            <strong>Flood Risk:</strong> Flood risk conditions are assessed as{" "}
+            {floodRiskLevel ? (
+              <strong style={{ textTransform: "capitalize" }}>
+                {floodRiskLevel}
               </strong>
             ) : (
-              ph("{min – max rainfall range)")
+              ph("{flood_risk_level}")
             )}{" "}
-            across districts.
-          </>,
-        )}
-
-        {rainfallTable}
-
-        {mapPlaceholder("{add_rainfall_forecast_map}")}
-
-        {figureCaption(
-          <>
-            <strong>Figure 1:</strong> Spatial distribution of forecast rainfall
-            across Uganda, valid {validFrom ?? ph("{start_date}")} to{" "}
-            {validTo ?? ph("{end_date}")}.
-          </>,
-        )}
-
-        {bullet(
-          <>
-            Higher rainfall accumulations are forecast in{" "}
-            {higherRainfallAreas ? (
-              <strong>{higherRainfallAreas}</strong>
+            in areas associated with{" "}
+            {floodLocations ? (
+              <strong>{floodLocations}</strong>
             ) : (
-              ph("{higher_rainfall_areas}")
+              ph("{flood_risk_locations}")
             )}
-            .
-          </>,
-        )}
-
-        {/* Temperature */}
-        {subHeading("Temperature Forecasts")}
-
-        {bullet(
-          <>
-            Temperature conditions are expected to range from{" "}
-            {tempMin != null ? (
-              <strong>{fmt.temp(tempMin)}</strong>
+            . Estimated exposure includes{" "}
+            {affectedPop != null ? (
+              <strong>{fmt.num(affectedPop)} people</strong>
             ) : (
-              ph("{min_temperature_range}")
-            )}{" "}
-            recorded at{" "}
-            {tempMinDst ? (
-              <strong>{tempMinDst}</strong>
-            ) : (
-              ph("{district_to_experience_minimum_range}")
-            )}{" "}
-            to{" "}
-            {tempMax != null ? (
-              <strong>{fmt.temp(tempMax)}</strong>
-            ) : (
-              ph("{max_temperature_range}")
-            )}{" "}
-            recorded at{" "}
-            {tempMaxDst ? (
-              <strong>{tempMaxDst}</strong>
-            ) : (
-              ph("{district_to_experience_maximum_range}")
+              ph("{potentially_affected_population}")
             )}
-            .
-          </>,
-        )}
-
-        {temperatureTable}
-
-        {mapPlaceholder("{add_temperature_distribution_mean_forecast_map}")}
-
-        {figureCaption(
-          <>
-            <strong>Figure 2:</strong> Spatial distribution of forecast mean
-            temperature across Uganda, valid {validFrom ?? ph("{start_date}")}{" "}
-            to {validTo ?? ph("{end_date}")}.
-          </>,
-        )}
-
-        {/* Floods */}
-        {subHeading("Floods Forecast")}
-
-        {bullet(
-          <>
-            River conditions in{" "}
-            {floodRiverName ? (
-              <strong>{floodRiverName}</strong>
-            ) : (
-              ph("{river_name}")
-            )}{" "}
-            are expected to remain{" "}
-            {floodCondition ? (
-              <strong>{fmt.cap(floodCondition)}</strong>
-            ) : (
-              ph("{river_condition}")
-            )}
-            . The discharge levels are summarized below:
-          </>,
-        )}
-
-        {floodTable}
-
-        {/* Impact Assessment */}
-        {subHeading("Impact Assessment")}
-
-        <p style={{ margin: "6px 0", fontSize: "10pt", lineHeight: "1.6" }}>
-          <strong>Flood Risk:</strong> Flood risk conditions are assessed as{" "}
-          {floodRiskLevel ? (
-            <strong style={{ textTransform: "capitalize" }}>
-              {floodRiskLevel}
-            </strong>
-          ) : (
-            ph("{flood_risk_level}")
-          )}{" "}
-          in areas associated with{" "}
-          {floodLocations ? (
-            <strong>{floodLocations}</strong>
-          ) : (
-            ph("{flood_risk_locations}")
-          )}
-          . Estimated exposure includes{" "}
-          {affectedPop != null ? (
-            <strong>{fmt.num(affectedPop)} people</strong>
-          ) : (
-            ph("{potentially_affected_population}")
-          )}
-          . The following is the basin-level impact on potential floods.
-        </p>
-
-        {/* Basin-level impact table */}
-        {ia?.basin_level_flood_impact?.length ? (
-          <table style={tableWrap}>
-            <thead>
-              <tr style={{ backgroundColor: "#1a1a1a", color: "#fff" }}>
-                <th style={{ ...thStyle, width: "28%" }}>River Basin</th>
-                <th style={thStyle}>Risk Level</th>
-                <th style={thStyle}>Flood Extent (km²)</th>
-                <th style={thStyle}>Roads (km)</th>
-                <th style={thStyle}>Buildings</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ia.basin_level_flood_impact.map((b, i) => (
-                <tr key={b.river_basin_id} style={rowBg(i)}>
-                  <td style={{ ...tdStyle, fontWeight: "500" }}>
-                    {b.river_basin}
-                  </td>
-                  <td style={{ ...tdStyle, textTransform: "capitalize" }}>
-                    {b.flood_risk_level}
-                  </td>
-                  <td style={tdStyle}>{fmt.km2(b.flood_extent_km2)}</td>
-                  <td style={tdStyle}>{fmt.km(b.affected_roads_km)}</td>
-                  <td style={tdStyle}>{fmt.num(b.affected_buildings)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          mapPlaceholder(
-            "{add the basin level aggregation of the flood impact}",
-          )
-        )}
-
-        {/* Issue / validity dates */}
-        {dates && (
-          <p
-            style={{
-              margin: "10px 0 0 0",
-              fontSize: "8.5pt",
-              color: "#555",
-              fontStyle: "italic",
-            }}
-          >
-            Weather issue date: {fmt.date(dates.weather_issue_date)}{" "}
-            &nbsp;|&nbsp; Flood forecast date:{" "}
-            {fmt.date(dates.flood_forecast_date)}
+            . The following is the basin-level impact on potential floods.
           </p>
-        )}
-      </div>
+
+          {/* Basin-level impact table */}
+          {ia?.basin_level_flood_impact?.length ? (
+            <table style={tableWrap}>
+              <thead>
+                <tr style={{ backgroundColor: "#1a1a1a", color: "#fff" }}>
+                  <th style={{ ...thStyle, width: "28%" }}>River Basin</th>
+                  <th style={thStyle}>Risk Level</th>
+                  <th style={thStyle}>Flood Extent (km²)</th>
+                  <th style={thStyle}>Roads (km)</th>
+                  <th style={thStyle}>Buildings</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ia.basin_level_flood_impact.map((b, i) => (
+                  <tr key={b.river_basin_id} style={rowBg(i)}>
+                    <td style={{ ...tdStyle, fontWeight: "500" }}>
+                      {b.river_basin}
+                    </td>
+                    <td style={{ ...tdStyle, textTransform: "capitalize" }}>
+                      {b.flood_risk_level}
+                    </td>
+                    <td style={tdStyle}>{fmt.km2(b.flood_extent_km2)}</td>
+                    <td style={tdStyle}>{fmt.km(b.affected_roads_km)}</td>
+                    <td style={tdStyle}>{fmt.num(b.affected_buildings)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            mapPlaceholder(
+              "{add the basin level aggregation of the flood impact}",
+            )
+          )}
+
+          {/* Issue / validity dates */}
+          {dates && (
+            <p
+              style={{
+                margin: "10px 0 0 0",
+                fontSize: "8.5pt",
+                color: "#555",
+                fontStyle: "italic",
+              }}
+            >
+              Weather issue date: {fmt.date(dates.weather_issue_date)}{" "}
+              &nbsp;|&nbsp; Flood forecast date:{" "}
+              {fmt.date(dates.flood_forecast_date)}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <div
