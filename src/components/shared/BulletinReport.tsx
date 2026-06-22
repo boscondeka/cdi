@@ -5,7 +5,7 @@ import type {
   TemperatureDistrict,
   FloodBasinSummary,
 } from "@/hooks/useWeatherForecast";
-import { DROUGHT_BASE } from "@/config";
+import { API_BASE, DROUGHT_BASE } from "@/config";
 
 // ── Prop types ────────────────────────────────────────────────────────────────
 
@@ -182,7 +182,7 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
         <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
           <div className="bg-gray-50">
             <img
-              src={`${DROUGHT_BASE}uploaded${data}`}
+              src={`${data}`}
               alt={label}
               style={{ width: "100%", height: "auto", display: "block" }}
             />
@@ -584,7 +584,11 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
           )}
 
           {droughtTable}
-          {mapPlaceholder("{add main CDI map}", drought?.cdi_image[4])}
+          {/* {mapPlaceholder("{add main CDI map}", drought?.cdi_image[4])} */}
+          {mapPlaceholder(
+            "{add main CDI map}",
+            `${DROUGHT_BASE}uploaded${drought?.cdi_image[4]}`,
+          )}
 
           {/* ── Forecast Highlights ── */}
           {sectionHeading("Forecast Highlights")}
@@ -612,7 +616,10 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
 
           {rainfallTable}
 
-          {mapPlaceholder("{add_rainfall_forecast_map}")}
+          {mapPlaceholder(
+            "{add_rainfall_forecast_map}",
+            `${API_BASE}weather/report-maps/rainfall.png`,
+          )}
 
           {figureCaption(
             <>
@@ -669,7 +676,10 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
 
           {temperatureTable}
 
-          {mapPlaceholder("{add_temperature_distribution_mean_forecast_map}")}
+          {mapPlaceholder(
+            "{add_temperature_distribution_mean_forecast_map}",
+            `${API_BASE}weather/report-maps/temperature.png`,
+          )}
 
           {figureCaption(
             <>
