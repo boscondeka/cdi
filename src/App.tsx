@@ -184,27 +184,27 @@ function AppContent() {
     }
   };
 
-  // Theme classes
+  // Theme classes with gradient backgrounds
   const themeClasses = isDarkMode
-    ? "bg-slate-900 text-white"
-    : "bg-slate-50 text-slate-900";
+    ? "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white"
+    : "bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 text-slate-900";
 
   const headerClasses = isDarkMode
-    ? "bg-slate-800/50 border-slate-700/50"
-    : "bg-white/80 border-slate-200";
+    ? "bg-slate-900/60 border-slate-700/50"
+    : "bg-white/70 border-slate-200";
 
   return (
     <div
-      className={`min-h-screen font-sans transition-colors duration-500 ${themeClasses}`}
+      className={`min-h-screen font-sans transition-all duration-700 ${themeClasses}`}
     >
       {/* Page Loading Overlay */}
       {pageLoading && (
         <div
-          className={`fixed inset-0 z-[100] flex items-center justify-center ${isDarkMode ? "bg-slate-900/90" : "bg-white/90"} backdrop-blur-sm`}
+          className={`fixed inset-0 z-[100] flex items-center justify-center ${isDarkMode ? "bg-slate-900/95" : "bg-white/95"} backdrop-blur-md`}
         >
           <div className="text-center">
             <div
-              className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
+              className="w-14 h-14 border-4 rounded-full animate-spin mx-auto mb-4"
               style={{ borderColor: `${FAO_BLUE}30`, borderTopColor: FAO_BLUE }}
             ></div>
             <p className={isDarkMode ? "text-slate-400" : "text-slate-600"}>
@@ -214,38 +214,37 @@ function AppContent() {
         </div>
       )}
 
-      {/* Background Animation - Only in Dark Mode */}
-      {isDarkMode && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          {/* Animated gradient orbs - FAO Blue Theme */}
-          <div
-            className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse"
-            style={{ backgroundColor: FAO_BLUE, animationDuration: "4s" }}
-          />
-          <div
-            className="absolute top-1/2 -left-40 w-80 h-80 rounded-full blur-3xl opacity-10 animate-pulse bg-blue-400"
-            style={{ animationDuration: "6s", animationDelay: "1s" }}
-          />
-          <div
-            className="absolute -bottom-40 right-1/4 w-72 h-72 rounded-full blur-3xl opacity-15 animate-pulse bg-cyan-400"
-            style={{ animationDuration: "5s", animationDelay: "2s" }}
-          />
+      {/* Beautiful Gradient Background Animation */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {/* Animated gradient orbs - FAO Blue Theme */}
+        <div
+          className="absolute -top-48 -right-48 w-[28rem] h-[28rem] rounded-full blur-3xl opacity-30 animate-pulse"
+          style={{ backgroundColor: FAO_BLUE, animationDuration: "5s" }}
+        />
+        <div
+          className="absolute top-1/3 -left-48 w-[24rem] h-[24rem] rounded-full blur-3xl opacity-20 animate-pulse"
+          style={{ backgroundColor: isDarkMode ? "#38bdf8" : "#7dd3fc", animationDuration: "7s", animationDelay: "1.5s" }}
+        />
+        <div
+          className="absolute -bottom-48 right-1/3 w-[20rem] h-[20rem] rounded-full blur-3xl opacity-25 animate-pulse"
+          style={{ backgroundColor: isDarkMode ? "#14b8a6" : "#5eead4", animationDuration: "6s", animationDelay: "3s" }}
+        />
 
-          {/* Floating particles */}
-          {particles.map((p) => (
-            <div
-              key={p.id}
-              className="absolute w-1 h-1 rounded-full opacity-30 animate-float bg-blue-400"
-              style={{
-                left: p.left,
-                top: p.top,
-                animationDelay: p.delay,
-                animationDuration: p.duration,
-              }}
-            />
-          ))}
-        </div>
-      )}
+        {/* Floating particles */}
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            className="absolute w-1.5 h-1.5 rounded-full opacity-40 animate-float"
+            style={{
+              backgroundColor: FAO_BLUE,
+              left: p.left,
+              top: p.top,
+              animationDelay: p.delay,
+              animationDuration: p.duration,
+            }}
+          />
+        ))}
+      </div>
 
       {/* Top Navigation Bar */}
       <header
@@ -264,25 +263,33 @@ function AppContent() {
             )}
           </button>
 
-          {/* FAO and Uganda Logo */}
-          <div className="flex items-center gap-2">
+          {/* FAO and Uganda Logo - Enhanced Quality */}
+          <div className="flex items-center gap-3">
             <img
               src={isDarkMode ? "/fao-white.png" : "/fao_logo_3lines_en1.png"}
               alt="FAO Logo"
-              className="h-6 md:h-8 w-auto object-contain"
+              className="h-8 md:h-10 lg:h-11 w-auto object-contain"
+              style={{
+                imageRendering: "crisp-edges",
+                filter: isDarkMode ? "drop-shadow(0 1px 2px rgba(0,0,0,0.2))" : "drop-shadow(0 1px 2px rgba(0,0,0,0.1))"
+              }}
             />
             <div
-              className={`h-6 w-px ${isDarkMode ? "bg-slate-700" : "bg-slate-300"}`}
+              className={`h-8 w-px ${isDarkMode ? "bg-slate-600" : "bg-slate-300/80"}`}
             />
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <img
                 src="/uganda-coat-of-arms.svg"
                 alt="Uganda Coat of Arms"
-                className="h-7 md:h-9 w-auto object-contain"
+                className="h-9 md:h-11 lg:h-12 w-auto object-contain"
+                style={{
+                  imageRendering: "crisp-edges",
+                  filter: isDarkMode ? "drop-shadow(0 1px 3px rgba(0,0,0,0.3))" : "drop-shadow(0 1px 3px rgba(0,0,0,0.15))"
+                }}
               />
               <div className="hidden sm:block">
                 <p
-                  className={`text-[9px] md:text-[10px] font-bold leading-tight ${isDarkMode ? "text-white" : "text-slate-900"}`}
+                  className={`text-[10px] md:text-[11px] font-black leading-tight tracking-wide ${isDarkMode ? "text-white" : "text-slate-900"}`}
                 >
                   Republic of Uganda
                 </p>
