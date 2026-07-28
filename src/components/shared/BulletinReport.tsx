@@ -157,7 +157,9 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
   //           </div>
   // );
   const mapPlaceholder = (label: string, data?: string) => (
+    
     <>
+    {console.log("url",data)}
       {!data ? (
         <div
           style={{
@@ -251,21 +253,21 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
         <tr style={{ backgroundColor: "#1a1a1a", color: "#fff" }}>
           <th style={{ ...thStyle, width: "34%" }}>Drought Condition</th>
           <th style={{ ...thStyle, width: "22%" }}>Number of Districts</th>
-          <th style={thStyle}>District List</th>
+          {/* <th style={thStyle}>District List</th> */}
         </tr>
       </thead>
       <tbody>
-        {droughtLevels.map(({ label, count, districts }, i) => (
+        {droughtLevels.map(({ label, count }, i) => (
           <tr key={label} style={rowBg(i)}>
             <td style={{ ...tdStyle, fontWeight: "500" }}>{label}</td>
             <td style={tdStyle}>{count > 0 ? count : "0"}</td>
-            <td style={{ ...tdStyle, lineHeight: "1.6" }}>
+            {/* <td style={{ ...tdStyle, lineHeight: "1.6" }}>
               {districts.length > 0
                 ? districts.join(", ")
                 : count > 0
                   ? ph("district names not available")
                   : "—"}
-            </td>
+            </td> */}
           </tr>
         ))}
       </tbody>
@@ -480,7 +482,14 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
               borderRadius: "3px",
             }}
           >
-            {"{Ministry of Environment Logo}"}
+           <img
+            src="/coat_of_arms.png"
+            alt="FAO"
+            style={{ height: "48px", objectFit: "contain" }}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
           </div>
         </div>
 
@@ -586,8 +595,8 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
           {droughtTable}
           {/* {mapPlaceholder("{add main CDI map}", drought?.cdi_image[4])} */}
           {mapPlaceholder(
-            "{add main CDI map}",
-            `${DROUGHT_BASE}uploaded${drought?.cdi_image[4]}`,
+            "CDI map",
+            `${DROUGHT_BASE}uploaded/${drought?.cdi_image[4]}`,
           )}
 
           {/* ── Forecast Highlights ── */}
@@ -822,7 +831,14 @@ export const BulletinReport: React.FC<BulletinReportProps> = ({
             textAlign: "center",
           }}
         >
-          {"{add partner logos}"}
+         <img
+            src="/coat_of_arms.png"
+            alt="FAO"
+            style={{ height: "48px", objectFit: "contain" }}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
         </div>
       </div>
 
