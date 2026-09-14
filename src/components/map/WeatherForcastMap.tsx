@@ -35,13 +35,13 @@ import {
 import type { district, UgandaBoundaryMapProps } from "@/types/data_types";
 import { useQuery } from "@tanstack/react-query";
 import { DistrictsAPI } from "@/services/api";
+import { OM_TILES_BASE, UGANDA_GEOJSON_URL } from "@/config";
 
 const FAO_BLUE = "#318DDE";
 
 // ── Open-Meteo configuration ──────────────────────────────────────────────────
-const UGANDA_GEOJSON_URL =
-  "https://map-assets.open-meteo.com/world-geojson/countries/uganda.json";
-const OM_TILES_BASE = "https://map-tiles.open-meteo.com/data_spatial";
+// Endpoints come from src/config.ts (env-overridable). The old
+// map-tiles/map-assets.open-meteo.com hosts no longer resolve.
 
 const DOMAIN_NOWCAST = "dwd_icon"; // ICON
 const DOMAIN_FORECAST = "ncep_gfs013"; // GFS
@@ -99,9 +99,13 @@ function prefetchUgandaGeoJson(): Promise<any> {
 
 // Kick off both fetches immediately at module load — they'll be ready
 // by the time the map initialises, eliminating the sequential waterfall.
-prefetchMetadata(DOMAIN_NOWCAST);
-prefetchMetadata(DOMAIN_FORECAST);
-prefetchUgandaGeoJson();
+// Swallow rejections here so a network failure doesn't surface as an
+// "Uncaught (in promise)" console error; the effects that consume these
+// caches handle the failure state and retry.
+const swallow = () => {};
+prefetchMetadata(DOMAIN_NOWCAST).catch(swallow);
+prefetchMetadata(DOMAIN_FORECAST).catch(swallow);
+prefetchUgandaGeoJson().catch(swallow);
 
 /** Map the app's `selectedParameter` to an Open-Meteo variable name */
 const VARIABLE_MAP: Record<string, string> = {

@@ -38,3 +38,30 @@ export const DROUGHT_ASSESMENT_COUNT = `${DROUGHT_BASE}data/district/assessment/
 // drought endpoint images
 
 export const DROUGHT_CDI_IMAGE = `${DROUGHT_BASE}data/all/cdi`;
+
+/**
+ * Open-Meteo weather map tile base (data_spatial `.om` tiles).
+ *
+ * The previous `https://map-tiles.open-meteo.com` host no longer resolves
+ * (ERR_NAME_NOT_RESOLVED). The raw AWS S3 endpoint below is publicly reachable
+ * and is what the official docs/examples use. `https://data-spatial.open-meteo.com`
+ * also works but only accepts requests with a `localhost` or `*.open-meteo.com`
+ * referer, so it is unsuitable for this app's origin.
+ *
+ * Override with VITE_OM_TILES_BASE if you proxy the tiles yourself.
+ */
+export const OM_TILES_BASE: string =
+  (import.meta.env.VITE_OM_TILES_BASE as string) ||
+  "https://openmeteo.s3.amazonaws.com/data_spatial";
+
+/**
+ * Uganda country boundary GeoJSON.
+ *
+ * Served from Open-Meteo's static-assets host. The old
+ * `map-assets.open-meteo.com` host no longer resolves; this replacement does.
+ * A local copy is bundled at public/uganda.json as a fallback — set
+ * VITE_UGANDA_GEOJSON_URL=/uganda.json to use it instead.
+ */
+export const UGANDA_GEOJSON_URL: string =
+  (import.meta.env.VITE_UGANDA_GEOJSON_URL as string) ||
+  "https://static-assets.open-meteo.com/map-assets/world-geojson/countries/uganda.json";

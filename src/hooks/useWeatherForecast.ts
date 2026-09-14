@@ -118,7 +118,6 @@ export const useWeatherForecast = () => {
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data: WeatherForecastData = await res.json();
-        console.log("weekly-forecast", data);
         setForecast(data);
       } catch (err) {
         console.error("useWeatherForecast error:", err);

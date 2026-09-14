@@ -15,17 +15,14 @@
  */
 import L from "leaflet";
 import type { FeatureCollection } from "geojson";
-
-// ── GeoServer WFS boundary URL (uses the same base as the GEO_SERVER_URL) ────
-const GEOJSON_BASE_URL =
-  "https://map-assets.open-meteo.com/world-geojson/countries";
+import { UGANDA_GEOJSON_URL } from "@/config";
 
 // ── Cached boundary promise (fetched once, reused across all layers) ──────────
 let _boundaryPromise: Promise<FeatureCollection> | null = null;
 
 export function fetchUgandaBoundary(): Promise<FeatureCollection> {
   if (!_boundaryPromise) {
-    _boundaryPromise = fetch(`${GEOJSON_BASE_URL}/uganda.json`)
+    _boundaryPromise = fetch(UGANDA_GEOJSON_URL)
       .then((res) => {
         if (!res.ok) throw new Error(`Boundary fetch failed: ${res.status}`);
         return res.json() as Promise<FeatureCollection>;

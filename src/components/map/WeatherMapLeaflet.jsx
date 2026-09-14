@@ -9,9 +9,7 @@ import {
   omProtocol,
   variableOptions
 } from '@openmeteo/weather-map-layer';
-
-const UGANDA_GEOJSON_URL =
-  'https://map-assets.open-meteo.com/world-geojson/countries/uganda.json';
+import { OM_TILES_BASE, UGANDA_GEOJSON_URL } from '@/config';
 
 const DEFAULT_DOMAIN = 'dwd_icon';
 const DEFAULT_VARIABLE = 'temperature_2m';
@@ -106,9 +104,7 @@ const buildOmUrl = ({
       ? `${formatOmModelRun(modelRun)}/${formatOmValidTime(validTime)}`
       : 'latest.json';
 
-  const url = new URL(
-    `https://map-tiles.open-meteo.com/data_spatial/${domain}/${filePath}`
-  );
+  const url = new URL(`${OM_TILES_BASE}/${domain}/${filePath}`);
 
   url.searchParams.set('variable', variable);
   url.searchParams.set('tile_size', tileSize);
@@ -510,7 +506,7 @@ export default function WeatherMapLeaflet() {
 
       try {
         const response = await fetch(
-          `https://map-tiles.open-meteo.com/data_spatial/${domain}/latest.json`
+          `${OM_TILES_BASE}/${domain}/latest.json`
         );
         if (!response.ok) throw new Error(`Metadata request failed (${response.status})`);
         const nextMetadata = await response.json();

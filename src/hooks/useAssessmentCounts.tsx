@@ -95,7 +95,6 @@ export const useAssessmentCounts = () => {
     }),
     [filtered],
   );
-  console.log("cdiImageData", counts);
   return {
     assessment,
     filtered,
