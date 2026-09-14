@@ -292,8 +292,8 @@ export default function UgandaBoundaryMap({
 
     // ── Tile layer ────────────────────────────────────────────────────────
     const tileUrl = isDarkMode
-      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+      ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
     tileLayerRef.current = L.tileLayer(tileUrl);
 
@@ -418,8 +418,8 @@ export default function UgandaBoundaryMap({
     if (!mapRef.current || !tileLayerRef.current) return;
     mapRef.current.removeLayer(tileLayerRef.current);
     const tileUrl = isDarkMode
-      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+      ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
     tileLayerRef.current = L.tileLayer(tileUrl).addTo(mapRef.current);
     tileLayerRef.current.bringToBack();
   }, [isDarkMode]);

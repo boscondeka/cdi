@@ -278,8 +278,8 @@ export default function FloodMonitorMap({
     // ── CartoDB base tile (dark / light matches system theme) ────────────
     FloodMonitortileLayerRef.current = L.tileLayer(
       isDarkMode
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 19, attribution: "© CartoDB" },
     );
 
@@ -458,8 +458,8 @@ export default function FloodMonitorMap({
     FloodMonitormapRef.current.removeLayer(FloodMonitortileLayerRef.current);
     FloodMonitortileLayerRef.current = L.tileLayer(
       isDarkMode
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 19, attribution: "© CartoDB" },
     ).addTo(FloodMonitormapRef.current);
     FloodMonitortileLayerRef.current.bringToBack();

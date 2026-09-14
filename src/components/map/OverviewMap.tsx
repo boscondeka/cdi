@@ -297,8 +297,8 @@ export default function OverviewMap({
 
     // ── Tile layer ────────────────────────────────────────────────────────
     const tileUrl = isDarkMode
-      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
     OverviewtileLayerRef.current = L.tileLayer(tileUrl);
 
@@ -425,8 +425,8 @@ export default function OverviewMap({
     if (!OverviewmapRef.current || !OverviewtileLayerRef.current) return;
     OverviewmapRef.current.removeLayer(OverviewtileLayerRef.current);
     const tileUrl = isDarkMode
-      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+     ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
     OverviewtileLayerRef.current = L.tileLayer(tileUrl).addTo(
       OverviewmapRef.current,
     );

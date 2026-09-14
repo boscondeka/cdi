@@ -211,8 +211,8 @@ export default function WeatherStationsMap({
 
       tileLayerRef.current = L.tileLayer(
         isDarkMode
-          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+          ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         { maxZoom: 19, attribution: "© CartoDB" },
       );
 
@@ -382,8 +382,8 @@ export default function WeatherStationsMap({
     map.removeLayer(tileLayerRef.current);
     tileLayerRef.current = L.tileLayer(
       isDarkMode
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 19, attribution: "© CartoDB" },
     ).addTo(map);
     tileLayerRef.current.bringToBack();

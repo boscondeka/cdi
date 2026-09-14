@@ -506,8 +506,8 @@ export default function WeatherForcastMap({
     // ── CartoDB base tile (same style as the rest of the app) ─────────────
     weatherforcasttileLayerRef.current = L.tileLayer(
       isDarkMode
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 12, attribution: "© CartoDB" },
     );
 
@@ -705,8 +705,8 @@ export default function WeatherForcastMap({
     );
     weatherforcasttileLayerRef.current = L.tileLayer(
       isDarkMode
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 12, attribution: "© CartoDB" },
     ).addTo(weatherforcastMapRef.current);
     weatherforcasttileLayerRef.current.bringToBack();
