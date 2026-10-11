@@ -22,7 +22,7 @@ RUN echo 'server { \
   client_max_body_size 100M; \
   \
   location /api/ { \
-    proxy_pass http://host.docker.internal:8000; \
+    proxy_pass http://host.docker.internal:8001; \
     proxy_http_version 1.1; \
     proxy_set_header Host $host; \
     proxy_set_header X-Real-IP $remote_addr; \
@@ -32,7 +32,7 @@ RUN echo 'server { \
   } \
   \
   location /admin/ { \
-    proxy_pass http://host.docker.internal:8000/admin/; \
+    proxy_pass http://host.docker.internal:8001/admin/; \
     proxy_http_version 1.1; \
     proxy_set_header Host $host; \
     proxy_set_header X-Real-IP $remote_addr; \
@@ -42,9 +42,9 @@ RUN echo 'server { \
   } \
   \
   location /geoserver/ { \
-    proxy_pass http://192.168.100.104:8090/geoserver/; \
+    proxy_pass http://host.docker.internal:8090/geoserver/; \
     proxy_http_version 1.1; \
-    proxy_set_header Host 192.168.100.104:8090; \
+    proxy_set_header Host host.docker.internal:8090; \
     proxy_set_header X-Real-IP $remote_addr; \
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
     proxy_set_header X-Forwarded-Proto $scheme; \
@@ -54,17 +54,17 @@ RUN echo 'server { \
     proxy_set_header Origin ""; \
     proxy_set_header Connection ""; \
     proxy_cookie_path /geoserver /geoserver; \
-    proxy_cookie_domain 192.168.100.104 multihazard.rosewillbome.com; \
+    proxy_cookie_domain host.docker.internal imhop.weis.mwe.go.ug; \
     proxy_buffering off; \
     proxy_request_buffering off; \
-    proxy_redirect http://192.168.100.104:8090/geoserver/ /geoserver/; \
+    proxy_redirect http://host.docker.internal:8090/geoserver/ /geoserver/; \
     proxy_connect_timeout 300; \
     proxy_send_timeout 300; \
     proxy_read_timeout 300; \
   } \
   \
   location /data/ { \
-    proxy_pass http://192.168.100.104:8070/; \
+    proxy_pass http://host.docker.internal:8070/; \
     proxy_http_version 1.1; \
     proxy_set_header Host $host; \
     proxy_set_header X-Real-IP $remote_addr; \
@@ -77,7 +77,7 @@ RUN echo 'server { \
   } \
   \
   location /minio/ { \
-    proxy_pass http://192.168.100.104:9000/; \
+    proxy_pass http://host.docker.internal:9000/; \
     proxy_http_version 1.1; \
     proxy_set_header Host $http_host; \
     proxy_set_header X-Real-IP $remote_addr; \
@@ -91,7 +91,7 @@ RUN echo 'server { \
   } \
   \
   location /minio-console/ { \
-    proxy_pass http://192.168.100.104:9001/; \
+    proxy_pass http://host.docker.internal:9001/; \
     proxy_http_version 1.1; \
     proxy_set_header Host $http_host; \
     proxy_set_header X-Real-IP $remote_addr; \

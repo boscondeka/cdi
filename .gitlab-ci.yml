@@ -10,11 +10,11 @@ deploy:
   script:
     - rm -rf dist node_modules
     - docker ps
-    - echo "VITE_API_URL=https://multihazard.rosewillbome.com/api/v1/" >> .env
-    - echo "VITE_GEOSERVER_URL=https://multihazard.rosewillbome.com/geoserver" >> .env
+    - echo "VITE_API_URL=https://imhop.weis.mwe.go.ug/api/v1/" >> .env
+    - echo "VITE_GEOSERVER_URL=https://imhop.weis.mwe.go.ug/geoserver" >> .env
     - ls
     - docker build -t cdi_main .
     - docker stop cdi_main_container || true
     - docker rm cdi_main_container || true
-    - docker run -d -p 3000:80 --add-host=host.docker.internal:host-gateway --restart unless-stopped --name cdi_main_container cdi_main
+    - docker run -d -p 3001:80 --add-host=host.docker.internal:host-gateway --restart unless-stopped --name cdi_main_container cdi_main
    
